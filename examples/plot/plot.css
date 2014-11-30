@@ -1,0 +1,16 @@
+#uiLeft {
+    display: inline-block;
+    padding-top: 10px;
+    width: 135px; 
+    float: left;
+}
+
+#uiRight {
+    padding-top: 10px;
+    width: 135px; 
+    float: right;
+}
+
+#image {
+    width: calc(100% - 290px);
+}

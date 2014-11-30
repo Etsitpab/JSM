@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <script type="text/javascript" src="../min/matrix.js"></script>
+    <script type="text/javascript" src="../projects/Math.object.js"></script>
+    <script type="text/javascript" src="../projects/histograms.js"></script>
+    <script type="text/javascript" src="../projects/colorConstancy.js"></script>
+
+    <script type="text/javascript" src="base.js"></script>
+    <script type="text/javascript" src="colorconstancy.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+    <title></title>
+  </head>
+
+  <body>
+
+    <div id="demo">
+      <h1>Color Constancy</h1>
+      <input type="file" id="loadFile"/>
+      <div id="interface">
+        
+        <div id="ui">
+          <hr></hr>
+          <center> <b> <label> Algorithm </label> </b> </center>
+          <hr></hr>
+	  <select id="wbAlgo">
+	    <option value="grey_world"> Grey World </option>
+	    <option value="max_rgb"> Max RGB </option>
+	    <option value="shades_of_grey"> Shades Of Grey </option>
+	    <option value="grey_edge"> Grey Edge </option>
+	    <option value="ppl"> Proj. on Planckian Locus </option>
+	  </select>
+          <hr></hr>
+          <center> <b> <label> Parameters </label> </b> </center>
+          <hr></hr>
+                      
+          <label> Njet: </label>
+	  <select id="njet">
+	    <option value="0"> 0 </option>
+	    <option value="1"> 1 </option>
+	  </select>
+          <label> Minkowski norm: </label>
+          <input type="range" id="mink" min="0" step="1" max="10" value="1"/>
+          <label> Sigma: </label>
+          <input type="range" id="sigma" min="0" step="1" max="10" value="0"/>
+          <input type="button" id="apply" value="Apply"/>
+          <hr></hr>
+          <center> <b> <label> View </label> </b> </center>
+          <hr></hr>
+	  <select id="view">
+	    <option value="imcor"> CORRECTED </option>
+	    <option value="im"> ORIGINAL </option>
+	    <option value="mask"> MASK </option>
+	    <option value="im_used"> IMAGE USED </option>
+	  </select>
+          <input type="button" value="Export image" onclick="exportImage();" />
+          <hr></hr>
+          
+          JavaScript code is based on a <a href="http://cat.uab.es/~joost/" target="_blank" >Joost Van de Weijer</a> code.
+        </div>
+        
+        <div id="image">
+          <canvas id="outputImage"></canvas>
+        </div>
+        <div id="warn">
+          <b>Warning:</b> 
+          <p>This demo works best on chrome and <a href="http://www.chromium.org" target="_blank">chromium</a> browser. 
+            On other browser, some functionality may be slower or unavailable.</p>
+        </div>
+      </div>
+      
+    </div>
+    
+  </body>
+</html>

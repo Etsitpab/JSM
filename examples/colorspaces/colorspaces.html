@@ -1,0 +1,284 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <script src="../../modules/JSM.js"></script>
+
+    <script src="../base.js"></script>
+    <script src="colorspaces.js"></script> 
+    <script src="../../min/CIE.min.js"></script>
+    <script src="../../min/drawHistogram.min.js"></script>
+    <script src="../../third/Disk.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="colorspaces.css" media="screen" />
+    <title></title>
+  </head>
+
+  <body>
+
+    <div id="demo">
+      <h1>Simple Image Editor</h1>
+      <input type="file" id="loadFile" multiple/>
+      <div id="images">
+      </div>
+      <div id="interface">
+        <div id="uiLeft">
+          <input type="button" id="undo" value="Undo"/>
+          <input type="button" id="redo" value="Redo"/>
+          <input type="button" value="Export image" onclick="exportImage();" />
+          <hr></hr>
+
+          <fieldset>
+            <legend>Parameters</legend>
+            <label>Work on</label>
+            <select id="workImage">
+              <option value="visible"> Visible image (faster) </option>
+              <option value="full"> Full resolution image </option>
+            </select>
+            <label> Stretch dynamic: </label>
+            <select id="stretchGlobal">
+              <option value="NO">  NO </option>
+              <option value="YES"> YES </option>
+            </select>
+          </fieldset>
+
+          <fieldset>
+            <legend>Filters</legend>
+            <select id="filters">
+            </select>
+            <input type="button" id="saveProcess" value="Save Filter"/>
+            <input type="button" id="removeProcess" value="Remove Filter"/>
+          </fieldset>
+          <hr></hr>
+
+          <fieldset>
+            <legend>Crop</legend>
+            <label> Rotation: </label>
+            <input type="range" id="rotation" min="0" step="1" max="3" value="0"/>
+            <label> x1, x2: </label>
+            <input type="range" id="x1" min="0" step="0.001" max="1" value="0"/>
+            <input type="range" id="x2" min="0" step="0.001" max="1" value="1"/>
+            <label> y2, y2: </label>
+            <input type="range" id="y1" min="0" step="0.001" max="1" value="0"/>
+            <input type="range" id="y2" min="0" step="0.001" max="1" value="1"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyCrop">
+            <input type="button" value="Reset" id="resetCrop"/>
+          </fieldset>
+          
+          <fieldset>
+            <legend>Contrast</legend>
+            <label> Channels: </label>
+            <select id="channels_contrast">
+              <option value="[]"> ALL </option>
+              <option value="[0]"> RED </option>
+              <option value="[1]"> GREEN </option>
+              <option value="[2]"> BLUE </option>
+            </select>
+
+            <label> Gamma: </label>
+            <input type="range" id="gamma" min="0.2" step="0.01" max="4" value="1"/>
+            <label> Brightness: </label>
+            <input type="range" id="brightness" min="0" step="0.01" max="1" value="0.5"/>
+            <label> Contrast: </label>
+            <input type="range" id="contrast" min="0" step="0.01" max="1" value="0.5"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyContrast">
+            <input type="button" value="Reset" id="resetContrast"/>
+          </fieldset>
+
+          <fieldset>
+            <legend>Color Balance</legend>
+            <label>Yellow / Blue</label>
+            <input type="range" id="yellowBlue" min="0" step="0.01" max="1" value="0.5"/>
+            <label>Cyan / Red</label>
+            <input type="range" id="cyanRed" min="0" step="0.01" max="1" value="0.5"/>
+            <label>Magenta / Green</label>
+            <input type="range" id="magentaGreen" min="0" step="0.01" max="1" value="0.5"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyColorBalance">
+            <input type="button" value="Reset" id="resetColorBalance"/>
+          </fieldset>
+          
+          <fieldset>
+            <legend>Hue / Saturation</legend>
+            <input type="range" id="hue" min="0" step="0.01" max="1" value="0.5"/>
+            <input type="range" id="saturation" min="0" step="0.1" max="2" value="1"/>
+            <hr></hr>
+
+            <label>Hue filtering</label>
+            <input type="range" id="hue_f0" min="0" step="0.01" max="1" value="0.5"/>
+            <input type="range" id="hue_sigma" min="0" step="0.01" max="1" value="0"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyHueSat">
+            <input type="button" value="Reset" id="resetHueSat"/>
+          </fieldset>
+          
+          <fieldset>
+            <legend>Color Temperature</legend>
+            <label> Input CCT: </label>
+            <input type="range" id="inputCCT" min="100" step="2" max="200" value="150"/>
+            <label> Output CCT: </label>
+            <input type="range" id="outputCCT" min="100" step="2" max="200" value="150"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyCCT">
+            <input type="button" value="Reset" id="resetCCT"/>
+          </fieldset>
+          
+          
+          <fieldset>
+            <legend>Filtering</legend>
+            <label>Gaussian</label>
+            <input type="range" id="gaussian" min="0" step="0.05" max="1" value="0"/>
+            <label>Bilateral</label>
+            <input type="range" id="bilateral_sigma_s" min="0" step="0.05" max="1" value="0"/>
+            <input type="range" id="bilateral_sigma_i" min="0" step="0.05" max="1" value="0"/>
+            <label>Predefined</label>
+            <select id="filter">
+              <option value="none"> NONE </option>
+              <option value="gaussian"> GAUSSIAN </option>
+              <option value="average"> AVERAGE </option>
+              <option value="laplacian"> LAPLACIAN </option>
+              <option value="log"> LOG </option>
+	      <option value="unsharp"> UNSHARP </option>	
+	      <option value="prewitt"> PREWITT </option>	
+	      <option value="sobel"> SOBEL </option>	
+            </select>
+            <select id="filter2">
+              <option value="none"> NONE </option>
+              <option value="x"> X </option>
+              <option value="y"> Y </option>
+              <option value="norm"> NORM </option>
+              <option value="phase"> PHASE </option>
+	      <option value="laplacian"> LAPLACIAN </option>	
+            </select>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyFilter"/>
+            <input type="button" value="Reset" id="resetFilter"/>
+          </fieldset>
+          
+          <fieldset>
+            <legend>Colorspaces</legend>
+            <label> Input/Output: </label>
+            <select id="inputColorspaces">
+              <option value="RGB"> RGB </option>
+              <option value="GRAY"> Gray </option>
+              <option value="HSV"> HSV </option>
+              <option value="HSL"> HSL </option>
+              <option value="Opponent"> Opponent </option>
+              <option value="Ohta"> Ohta </option>
+              <option value="OhtaNorm"> OhtaNorm </option>
+              <option value="CMY"> CMY </option>
+              <option value="XYZ"> CIE XYZ </option>
+              <option value="xyY"> CIE xyY </option>
+              <option value="1960 uvY"> CIE 1960 uvY </option>
+	      <option value="1976 u'v'Y"> CIE 1976 u'v'Y </option>	
+              <option value="Lab"> CIE Lab </option>	
+              <option value="Luv"> CIE Luv </option>	
+              <option value="Lch"> CIE Lch </option>	
+            </select>
+            <select id="outputColorspaces">
+              <option value="RGB"> RGB </option>
+              <option value="GRAY"> Gray </option>
+              <option value="HSV"> HSV </option>
+              <option value="HSL"> HSL </option>
+              <option value="Opponent"> Opponent </option>
+              <option value="Ohta"> Ohta </option>
+              <option value="OhtaNorm"> OhtaNorm </option>
+              <option value="CMY"> CMY </option>
+              <option value="XYZ"> CIE XYZ </option>
+              <option value="xyY"> CIE xyY </option>
+              <option value="1960 uvY"> CIE 1960 uvY </option>
+	      <option value="1976 u'v'Y"> CIE 1976 u'v'Y </option>	
+              <option value="Lab"> CIE Lab </option>	
+              <option value="Luv"> CIE Luv </option>	
+              <option value="Lch"> CIE Lch </option>	
+            </select>
+
+            <label> Channels: </label>
+            <select id="channels">
+              <option value="[]"> ALL </option>
+              <option value="[0]"> 0 </option>
+              <option value="[1]"> 1 </option>
+	      <option value="[2]"> 2 </option>	
+            </select>
+            <label> Stretch dynamic: </label>
+            <select id="stretch">
+              <option value="NO">  NO </option>
+              <option value="YES"> YES </option>
+            </select>
+            <label> Colormap: </label>
+            <select id="colormap">
+              <option value="GRAY"> GRAY </option>
+              <option value="JET"> JET </option>
+              <option value="HUE"> HUE </option>
+            </select>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyColorspace"/>
+            <input type="button" value="Reset" id="resetColorspace"/>
+          </fieldset>
+          <hr></hr>
+
+
+          
+        </div>
+        <div id="image">
+          <canvas id="outputImage"></canvas>
+          <div id="help">
+          </div>
+        </div>
+
+        <div id="uiRight">
+          <canvas id="histogram" style="width:100%"></canvas>
+          <hr></hr>
+
+          <fieldset>
+            <legend>Thresholding</legend>
+            <label> Min, max: </label>
+            <input type="range" id="min" min="0" step="0.001" max="1" value="0"/>
+            <input type="range" id="max" min="0" step="0.001" max="1" value="1"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyThreshold">
+            <input type="button" value="Reset" id="resetThreshold"/>
+          </fieldset>
+
+          <fieldset>
+            <legend>Noise</legend>
+            <input type="range" id="noise" min="0" step="0.01" max="0.5" value="0"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyNoise">
+            <input type="button" value="Reset" id="resetNoise"/>
+          </fieldset>
+
+          <fieldset>
+            <legend>Geometrical transformation</legend>
+            <label> Rotation: </label>
+            <input type="range" id="fullRotation" min="0" step="0.01" max="1" value="0"/>
+            <label> Tilt: </label>
+            <input type="range" id="tilt" min="0" step="0.01" max="1" value="0"/>
+            <label> Scale: </label>
+            <input type="range" id="scale" min="0" step="0.01" max="1" value="0.5"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyGeometric">
+            <input type="button" value="Reset" id="resetGeometric"/>
+          </fieldset>
+
+          <fieldset>
+            <legend>Sharpening</legend>
+            <label> Gradient: </label>
+            <input type="range" id="gradSharp" min="0" step="0.01" max="1" value="0"/>
+            <label> Proportion: </label>
+            <input type="range" id="propSharp" min="0" step="0.01" max="1" value="0"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applySharp">
+            <input type="button" value="Reset" id="resetSharp"/>
+          </fieldset>
+          
+        </div>
+
+      </div>
+
+    </div>
+
+  </body>
+</html>

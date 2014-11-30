@@ -1,0 +1,41 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <script src="../min/matrix_min.js"></script>
+    <script src="gameoflife.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+    <title></title>
+  </head>
+
+  <body>
+
+    <div id="demo">
+      <h1>Game of Life</h1>
+      <input type="file" id="loadFile"/>
+      <div id="interface">
+        
+        <div id="ui">
+          <label> Probability: </label>
+          <input type="range" id="proba" min="0" step="0.05" max="1" value="0.5"/>
+          <label> Speed: </label>
+          <input type="range" id="speed" min="0" step="50" max="1000" value="100"/>
+          <label> Zoom: </label>
+          <input type="range" id="zoom" min="1" step="1" max="8" value="3"/>
+          <input type="button" value="Random initialization" id="random">
+        </div>
+
+        <div id="image">
+          <canvas id="outputImage"></canvas>
+        </div>
+        <div id="warn">
+          <b>Warning:</b> 
+          <p>This demo works best on chrome and <a href="http://www.chromium.org" target="_blank">chromium</a> browser. 
+            On other browser, some functionality may be slower or unavailable.</p>
+        </div>
+
+      </div>
+      
+    </div>
+    
+  </body>
+</html>

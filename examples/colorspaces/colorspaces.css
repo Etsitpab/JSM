@@ -1,0 +1,26 @@
+#images {
+    display: block;
+    height: 50px;
+    border: 1px solid #e6e6e6;
+    padding: 3px;
+    margin-top: 7px;
+    border-radius: 3px;
+}
+
+#uiLeft {
+    display: inline-block;
+    padding-top: 10px;
+    width: 135px; 
+    float: left;
+}
+
+#uiRight {
+    padding-top: 10px;
+    width: 135px; 
+    float: right;
+}
+
+#image {
+    width: calc(100% - 290px);
+    height: calc(100% - 20px);
+}

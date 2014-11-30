@@ -1,0 +1,123 @@
+<html>
+  <head>
+    <!--<title>IPiJ - Image Processing in Javascript</title>-->
+    <!-- <link rel="stylesheet" href="common_files/document.css" />-->
+
+    
+    <meta http-equiv="text/javascript" content="type">
+    
+
+    <script type="text/javascript" src="init.js"></script>
+
+
+    <script src="../../src/Tools/Tools.js"></script>
+
+    <script src="../../src/MatrixView/MatrixView.class.js"></script>
+    <script src="../../src/MatrixView/MatrixView.manipulation.js"></script>
+    <script src="../../src/MatrixView/MatrixView.informations.js"></script>
+
+    <script src="../../src/Matrix/Matrix.class.js"></script>
+    <script src="../../src/Matrix/Matrix.Tools.js"></script>
+    <script src="../../src/Matrix/Matrix.numeric_types.js"></script>
+    <script src="../../src/Matrix/Matrix.informations.js"></script>
+    <script src="../../src/Matrix/Matrix.manipulation.js"></script>
+    <script src="../../src/Matrix/Matrix.construction.js"></script>
+    <script src="../../src/Matrix/Matrix.statistics.base.js"></script>
+    <script src="../../src/Matrix/Matrix.operators.js"></script>
+
+    <script src="../../src/Matrix/Matrix.extend.linear_algebra.js"></script>
+    <script src="../../src/Matrix/Matrix.extend.image_processing.js"></script>
+    <script src="../../src/Matrix/Matrix.extend.image_processing.color.js"></script>
+    <script src="../../src/Matrix/Matrix.extend.elementary_math.special_functions.js"></script>
+    <script src="../../src/Matrix/Matrix.elementary_math.complex_numbers.js"></script>
+    <script src="../../src/Matrix/Matrix.extend.histograms.js"></script>
+
+    <script src="../../src/Matching/Matching.class.js"></script>
+    <script src="../../src/Matching/Matching.Match.js"></script>
+    <script src="../../src/Matching/Matching.DescriptorData.js"></script>
+    <script src="../../src/Matching/Matching.Descriptor.js"></script>
+    <script src="../../src/Matching/Matching.Keypoint.js"></script>
+    <script src="../../src/Matching/Matching.Scalespace.js"></script>
+    <script src="../../src/Matching/Matching.Sift.js"></script>
+
+    <script src="../../src/Plot/Plot.class.js"></script>
+
+    <script src="../../tests/MatrixView.test_functions.js"></script>
+    <script src="../../tests/Matrix.test_functions.js"></script>
+
+    <script src="../../projects/CIE.js"></script>
+    <script src="../../projects/drawHistogram.js"></script>
+    <script src="../../projects/colorConstancy.js"></script>
+    <script src="../../projects/colorInvariants.js"></script>
+    <script src="../../projects/Math.object.js"></script>
+
+
+    <script src="Disk.js"></script>
+    <script src="ScriptArea.class.js"></script>
+
+    <script src="codemirror/codemirror.js"></script>
+    <script src="codemirror/javascript.js"></script>
+    <link rel="stylesheet" href="codemirror/codemirror.css" />
+    <link rel="stylesheet" href="console.css" />
+
+    
+  </head>
+  <body onload="init();">
+    
+    <div id="panel">
+      
+      <!-- ******************************** -->
+      <!--          Left Pannel             -->
+      <!-- ******************************** -->
+      
+      <div id="leftPanel">
+        
+        <!--        ZONE BUTTONS        -->
+        
+        <div id="header">
+
+          <select 
+             id="fileList" 
+             onchange="selectBuffer();">
+          </select>
+
+          <select 
+             id="fileOperations" 
+             onclick="fileOperations();">
+            <option value="new"> New </option>
+            <option value="save"> Save </option>
+            <option value="saveAs"> Save as </option>
+            <option value="delete"> Delete </option>
+          </select>
+          <input id="runScript" type="button" value="Run Script (F10)"/>
+          <input id="runSelec" type="button" value="Run Selection (F9)"/>
+        </div>
+        
+        <!--        ZONE DE SCRIPT        -->
+        
+        <div id="jsScriptParent">
+          <div id="jsScript"></div>
+        </div>
+
+      </div>
+      
+      
+      <!-- ******************************** -->
+      <!--          Right Pannel            -->
+      <!-- ******************************** -->
+      
+      <div id="rightPanel">
+        
+        <!--        ZONE DE CANVAS        -->
+        
+        <div id="tableCanvas">
+          <div id="canvas">
+          </div>
+        </div>
+
+      </div>
+      
+    </div> 
+
+  </body>
+</html>
