@@ -3,7 +3,7 @@ JSM
 
 # The JavaScript Matrix Library
 
-This class intends to provide an easy way to deal with nd-ar[ray.
+This class intends to provide an easy way to deal with nd-array.
 The Matrix name is in fact a bit simplistic since it refers to 2d array only while here a Matrix object is an nd-array. It intends to provide tools to deal with numerical data.
 The inspiration is the well known [Matlab][1] software though there are some differences in the syntax we used. 
 
