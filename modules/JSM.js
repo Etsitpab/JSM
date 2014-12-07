@@ -5737,14 +5737,14 @@ var IT;
             var id = this.getData();
             for (i = 0, ie = od.length; i < ie; i++) {
                 var v = id[i];
-                od[i] = (v === Infinity) || (v === -Infinity);
+                od[i] = (v === Infinity) || (v === -Infinity) ? 1 : 0;
             }
         } else {
             var ird = this.getRealData(), iid = this.getImagData();
             for (i = 0, ie = od.length; i < ie; i++) {
                 var vr = ird[i], vi = iid[i];
-                od[i] = (vr === Infinity) || (vr === -Infinity) ||
-                    (vi === Infinity) || (vi === -Infinity);
+                od[i] = ((vr === Infinity) || (vr === -Infinity) ||
+                    (vi === Infinity) || (vi === -Infinity)) ? 1 : 0;
             }
         }
         return oMat;
@@ -5763,12 +5763,12 @@ var IT;
         if (this.isreal()) {
             var id = this.getData();
             for (i = 0, ie = od.length; i < ie; i++) {
-                od[i] = isFinite(id[i]);
+                od[i] = isFinite(id[i]) ? 1 : 0;
             }
         } else {
             var ird = this.getRealData(), iid = this.getImagData();
             for (i = 0, ie = od.length; i < ie; i++) {
-                od[i] = isFinite(ird[i]) || isFinite(iid[i]);
+                od[i] = (isFinite(ird[i]) || isFinite(iid[i])) ? 1 : 0;
             }
         }
         return oMat;
@@ -10324,7 +10324,7 @@ var IT;
                     data[0] *= boundaryscale;
                     // Filter rightwards
                     for (y = 1; y < l; y++) {
-                        data[y] +=  nu * data[y - 1];
+                        data[y] += nu * data[y - 1];
                     }
                     data[l - 1] *= boundaryscale;
                     // Filter leftwards
@@ -10574,42 +10574,149 @@ var IT;
             throw new Error("Matrix.conv: Invalid shape parameter.");
         }
     };
+    
+    var getImageColumnArray = function (A) {
+        var m = A.getSize(0), n = A.getSize(1), c = A.getSize(2);
+        var dc = m * n;
+        var ad = A.getData(), col = [];
+        for (var c = 0, lc = ad.length; c < lc; c += dc) {
+            var tmp = []
+            for (var j = 0, _j = 0; j < n; j++, _j += m) {
+                tmp[j] = ad.subarray(_j, m + _j);
+            }
+            col.push(tmp);
+        }
+        return col;
+    };
 
-    /** Fast block filtering function. allow to compute block average.
+    var computeImageIntegral = function(im) {
+        var view = im.getView(), d = im.getData();
+        var dc = view.getStep(2), lc = view.getEnd(2);
+        var dx = view.getStep(1), lx = view.getEnd(1), nx;
+        var ly = view.getEnd(0), ny;
+        var c, y, x;
+        for (c = 0; c < lc; c += dc) {
+            for (y = c + 1, ny = c + ly; y < ny; y++) {
+                d[y] += d[y - 1];
+            }
+            for (x = c + dx, nx = c + lx; x < nx; x += dx) {
+                var sum = d[x];
+                d[x] += d[x - dx];
+                for (y = x + 1, ny = x + ly; y < ny; y++) {
+                    sum += d[y];     
+                    d[y] = d[y - dx] + sum;
+                }
+            }
+        }
+    };
+
+    /** Bluring based box filtering. allow to compute block average.
      *
      * @param {Number} sigmaX
      * @param {Number} [sigmaY=sigmaX]
-     * @param {Matrix} [imcum]
-     *  Image cumulated. It can be used to avoid this step.
-     *
+     * @param {Number} [k=2]
+     *  Number of times than the image is boxfiltered.
      * @return {Matrix}
      */
-    Matrix_prototype.blockFilter = function (wx, wy, imcum) {
-        if (!imcum) {
-            imcum = this.im2double().cumsum(0).cumsum(1);
-        }
-        var imout = Matrix.zeros(this.getSize());
-        var din = imcum.getData(), dout = imout.getData();
+    Matrix_prototype.fastBlur = function (sx, sy, k) {
+        k = k || 2;
+        sy = sy || sx;
+        console.log("TOTO");
+        var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1
+        var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1
+        var imcum = this.im2double();
+        var imout = Matrix.zeros(imcum.getSize());
         // Iterator to scan the view
-        var view = this.getView();
+        var view = imcum.getView();
         var dc = view.getStep(2), lc = view.getEnd(2);
         var dx = view.getStep(1), lx = view.getEnd(1);
         var dy = view.getStep(0), ly = view.getEnd(0);
 
-        var sy = (wy / 2) | 0, sx = ((wx / 2) | 0) * dx;
-	var nx, ny, c, x, y;
-        var y00, y02, y20, y22;
-        for (c = 0; c !== lc; c += dc) {
-            var d = dout.subarray(c + sx + sy)
-            var d00 = din.subarray(c); 
-            var d20 = din.subarray(c + 2 * sy + 1);
-            var d02 = din.subarray(c + 2 * (sx + 1) * dx);
-            var d22 = din.subarray(c + 2 * ((sx + 1) * dx + sy + 1));
-            for (x = 0, nx = 0 + lx; x !== nx; x += dx) {
-                for (y = x, ny = x + ly; y < ny; y++) {
-                    d[y] = d22[y] + d00[y] - d02[y] - d20[y];
+        var sy = (wy / 2) | 0, sx = ((wx / 2) | 0) * dx, sx2 = ((wx / 2) | 0);
+
+	var nx, ny, c, x, y, y_, yx;
+        var cst, cstx, csty, cste;
+
+        var imcum = this;
+        for (var p = 0; p < k; p++) {
+
+            imcum = imcum.im2double()
+            computeImageIntegral(imcum);
+
+            var din = imcum.getData(), dout = imout.getData();
+            var e = (sx + sy + dx + 1), f = sx + sy, g = -(sx + dx) + sy, h = sx - sy - 1;
+            var dinf = din.subarray(f), dinh = din.subarray(h);
+
+            for (c = 0; c < lc; c += dc) {            
+
+                // First rows
+                for (y_ = c, y = 0, ny = c + sy + 1; y_ < ny; y_++, y++) {
+                    csty = (y + sy + 1);
+                    // First columns
+                    for (yx = y_, x = 0, nx = y_ + sx + dx; yx < nx; yx += dx, x++) {
+                        dout[yx] = dinf[yx] / ((x + sx2 + 1) * csty);
+                    }
+                    cst = 1 / (wx * csty);
+                    // Central columns
+                    for (yx = y_ + sx + dx, nx = y_ + lx - sx; yx < nx; yx += dx) {
+                        dout[yx] = (dinf[yx] - din[yx + g]) * cst;
+                    }
+                    cste = din[y_ + lx - dx + sy];
+                    // Last columns
+                    for (yx = y_ + lx - sx, nx = y_ + lx; yx < nx; yx += dx) {
+                        dout[yx] =  cste - din[yx + g];
+                        dout[yx] /= ((sx + nx - yx) / dx) * csty;
+                    }
+                }
+                
+                // First columns
+                for (x = c, nx = c + sx + dx; x < nx; x += dx) {
+                    // Central part
+                    cst = 1 / (((x - c + sx) / dx + 1) * wy)
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = dinf[y] - dinh[y];
+                        dout[y] *= cst;
+                    }
+                }
+                // Central part
+                cst = 1 / (wx * wy)
+                for (x = c + sx + dx, nx = c + lx - sx; x < nx; x += dx) {
+                    // Central part
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = (din[y - e] + dinf[y] - din[y + g] - dinh[y]) * cst;
+                    }
+                }
+                // Last columns
+                for (x = c + lx - sx, nx = c + lx; x < nx; x += dx) {
+                    // Central part
+                    cst = 1 / (((c + lx - x + sx) / dx) * wy)
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = din[y - e] + din[c + lx - dx + y - x + sy] - din[c + lx - dx + y - x - sy - 1] - din[y + g];
+                        dout[y] *= cst;
+                    }
+                }
+                
+                // last rows
+                for (y = c + ly - sy, ny = c + ly; y < ny; y++) {
+                    // First columns
+                    for (x = y, nx = y + sx + dx; x < nx; x += dx) {
+                        dout[x] = din[x - y + c + ly - 1 + sx] - dinh[x];
+                        dout[x] /= ((x - y + sx) / dx + 1) * (sy + (ly - (y - c)));
+                    }
+                    cst = 1 / (wx * (sy + (ly - (y - c))));
+                    // Central columns
+                    for (x = y + sx + dx, nx = y + lx - sx; x < nx; x += dx) {
+                        dout[x] = din[x - y + c + ly - 1 + sx] - din[x - y + c + ly - 1 - sx - dx] + din[x - e] - dinh[x];
+                        dout[x] *= cst
+                    }
+                    // Last columns
+                    for (x = y + lx - sx, nx = y + lx; x < nx; x += dx) {
+                        dout[x] = din[c + lx - dx + ly - 1] + din[x - e] - din[c + x - y + ly - 1 - sx - dx] - din[c + lx - dx + y - c - sy - 1];
+                        dout[x] /= ((lx - (x - y) + sx) / dx) * (sy + (ly - (y - c)));
+                    }
                 }
             }
+            imcum = imout;
         }
         return imout;
     };
@@ -10850,6 +10957,9 @@ var IT;
      */
     Matrix_prototype.imagesc = function (canvas, scale) {
         var min = this.min().getDataScalar(), max = this.max().getDataScalar();
+        if (min - max === 0) {
+            return this['-'](min).imshow(canvas, scale);
+        }
         return this['-'](min)['./'](max - min).imshow(canvas, scale);
     };
 

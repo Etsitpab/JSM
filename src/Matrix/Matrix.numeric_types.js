@@ -196,14 +196,14 @@
             var id = this.getData();
             for (i = 0, ie = od.length; i < ie; i++) {
                 var v = id[i];
-                od[i] = (v === Infinity) || (v === -Infinity);
+                od[i] = (v === Infinity) || (v === -Infinity) ? 1 : 0;
             }
         } else {
             var ird = this.getRealData(), iid = this.getImagData();
             for (i = 0, ie = od.length; i < ie; i++) {
                 var vr = ird[i], vi = iid[i];
-                od[i] = (vr === Infinity) || (vr === -Infinity) ||
-                    (vi === Infinity) || (vi === -Infinity);
+                od[i] = ((vr === Infinity) || (vr === -Infinity) ||
+                    (vi === Infinity) || (vi === -Infinity)) ? 1 : 0;
             }
         }
         return oMat;
@@ -222,12 +222,12 @@
         if (this.isreal()) {
             var id = this.getData();
             for (i = 0, ie = od.length; i < ie; i++) {
-                od[i] = isFinite(id[i]);
+                od[i] = isFinite(id[i]) ? 1 : 0;
             }
         } else {
             var ird = this.getRealData(), iid = this.getImagData();
             for (i = 0, ie = od.length; i < ie; i++) {
-                od[i] = isFinite(ird[i]) || isFinite(iid[i]);
+                od[i] = (isFinite(ird[i]) || isFinite(iid[i])) ? 1 : 0;
             }
         }
         return oMat;

@@ -533,7 +533,7 @@ var filter = function () {
     };
     filter.fun = function (img, p) {
         if (p.gaussian > 0) {
-            img = img.fastGaussian(p.gaussian * 10);
+            img = img.fastBlur(p.gaussian * 50);
         }
         if (p.bilateral_sigma_s > 0 && p.bilateral_sigma_i > 0) {
             img = img.bilateral(p.bilateral_sigma_s * 5, 1 / (101 - p.bilateral_sigma_i * 100), 3);
