@@ -3,29 +3,39 @@ JSM
 
 # The JavaScript Matrix Library
 
-This class intends to provide an easy way to deal with nd-array.
-The Matrix name is in fact a bit simplistic since it refers to 2d array only while here a Matrix object is an nd-array.
-It intends to provide tools to deal with numerical data.
+This library intends to provide an easy way to deal with nd-array. This implementation has many advantages since
+* it use typed array for fast computation and controled memory comsumption ;
+* it is designed to work with real as well as complex values ;
+* it is easy to use thanks to the object notation.
+
+Many modules are developed 
+* for nd-array manipulation including value selection and modifications ;
+* for arithmetic and boolean operation ;
+* for linear algebra ;
+* for image processing, such as filtering, FFT, image matching ;
+* for statistical processing ; ...
+
 The inspiration is the well known [Matlab][1] software though there are some differences in the syntax we used. 
 
 [1]:http://www.mathworks.fr/products/matlab/
 
-# How to test it, compile it and build doc
+# Documentation 
 
-To test it, just download the modules that you need, they are located in the `./modules/` directory. 
+The documentation can be consulted [here](http://etsitpab.github.io/JSM/). The code is documented using [jsduck](https://github.com/senchalabs/jsduck). Once it is installed just use the command `make doc`
+If you experience problem, be sure that you installed the ruby1.9-dev (or more recent) package and check this [page](https://github.com/senchalabs/jsduck/wiki/Installation).
 
-The core module is `JSM.js` and it is the concatenation of the `Matrix.js`, `Matrix.js` and `Tools.js` modules. The other modules such that `Plot.js` and `Matching.js` are independent.
-In the directory `./min/` you can find the minified version of the modules.
+# How to compile and test it
 
 ## Compilation
 
 In order to regenerate the modules from the sources, you simply need to use the command `make` (Unix system).
 To minify the modules and the projects, you have to install [uglifyjs](https://github.com/mishoo/UglifyJS2). Once it's done, just enter `make minify`.
 
-## Create Documentation
+## Test
 
-The code is documented using [jsduck](https://github.com/senchalabs/jsduck). Once it is installed just use the command `make doc`
-If you experience problem, be sure that you installed the ruby1.9-dev package and check this [page](https://github.com/senchalabs/jsduck/wiki/Installation).
+To test it, just download the modules that you need, they are located in the `./modules/` directory. 
+The core module is `JSM.js` and it is the concatenation of the `Matrix.js`, `Matrix.js` and `Tools.js` modules. The other modules such that `Plot.js` and `Matching.js` are independent.
+In the directory `./min/` you can find the minified version of the modules.
 
 ## Nodejs and npm
 
@@ -50,6 +60,7 @@ More and more web applications request to deal with numerical data, and we do no
 Here comes a list made of JS library that we found interesting.
 This list does not pretend to exhaustive and if you would like to see a link to your website added here please send an email.
 
+- [mathjs](http://mathjs.org/)
 - [jStat](https://github.com/jstat/jstat)
 - [jsmat](https://github.com/ghewgill/jsmat)
 - [JSNum](https://github.com/kms15/jsnum)
@@ -61,14 +72,12 @@ This list does not pretend to exhaustive and if you would like to see a link to 
 
     ./
     +- doc/
-    |   +  Makefile                 - generate the documentation
     |   +  jsduck.json              - doc. configuration file
     |   +  guides.json              - tutorials configuration file
     |   +- html/                    - generated documentation (HTML format)
     |   |   +  index.html           - main page of the documentation
     |   +- content/                 - doc. content (raw)
     |   |   +  readme.md            - content of the doc. main page
-    |   |   +  categories.json      - sort documented JS classes into categories
     |   +- tag/                     - custom tags definitions
     +- examples/                    - examples of use of the Matrix class
     +- modules/                     - modules grouping files together
