@@ -1156,6 +1156,20 @@
             throw new Error("Matrix.conv: Invalid shape parameter.");
         }
     };
+    
+    var getImageColumnArray = function (A) {
+        var m = A.getSize(0), n = A.getSize(1), c = A.getSize(2);
+        var dc = m * n;
+        var ad = A.getData(), col = [];
+        for (var c = 0, lc = ad.length; c < lc; c += dc) {
+            var tmp = []
+            for (var j = 0, _j = 0; j < n; j++, _j += m) {
+                tmp[j] = ad.subarray(_j, m + _j);
+            }
+            col.push(tmp);
+        }
+        return col;
+    };
 
     /** Fast block filtering function. allow to compute block average.
      *
@@ -1166,30 +1180,150 @@
      *
      * @return {Matrix}
      */
-    Matrix_prototype.blockFilter = function (wx, wy, imcum) {
-        if (!imcum) {
+    Matrix_prototype.blockFilter = function (wx, wy, iscum, k) {
+        var imcum;
+        if (iscum !== true) {
             imcum = this.im2double().cumsum(0).cumsum(1);
+        } else {
+            imcum = this.getCopy();
         }
-        var imout = Matrix.zeros(this.getSize());
+        var imout = Matrix.zeros(imcum.getSize());
         var din = imcum.getData(), dout = imout.getData();
         // Iterator to scan the view
-        var view = this.getView();
+        var view = imcum.getView();
         var dc = view.getStep(2), lc = view.getEnd(2);
         var dx = view.getStep(1), lx = view.getEnd(1);
         var dy = view.getStep(0), ly = view.getEnd(0);
 
         var sy = (wy / 2) | 0, sx = ((wx / 2) | 0) * dx;
+
 	var nx, ny, c, x, y;
         var y00, y02, y20, y22;
-        for (c = 0; c !== lc; c += dc) {
-            var d = dout.subarray(c + sx + sy)
-            var d00 = din.subarray(c); 
-            var d20 = din.subarray(c + 2 * sy + 1);
-            var d02 = din.subarray(c + 2 * (sx + 1) * dx);
-            var d22 = din.subarray(c + 2 * ((sx + 1) * dx + sy + 1));
-            for (x = 0, nx = 0 + lx; x !== nx; x += dx) {
-                for (y = x, ny = x + ly; y < ny; y++) {
-                    d[y] = d22[y] + d00[y] - d02[y] - d20[y];
+
+        var e = (sx + sy + dx + 1), f = sx + sy, g = -(sx + dx) + sy, h = sx - sy - 1;
+        var dinf = din.subarray(f), dinh = din.subarray(h);
+        var cst, cst2 = 1 / (wx * wy);
+        
+        for (c = 0; c < lc; c += dc) {            
+            if (k === 0) {
+                // First rows
+                for (y = c, ny = c + sy + 1; y < ny; y++) {
+                    // First columns
+                    for (x = y, nx = y + sx + dx; x < nx; x += dx) {
+                        dout[x] = dinf[x] / (((x - y + sx) / dx + 1) * (sy + 1 + y - c));
+                    }
+                    cst = 1  /(wx * (sy + 1 + y - c));
+                    // Central columns
+                    for (x = y + sx + dx, nx = y + lx - sx; x < nx; x += dx) {
+                        dout[x] = (dinf[x] - din[x + g]) * cst;
+                    }
+                    // Last columns
+                    for (x = y + lx - sx, nx = y + lx; x < nx; x += dx) {
+                        dout[x] = din[y + lx - dx + sy] - din[x + g];
+                        dout[x] /= ((sx + nx - x) / dx) * (y - c + sy + 1);
+                    }
+                }
+                
+                // First columns
+                for (x = c, nx = c + sx + dx; x < nx; x += dx) {
+                    // Central part
+                    cst = 1 / (((x - c + sx) / dx + 1) * wy)
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = dinf[y] - dinh[y];
+                        dout[y] *= cst;
+                    }
+                }
+                // Central part
+                for (x = c + sx + dx, nx = c + lx - sx; x < nx; x += dx) {
+                    // Central part
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = (din[y - e] + dinf[y] - din[y + g] - dinh[y]) * cst2;
+                    }
+                }
+                // Last columns
+                for (x = c + lx - sx, nx = c + lx; x < nx; x += dx) {
+                    // Central part
+                    cst = 1 / (((c + lx - x + sx) / dx) * wy)
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = din[y - e] + din[c + lx - dx + y - x + sy] - din[c + lx - dx + y - x - sy - 1] - din[y + g];
+                        dout[y] *= cst;
+                    }
+                }
+                
+                // last rows
+                for (y = c + ly - sy, ny = c + ly; y < ny; y++) {
+                    // First columns
+                    for (x = y, nx = y + sx + dx; x < nx; x += dx) {
+                        dout[x] = din[x - y + c + ly - 1 + sx] - dinh[x];
+                        dout[x] /= ((x - y + sx) / dx + 1) * (sy + (ly - (y - c)));
+                    }
+                    cst = 1 / (wx * (sy + (ly - (y - c))));
+                    // Central columns
+                    for (x = y + sx + dx, nx = y + lx - sx; x < nx; x += dx) {
+                        dout[x] = din[x - y + c + ly - 1 + sx] - din[x - y + c + ly - 1 - sx - dx] + din[x - e] - dinh[x];
+                        dout[x] *= cst
+                    }
+                    // Last columns
+                    for (x = y + lx - sx, nx = y + lx; x < nx; x += dx) {
+                        dout[x] = din[c + lx - dx + ly - 1] + din[x - e] - din[c + x - y + ly - 1 - sx - dx] - din[c + lx - dx + y - c - sy - 1];
+                        dout[x] /= ((lx - (x - y) + sx) / dx) * (sy + (ly - (y - c)));
+                    }
+                }
+            } else {
+                // First columns
+                for (x = c, nx = c + sx + dx; x < nx; x += dx) {
+                    // First rows
+                    for (y = x, ny = x + sy + 1; y < ny; y++) {
+                        dout[y] = dinf[y]
+                        dout[y] /= ((x - c + sx) / dx + 1) * (sy + 1 + y - x);
+                    }
+                    // Central part
+                    cst = 1 / (((x - c + sx) / dx + 1) * wy)
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = dinf[y] - dinh[y];
+                        dout[y] *= cst;
+                    }
+                    // Last rows
+                    for (y = x + ly - sy, ny = x + ly; y < ny; y++) {
+                        dout[y] = din[x + ly - 1 + sx] - dinh[y];
+                        dout[y] /= ((x - c + sx) / dx + 1) * (sy + (x + ly - y));
+                    }
+                }
+                // Central part
+                for (x = c + sx + dx, nx = c + lx - sx; x < nx; x += dx) {
+                    // First rows
+                    for (y = x, ny = x + sy + 1; y < ny; y++) {
+                        dout[y] = dinf[y] - din[y + g];
+                        dout[y] /= wx * (sy + 1 + y - x);
+                    }
+                    // Central part
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = (din[y - e] + dinf[y] - din[y + g] - dinh[y]) * cst2;
+                    }
+                    // last rows
+                    for (y = x + ly - sy, ny = x + ly; y < ny; y++) {
+                        dout[y] = din[x + ly - 1 + sx] - din[x + ly - 1 - sx - dx] + din[y - e] - dinh[y];
+                        dout[y] /= wx * (sy + (x + ly - y));
+                    }
+                }
+                // Last columns
+                for (x = c + lx - sx, nx = c + lx; x < nx; x += dx) {
+                    // First rows
+                    for (y = x, ny = x + sy + 1; y < ny; y++) {
+                        dout[y] = din[c + lx - dx + y - x + sy] - din[y + g];
+                        dout[y] /= ((c + lx - x + sx) / dx) * (sy + 1 + y - x);
+                    }
+                    // Central part
+                    cst = 1 / (((c + lx - x + sx) / dx) * wy)
+                    for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
+                        dout[y] = din[y - e] + din[c + lx - dx + y - x + sy] - din[c + lx - dx + y - x - sy - 1] - din[y + g];
+                        dout[y] *= cst;
+                    }
+                    // last rows
+                    for (y = x + ly - sy, ny = x + ly; y < ny; y++) {
+                        dout[y] = din[c + lx + ly - dx - 1] - din[x + ly - 1 - sx - dx] + din[y - e] - din[c + lx - dx + y - x - sy - 1];
+                        dout[y] /= ((c + lx - x + sx) / dx) * (sy + (x + ly - y));
+                    }
                 }
             }
         }

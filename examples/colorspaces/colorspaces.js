@@ -50,7 +50,8 @@ function updateOutput(image) {
         var green_hist = image.select([], [], 1).imhist();
         var blue_hist = image.select([], [], 2).imhist();
         var grey_hist = image.rgb2gray().imhist();//blue_hist.min(green_hist);
-        var M = Math.max(red_hist.max(), green_hist.max(), blue_hist.max(), grey_hist.max());
+        var M = Math.max(red_hist.max().getDataScalar(), green_hist.max().getDataScalar(),
+                         blue_hist.max().getDataScalar(), grey_hist.max().getDataScalar());
         $("histogram").drawHistogram(red_hist.getData(), M, "", undefined, 'red');
         $("histogram").drawHistogram(green_hist.getData(), M, "", undefined, 'green', false);
         $("histogram").drawHistogram(blue_hist.getData(), M, "", undefined, 'blue', false);
