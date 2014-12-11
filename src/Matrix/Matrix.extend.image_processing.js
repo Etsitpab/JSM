@@ -1201,14 +1201,13 @@
      * @return {Matrix}
      */
     Matrix_prototype.fastBlur = function (sx, sy, k) {
-        k = k || 2;
+        k = k || 3;
         sy = sy || sx;
         var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1
         var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1
-        var imcum = this.im2double();
-        var imout = Matrix.zeros(imcum.getSize());
+        var imout = Matrix.zeros(this.getSize());
         // Iterator to scan the view
-        var view = imcum.getView();
+        var view = this.getView();
         var dc = view.getStep(2), lc = view.getEnd(2);
         var dx = view.getStep(1), lx = view.getEnd(1);
         var dy = view.getStep(0), ly = view.getEnd(0);
@@ -1302,6 +1301,101 @@
         return imout;
     };
 
+    /*
+    var getImageColumnArray = function (d, ly, lx, lc) {
+        var out = [], cols;
+        for (var c = 0, nc = lc * lx * ly ; c < nc;  c += lx * ly) {
+            cols = [];
+            out.push(cols);
+            for (var _x = c, x = 0; x < lx; x++, _x += ly) {
+                cols[x] = d.subarray(_x, _x + ly);
+            }
+        }
+        return out;
+    };
+
+    Matrix_prototype.fastBlur_2 = function (sx, sy, k) {
+
+
+        var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1
+        var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1
+        var sy = (wy / 2) | 0, sx = (wx / 2) | 0;
+
+        var imout = Matrix.zeros(this.getSize());
+
+        var lc = this.getSize(2), lx = this.getSize(1), ly = this.getSize(0); 
+
+        var channelIn, channelOut, colOut, colIn1, colIn2;
+        var c, x, y, nx, ny;
+        var imcum = this;
+        for (var p = 0; p < k; p++) {
+
+            imcum = imcum.im2double()
+            computeImageIntegral(imcum);
+            var dOut = imout.getData(), dIn = imcum.getData();
+            var columnsIn = getImageColumnArray(dIn, ly, lx, lc);
+            var columnsOut = getImageColumnArray(dOut, ly, lx, lc);
+            
+            for (c = 0; c < lc; c++) {
+                channelIn = columnsIn[c];
+                channelOut = columnsOut[c];
+                for (x = 0, nx = sx + 1; x < nx; x++) {
+                    colOut = channelOut[x];
+                    colIn2 = channelIn[x + sx];
+                    for (y = 0, ny = sy + 1; y < ny; y++) {
+                        colOut[y] = colIn2[y + sy];
+                        colOut[y] /= (sx + x + 1) * (sy + y + 1);
+                    }
+                    for (ny = ly - sy; y < ny; y++) {
+                        colOut[y] = colIn2[y + sy] - colIn2[y - sy - 1];
+                        colOut[y] /= (sx + x + 1) * wy;
+                    }
+                    for (; y < ly; y++) {
+                        colOut[y] = colIn2[ly - 1] - colIn2[y - sy - 1];
+                        colOut[y] /= (sx + x + 1) * (ly - y + sy);
+                    }
+                }
+                for (nx = lx - sx; x < nx; x++) {
+                    colOut = channelOut[x];
+                    colIn1 = channelIn[x - sx - 1];
+                    colIn2 = channelIn[x + sx];
+                    for (y = 0, ny = sy + 1; y < ny; y++) {
+                        colOut[y] = colIn2[y + sy] - colIn1[y + sy];
+                        colOut[y] /= wx * (sy + y + 1);
+                    }
+                    var cst = 1 / (wx * wy);
+                    for (ny = ly - sy; y < ny; y++) {
+                        colOut[y] = colIn2[y + sy] + colIn1[y - sy - 1] - colIn1[y + sy] - colIn2[y - sy - 1]
+                        colOut[y] *= cst;
+                    }
+                    for (; y < ly; y++) {
+                        colOut[y] = colIn2[ly - 1] + colIn1[y - sy - 1] - colIn1[ly - 1] - colIn2[y - sy - 1]
+                        colOut[y] /= wx * (ly - y + sy);
+                    }
+                }
+                for (; x < lx; x++) {
+                    colOut = channelOut[x];
+                    colIn1 = channelIn[x - sx - 1];
+                    colIn2 = channelIn[lx - 1];
+                    for (y = 0, ny = sy + 1; y < ny; y++) {
+                        colOut[y] = colIn2[y + sy] - colIn1[y + sy];
+                        colOut[y] /= (lx - x + sx) * (sy + y + 1);
+                    }
+                    for (ny = ly - sy; y < ny; y++) {
+                        colOut[y] = colIn2[y + sy] + colIn1[y - sy - 1] - colIn1[y + sy] - colIn2[y - sy - 1]
+                        colOut[y] /= (lx - x + sx) * wy;
+                    }
+                    for (; y < ly; y++) {
+                        colOut[y] = colIn2[ly - 1] + colIn1[y - sy - 1] - colIn1[ly - 1] - colIn2[y - sy - 1]
+                        colOut[y] /= (lx - x + sx) * (ly - y + sy);
+                    }
+                }
+            }
+            imcum = imout;
+        }
+        return imout;
+    };
+     */
     //////////////////////////////////////////////////////////////////
     //                          KERNEL TOOLS                        //
     //////////////////////////////////////////////////////////////////

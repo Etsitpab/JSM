@@ -10619,9 +10619,8 @@ var IT;
      * @return {Matrix}
      */
     Matrix_prototype.fastBlur = function (sx, sy, k) {
-        k = k || 2;
+        k = k || 3;
         sy = sy || sx;
-        console.log("TOTO");
         var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1
         var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1
         var imcum = this.im2double();

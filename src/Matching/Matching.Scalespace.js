@@ -130,7 +130,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
             for (i = 0; i < nScale; i++) {
                 var s = {};
                 s.sigma = sigmaInit * Math.pow(scaleRatio, i);
-                s.blur = image.gaussian(s.sigma);
+                s.blur = image.fastBlur(s.sigma);
+                //s.blur = image.gaussian(s.sigma);
                 //s.blur = image.fastGaussian(s.sigma);
                 s.gray = s.blur.rgb2gray();
                 s.gradient = s.gray.gradient(1, 1, 1, 1, 1);
@@ -210,9 +211,14 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     yD[j] *= yD[j];
                 }
                 var std = s[k].sigma * 1.4;
+                gradient.xy = gradient.xy.fastBlur(std);
+                gradient.x  = gradient.x.fastBlur(std);
+                gradient.y  = gradient.y.fastBlur(std);
+                /*
                 gradient.xy = gradient.xy.gaussian(std);
                 gradient.x  = gradient.x.gaussian(std);
                 gradient.y  = gradient.y.gaussian(std);
+                */
                 /*
                  gradient.xy = gradient.xy.fastGaussian(std);
                  gradient.x  = gradient.x.fastGaussian(std);
