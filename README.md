@@ -41,9 +41,11 @@ In the directory `./min/` you can find the minified version of the modules.
 
 ## Nodejs and npm
 
-There is not yet a specific package that can be install with `npm` but the modules `JSM.js` and `JSM.min.js` can be imported in nodejs script by using one of these instruction `var JSM = require('./<path to the modules>/module/JSM.js');` or `var JSM = require('./<path to the modules minified>/min/JSM.min.js');`.
+There is not yet a specific package that can be install with `npm` but the modules `JSM.js` and `JSM.min.js` can be imported in nodejs script by using one of these instruction :
+- `var JSM = require('./<path to the modules>/module/JSM.js');` ;
+- `var JSM = require('./<path to the modules minified>/min/JSM.min.js');`.
 
-To be able to read and write images you have to install npm canvas package. To this end, ensure that the following packages are installed (on Ubuntu/debian) :
+To be able to read and write images you have to install npm canvas package. To this end, ensure that the following packages are installed (on Ubuntu/Debian) :
 - node-legacy
 - libcairo2-dev
 - libgif-dev
