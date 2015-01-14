@@ -15,11 +15,13 @@ Many modules are developed
 * for image processing, such as filtering, FFT, image matching ;
 * for statistical processing ; ...
 
+A list of supported function may be found [here](http://etsitpab.github.io/JSM/#!/guide/functions).
+
 The inspiration is the well known [Matlab][1] software though there are some differences in the syntax we used. 
 
 [1]:http://www.mathworks.fr/products/matlab/
 
-# Documentation 
+# [Documentation](http://etsitpab.github.io/JSM/)
 
 The documentation can be consulted [here](http://etsitpab.github.io/JSM/). The code is documented using [jsduck](https://github.com/senchalabs/jsduck). Once it is installed just use the command `make doc`
 If you experience problem, be sure that you installed the ruby1.9-dev (or more recent) package and check this [page](https://github.com/senchalabs/jsduck/wiki/Installation).
@@ -39,9 +41,11 @@ In the directory `./min/` you can find the minified version of the modules.
 
 ## Nodejs and npm
 
-There is not yet a specific package that can be install with `npm` but the modules `JSM.js` and `JSM.min.js` can be imported in nodejs script by using one of these instruction `var JSM = require('./<path to the modules>/module/JSM.js');` or `var JSM = require('./<path to the modules minified>/min/JSM.min.js');`.
+There is not yet a specific package that can be install with `npm` but the modules `JSM.js` and `JSM.min.js` can be imported in nodejs script by using one of these instruction :
+- `var JSM = require('./<path to the modules>/module/JSM.js');` ;
+- `var JSM = require('./<path to the modules minified>/min/JSM.min.js');`.
 
-To be able to read and write images you have to install npm canvas package. To this end, ensure that the following packages are installed (on Ubuntu/debian) :
+To be able to read and write images you have to install npm canvas package. To this end, ensure that the following packages are installed (on Ubuntu/Debian) :
 - node-legacy
 - libcairo2-dev
 - libgif-dev
