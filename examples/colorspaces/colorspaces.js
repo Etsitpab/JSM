@@ -3,6 +3,21 @@
 
 var stack, stackIt, image, modules;
 
+var onclick, onmousewheel;
+
+var getPosition = function (e, event) {
+    'use strict';
+    var left = 0, top = 0;
+    while (e.offsetParent !== undefined && e.offsetParent !== null) {
+        left += e.offsetLeft + (e.clientLeft !== null ? e.clientLeft : 0);
+        top += e.offsetTop + (e.clientTop !== null ? e.clientTop : 0);
+        e = e.offsetParent;
+    }
+    left = -left + event.pageX;
+    top = -top + event.pageY;
+    return [left, top];
+};
+
 function exportImage() {
     "use strict";
     var output = stack[stackIt].image;
@@ -28,19 +43,19 @@ function exportImage() {
 
 function updateOutput(image) {
     "use strict";
+
     if (!stack) {
         return;
     }
     if (!(image instanceof Matrix)) {
         image = stack[stackIt].image;
     }
-    var outputCanvas = $("outputImage");
-    var div = $("image");
+    var outputCanvas = $("outputImage"), div = $("image");
     var canvasXSize = div.offsetWidth;
     var canvasYSize = div.offsetHeight;
+
     outputCanvas.width = canvasXSize;
     outputCanvas.height = canvasYSize;
-
     image.imshow(outputCanvas, "fit");
     outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
 
@@ -65,7 +80,10 @@ function updateOutput(image) {
 
 function initProcess () {
     "use strict";
-
+    if (!window.Disk) {
+        return;
+    }
+    
     var updateProcessList = function () {
         $("filters").innerHTML = "";
         var process = Disk.getItemList(".ps");
@@ -310,6 +328,42 @@ var thresholding = function () {
     $("applyThreshold").addEventListener("click", onApply);
     $("min").addEventListener("change", onChange);
     $("max").addEventListener("change", onChange);
+};
+
+var selection = function () {
+    "use strict";
+
+    var coord;
+    
+    selection.reset = function () {
+        $F("threshold", 0);
+        updateOutput();
+    };
+
+    var getParameters = function () {
+        return  {
+            threshold: $F("select_threshold"),
+            coord: coord
+        };
+    };
+    selection.fun = function (img, p) {
+	var cc = img.getConnectedComponent(p.coord[0], p.coord[1], p.threshold * 2);
+        return cc;
+    };
+    var onChange = function () {
+        change("selection", getParameters());
+    };
+
+    onclick = function (c) {
+        coord = c;
+        onChange();
+    };
+
+    onmousewheel = function (direction) {
+        console.log(direction);
+        $F("select_threshold", $F("select_threshold") + direction);
+        onChange();
+    };
 };
 
 var colorBalance = function () {
@@ -750,6 +804,7 @@ window.onload = function () {
         noise,
         filter,
         thresholding,
+        selection,
         colorspace,
         geometric,
         sharpening
@@ -783,9 +838,8 @@ window.onload = function () {
                 image = this.im2double()
                 stack[0] = {image: image};
                 updateOutput(image);
-
                 // Uncomment for working on visible image (lower resolution).
-                if ($V("workImage") == "visible") {
+                if ($V("workImage") === "visible") {
                     var outputCanvas = $("outputImage");
                     stack[0].image = Matrix.imread(outputCanvas).im2double();
                 }
@@ -819,5 +873,32 @@ window.onload = function () {
     document.body.onresize = updateOutput;
     hideFieldset();
     initProcess();
+
+    var canvas = $("outputImage");
+    var click = function (e) {
+        var coord = getPosition(canvas, e);
+        if (onclick instanceof Function) {
+            onclick.bind(this)(coord, e);
+        }
+    };
+    canvas.addEventListener("click", click);
+
+    var onMouseWheel = function (event) {
+        event.stopPropagation();
+        event.preventDefault();
+        var coord = getPosition(canvas, event);
+        var direction = 0;
+        if (event.hasOwnProperty('wheelDelta')) {
+            direction = -event.wheelDelta / 120.0;
+        } else {
+            direction = event.detail / 3.0;
+        }
+        if (onmousewheel instanceof Function) {
+            onmousewheel.bind(this)(direction * 0.01, coord, event);
+        }
+    };
+    canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
+    canvas.addEventListener('mousewheel', onMouseWheel, false);
+
 };
 

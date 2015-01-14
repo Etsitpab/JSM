@@ -811,7 +811,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
     // EXPORTS
     if (typeof window !== 'undefined') {
         root.extractModes = extractModes;
-        root.extractModes = extractGaps;
+        root.extractGaps = extractGaps;
         root.extravctModesAndGaps = extractModesAndGaps
     }
     

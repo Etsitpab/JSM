@@ -801,7 +801,7 @@
     /** 2D gaussian blur.
      *
      * __Also see:__
-     * {@link Matrix#fastGaussian}.
+     * {@link Matrix#fastBlur}.
      *
      * @param {Number} sigmaX
      *
@@ -862,81 +862,6 @@
         }
 
         return {x: x, y: y, norm: n, phase: p};
-    };
-    /** 2D Fast gaussian blur.
-     *
-     * @param {Number} sigmaX
-     *
-     * @param {Number} [sigmaY=sigmaX]
-     *
-     * @param {Integer} [numsteps=4]
-     *  High number increases the computational time as well as the
-     *  quality of the filtering.
-     *
-     * @return {Matrix}
-     *
-     * @todo Actually it should be faster.
-     */
-    Matrix_prototype.fastGaussian = function (sigmaX, sigmaY, numsteps) {
-
-        if (!sigmaY) {
-            sigmaY = sigmaX;
-        }
-        if (!numsteps) {
-            numsteps = 4;
-        }
-
-        if (sigmaX <= 0 || numsteps < 1) {
-            throw new Error('Matrix.fastGaussian: sigma and' +
-                            ' numsteps values have to be positives');
-        }
-
-        var filter = function (imOut, sigma) {
-            var dataOut = imOut.getData();
-
-            var lambda = (sigma * sigma) / (2 * numsteps);
-            var nu = (1 + 2 * lambda - Math.sqrt(1 + 4 * lambda)) / (2 * lambda);
-            var boundaryscale = 1 / (1 - nu);
-            var postscale = Math.pow(nu / lambda, numsteps);
-            var c, x;
-
-            var f = function (data, l) {
-                var y, ey, step;
-                for (step = 0; step < numsteps; step++) {
-                    data[0] *= boundaryscale;
-                    // Filter rightwards
-                    for (y = 1; y < l; y++) {
-                        data[y] += nu * data[y - 1];
-                    }
-                    data[l - 1] *= boundaryscale;
-                    // Filter leftwards
-                    for (y--; y > 0; y--) {
-                        data[y - 1] += nu * data[y];
-                    }
-                }
-                for (y = 0, ey = l; y < ey; y++) {
-                    data[y] *= postscale;
-                }
-            };
-
-            // Iterator to scan the view
-            var view = imOut.getView();
-            var dc = view.getStep(2), lc = view.getEnd(2);
-            var dx = view.getStep(1), lx = view.getEnd(1);
-            var ly = view.getEnd(0);
-
-            var nx;
-            for (c = 0; c !== lc; c += dc) {
-                for (x = c, nx = c + lx; x !== nx; x += dx) {
-                    var data = dataOut.subarray(x);
-                    f(data, ly);
-                }
-            }
-            return imOut;
-        };
-
-        var imOut = filter(this.getCopy(), sigmaX).permute([1, 0, 2]);
-        return filter(imOut, sigmaY).permute([1, 0, 2]);
     };
     /** Compute various differential operators on an image
      * with discret schemes.
@@ -1031,68 +956,6 @@
         }
 
         return gradient;
-    };
-
-    Matrix_prototype.fastGaussian = function (sigmaX, sigmaY, numsteps) {
-
-        if (!sigmaY) {
-            sigmaY = sigmaX;
-        }
-        if (!numsteps) {
-            numsteps = 4;
-        }
-
-        if (sigmaX <= 0 || numsteps < 1) {
-            throw new Error('Matrix.fastGaussian: sigma and' +
-                            ' numsteps values have to be positives');
-        }
-
-        var filter = function (imOut, sigma) {
-            var dataOut = imOut.getData();
-
-            var lambda = (sigma * sigma) / (2 * numsteps);
-            var nu = (1 + 2 * lambda - Math.sqrt(1 + 4 * lambda)) / (2 * lambda);
-            var boundaryscale = 1 / (1 - nu);
-            var postscale = Math.pow(nu / lambda, numsteps);
-            var c, x;
-
-            var f = function (data, l) {
-                var y, ey, step;
-                for (step = 0; step < numsteps; step++) {
-                    data[0] *= boundaryscale;
-                    // Filter rightwards
-                    for (y = 1; y < l; y++) {
-                        data[y] +=  nu * data[y - 1];
-                    }
-                    data[l - 1] *= boundaryscale;
-                    // Filter leftwards
-                    for (y--; y > 0; y--) {
-                        data[y - 1] += nu * data[y];
-                    }
-                }
-                for (y = 0, ey = l; y < ey; y++) {
-                    data[y] *= postscale;
-                }
-            };
-
-            // Iterator to scan the view
-            var view = imOut.getView();
-            var dc = view.getStep(2), lc = view.getEnd(2);
-            var dx = view.getStep(1), lx = view.getEnd(1);
-            var ly = view.getEnd(0);
-
-            var nx;
-            for (c = 0; c !== lc; c += dc) {
-                for (x = c, nx = c + lx; x !== nx; x += dx) {
-                    var data = dataOut.subarray(x);
-                    f(data, ly);
-                }
-            }
-            return imOut;
-        };
-
-        var imOut = filter(this.getCopy(), sigmaX).permute([1, 0, 2]);
-        return filter(imOut, sigmaY).permute([1, 0, 2]);
     };
 
     /** Performs an 1D convolution between two vectors.
@@ -1192,9 +1055,12 @@
         }
     };
 
-    /** Bluring based box filtering. allow to compute block average.
+    /** Gaussian bluring based on box filtering. 
+     * It computes a fast approximation of gaussian blur 
+     * in constant time.
      *
      * @param {Number} sigmaX
+     *  Standard deviation of the gausian.
      * @param {Number} [sigmaY=sigmaX]
      * @param {Number} [k=2]
      *  Number of times than the image is boxfiltered.
@@ -1396,6 +1262,7 @@
         return imout;
     };
      */
+    
     //////////////////////////////////////////////////////////////////
     //                          KERNEL TOOLS                        //
     //////////////////////////////////////////////////////////////////
@@ -1754,7 +1621,7 @@
 
     /** Transform a RGB image to a gray level image.
      *
-     * @chainablec
+     * @chainable
      * @matlike
      */
     Matrix_prototype.rgb2gray = function () {
@@ -1796,6 +1663,263 @@
     };
 
 })(Matrix, Matrix.prototype);
+
+
+//////////////////////////////////////////////////////////////////
+//                  REGION AND IMAGE PROPERTIES                 //
+//////////////////////////////////////////////////////////////////
+
+
+(function () {
+
+    var Node = function (x, y, parent) {
+        this.x = x;
+        this.y = y;
+	this.parent = parent;
+    };
+    Node.prototype.initChildren = function (w, h) {
+        var x = this.x, y = this.y;
+        if (y + 1 < h) {
+	    this.top = new Node(x, y + 1, this);
+        }
+        if (y - 1 >= 0) {
+	    this.bottom = new Node(x, y - 1, this);
+        }
+        if (x + 1 < w) {
+	    this.left = new Node(x + 1, y, this);
+        }
+        if (x - 1 >= 0) {
+	    this.right = new Node(x - 1, y, this);
+        }
+    }; 
+    Node.prototype.remove = function (n) {
+        if (this.bottom === n) {
+            this.bottom = undefined;
+        } else if (this.top === n) {
+            this.top = undefined;
+        } else if (this.right === n) {
+            this.right = undefined;
+        } else if (this.left === n) {
+            this.left = undefined;
+        }
+        return this;
+    }
+    Node.prototype.getNext = function () {
+        if (this.top) {
+	    return this.top;
+        }
+        if (this.bottom) {
+	    return this.bottom;
+        }
+        if (this.left) {
+	    return this.left;
+        }
+        if (this.right) {
+	    return this.right;
+        }
+        if (this.parent) {
+            return this.parent.remove(this).getNext();
+        }
+        return undefined;
+    };
+    
+    /** From an image and a pixel request select neighbour pixels with a similar values
+     * (RGB or grey level).
+     * @param{Number} xRef 
+     *  x coordinate of the pixel.
+     * @param{Number} yRef 
+     *  x coordinate of the pixel.
+     * @param{Number} t 
+     *  threshold on the distance
+     * @return{Matrix}
+     *  Return a Matrix with boolean values.
+     */
+    Matrix.prototype.getConnectedComponent = function (xRef, yRef, t) {
+        'use strict';
+        
+        // Get image height, width and depth
+        var h = this.getSize(0), w = this.getSize(1), d = this.getSize(2);
+        
+        // Squared threshold
+        var t2 = t * t;
+        
+        // Connected component and visited pixels
+        var cc = new Matrix([h, w], 'logical'), isVisited = new Matrix([h, w], 'logical');
+        var ccd = cc.getData(), imd = this.getData(), ivd = isVisited.getData();
+
+        // For debug, has to be removed
+        window.CC = cc;
+        window.IV = isVisited;
+
+        var cRef = yRef + h * xRef;
+        var compare_pixels;
+        if (d === 1) {
+            if (this.type() === "logical") {
+                
+            } else  {
+	        // Grey value of pixel request
+	        var v = imd[cRef];
+	        compare_pixels = function (c) {
+	            var dTmp = imd[c] - v;
+	            return dTmp * dTmp < t2;
+	        };
+            }
+        } else if (d === 3) {
+	    // RGB values of pixel request
+	    var rRef = imd[cRef], gRef = imd[cRef + h * w], bRef = imd[cRef + h * w * 2];
+	    // Image channel subarrays
+	    var rd = imd, gd = imd.subarray(h * w), bd = imd.subarray(h * w * 2);
+	    compare_pixels = function (c) {
+	        var dTmp1 = rd[c] - rRef, dTmp2 = gd[c] - gRef, dTmp3 = bd[c] - bRef;
+	        return dTmp1 * dTmp1 + dTmp2 * dTmp2 + dTmp3 * dTmp3 < t2;
+	    };
+        } else {
+	    throw new Error("Matrix.getConnectedComponent: This function only support " +
+                            "images with depth 1 or 3.");
+        }
+
+        var root = new Node(xRef, yRef), current = root;
+        
+        while (current !== undefined) {
+            var x = current.x, y = current.y, c = y + h * x;
+            
+	    if (ivd[c] === 1) {
+	        current = current.parent.remove(current).getNext();
+                continue;
+	    }
+	    ivd[c] = 1;
+	    if (compare_pixels(c)) {
+	        ccd[c] = 1;
+                current.initChildren(w, h);
+	    }
+            current = current.getNext();
+        }
+
+        return cc;
+    };
+
+    Matrix.prototype.bwconncomp = function () {};
+    
+})();
+
+
+//////////////////////////////////////////////////////////////////
+//                   MORPHOLOGICAL OPERATIONS                   //
+//////////////////////////////////////////////////////////////////
+
+
+(function (Matrix, Matrix_prototype) {
+    "use strict";
+    /**
+     * Perform an image dilation with a square element.
+     * @param{Number} size
+     *  Size of the structuring element
+     * @return{Matrix}
+     */
+    Matrix_prototype.imdilate = function (FS) {
+        var h = this.getSize(1), w = this.getSize(0), d = this.getSize(2), id = this.getData();
+        var out = new Matrix(this.getSize(), this.type()), od = out.getData();
+        
+        // Half filter size
+        var FS2 = FS >> 1;
+        
+        // Loop start (S) and end (E) indices
+        var yS = [0, 0, 0, FS2, FS2, FS2, h - FS2, h - FS2, h - FS2],
+	    xS = [0, FS2, w - FS2, 0, FS2, w - FS2, 0, FS2, w - FS2],
+	    yE = [FS2, FS2, FS2, h - FS2, h - FS2, h - FS2, h, h, h],
+	    xE = [FS2, w - FS2, w, FS2, w - FS2, w, FS2, w - FS2, w],
+	    jyS = [0, 0, 0, 1, 1, 1, 1, 1, 1],
+	    ixS = [0, 1, 1, 0, 1, 1, 0, 1, 1],
+	    jyE = [1, 1, 1, 1, 1, 1, 0, 0, 0],
+	    ixE = [1, 1, 0, 1, 1, 0, 1, 1, 0],
+	    jS = [0, 0, 0, -FS2, -FS2, -FS2, -FS2, -FS2, -FS2],
+	    iS = [0, -FS2, -FS2, 0, -FS2, -FS2, 0, -FS2, -FS2],
+	    jE = [FS2, FS2, FS2, FS2, FS2, FS2, h, h, h],
+	    iE = [FS2, FS2, w, FS2, FS2, w, FS2, FS2, w];
+        
+        // Loop indices
+        var l, x, y, _y, xy, i, j, _j, ij;
+        
+        // Loop end indices
+        var xe, ye, ie, je;
+        var c, ce;
+        for (c = 0, ce = id.length; c < ce; c += w * h) {
+            var idc = id.subarray(c, c + w * h);
+            var odc = od.subarray(c, c + w * h);
+            for (l = 0; l < 9; l++) {
+	        for (y = yS[l], ye = yE[l], _y = w * y; y < ye; y++, _y += w) {
+	            for (x = xS[l], xe = xE[l], xy = x + _y; x < xe; x++, xy++) {
+		        var max = 0;
+		        for (j = (jyS[l] ? y : 0) + jS[l], je = (jyE[l] ? y : 0) + jE[l], _j = j * w; j < je; j++, _j += w) {
+		            for (i = (ixS[l] ? x : 0) + iS[l], ie = (ixE[l] ? x : 0) + iE[l], ij = i + _j; i < ie; i++, ij++) {
+                      	        if (idc[ij] > max) {
+			            max = idc[ij];
+			        }
+                            }
+		        }
+	                odc[xy] = max;
+	            }
+	        }
+            }
+        }
+        return out;
+    };
+    /**
+     * Perform an image erosion with a square element.
+     * @param{Number} size
+     *  Size of the structuring element
+     * @return{Matrix}
+     */
+    Matrix_prototype.imerode = function (FS) {
+        var h = this.getSize(1), w = this.getSize(0), id = this.getData();
+        var out = new Matrix(this.getSize(), this.type()), od = out.getData();
+        
+        // Half filter size
+        var FS2 = FS >> 1;
+        
+        // Loop start (S) and end (E) indices
+        var yS = [0, 0, 0, FS2, FS2, FS2, h - FS2, h - FS2, h - FS2],
+	    xS = [0, FS2, w - FS2, 0, FS2, w - FS2, 0, FS2, w - FS2],
+	    yE = [FS2, FS2, FS2, h - FS2, h - FS2, h - FS2, h, h, h],
+	    xE = [FS2, w - FS2, w, FS2, w - FS2, w, FS2, w - FS2, w],
+	    jyS = [0, 0, 0, 1, 1, 1, 1, 1, 1],
+	    ixS = [0, 1, 1, 0, 1, 1, 0, 1, 1],
+	    jyE = [1, 1, 1, 1, 1, 1, 0, 0, 0],
+	    ixE = [1, 1, 0, 1, 1, 0, 1, 1, 0],
+	    jS = [0, 0, 0, -FS2, -FS2, -FS2, -FS2, -FS2, -FS2],
+	    iS = [0, -FS2, -FS2, 0, -FS2, -FS2, 0, -FS2, -FS2],
+	    jE = [FS2, FS2, FS2, FS2, FS2, FS2, h, h, h],
+	    iE = [FS2, FS2, w, FS2, FS2, w, FS2, FS2, w];
+        
+        // Loop indices
+        var l, x, y, _y, xy, i, j, _j, ij;
+        
+        // Loop end indices
+        var xe, ye, ie, je;
+        var c, ce;
+        for (c = 0, ce = id.length; c < ce; c += w * h) {
+            var idc = id.subarray(c);
+            var odc = od.subarray(c);
+            for (l = 0; l < 9; l++) {
+	        for (y = yS[l], ye = yE[l], _y = w * y; y < ye; y++, _y += w) {
+	            for (x = xS[l], xe = xE[l], xy = x + _y; x < xe; x++, xy++) {
+		        var min = Infinity;
+		        for (j = (jyS[l] ? y : 0) + jS[l], je = (jyE[l] ? y : 0) + jE[l], _j = j * w; j < je; j++, _j += w) {
+		            for (i = (ixS[l] ? x : 0) + iS[l], ie = (ixE[l] ? x : 0) + iE[l], ij = i + _j; i < ie; i++, ij++) {
+                      	        if (idc[ij] < min) {
+			            min = idc[ij];
+			        }
+                            }
+		        }
+	                odc[xy] = min;
+	            }
+	        }
+            }
+        }
+        return out;
+    };
+})(Matrix, Matrix.prototype);
+
 
 //////////////////////////////////////////////////////////////////
 //                 FAST FOURIER TRANSFORM MODULE                //

@@ -122,7 +122,6 @@ var run = function() {
     };
     var computeSift = function () {
         Matching.Descriptor.prototype.distance = $("distance").value;
-
         Matching.Keypoint.prototype.descriptors = ds;
         Matching.Keypoint.prototype.criterion = "NN-DR";
         Matching.ScaleSpace.prototype.harrisThresh = $F("harris");

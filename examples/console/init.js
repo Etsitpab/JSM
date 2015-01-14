@@ -31,12 +31,39 @@ function include(jsFile) {
 }
 
 // Ajout d'une zone d'affichage
-function createCanvas(size, id) {
+function createCanvas(size, id, onclick) {
     'use strict';
     var canvas = document.createElement("canvas");
     canvas.id = id || "id";
     canvas.height = size[0];
     canvas.width = size[1];
+
+    var getPosition = function (e, event) {
+        var left = 0;
+        var top = 0;
+        
+        // Tant que l'on a un élément parent
+        while (e.offsetParent !== undefined && e.offsetParent !== null) {
+	    // On ajoute la position de l'élément parent
+            left += e.offsetLeft + (e.clientLeft !== null ? e.clientLeft : 0);
+            top += e.offsetTop + (e.clientTop !== null ? e.clientTop : 0);
+            e = e.offsetParent;
+        }
+        
+        left = -left + event.pageX;
+        top = -top + event.pageY;
+        
+        return [left, top];
+    };
+    
+    if (onclick instanceof Function) {
+        var click = function (e) {
+            var coord = getPosition(canvas, e);
+            onclick.bind(this)(coord, e);
+        };
+        canvas.addEventListener("click", click);
+    }
+    
     $("tableCanvas").appendChild(canvas);
     return canvas.id;
 }
