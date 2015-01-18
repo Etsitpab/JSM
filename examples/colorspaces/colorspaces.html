@@ -279,6 +279,27 @@
             <input type="button" value="Apply" id="applySharp">
             <input type="button" value="Reset" id="resetSharp"/>
           </fieldset>
+
+          <fieldset>
+            <legend>Morphological filtering</legend>
+            <label>Structuring element </label>
+            <label>Operation</label>
+            <select id="morphOp">
+              <option value="imdilate"> DILATATION </option>
+              <option value="imerode"> EROSION </option>
+              <option value="imopen"> OPENING </option>
+              <option value="imclose"> CLOSING </option>
+            </select>
+            <select id="strElem">
+              <option value="square"> SQUARE </option>
+              <option value="circle"> CIRCLE </option>
+            </select>
+            <label>size</label>
+            <input type="range" id="strElemSize" min="0" step="0.05" max="1" value="0"/>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyMorph"/>
+            <input type="button" value="Reset" id="resetMorph"/>
+          </fieldset>
           
         </div>
 

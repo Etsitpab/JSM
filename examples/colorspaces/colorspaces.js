@@ -590,7 +590,7 @@ var filter = function () {
             img = img.fastBlur(p.gaussian * 50);
         }
         if (p.bilateral_sigma_s > 0 && p.bilateral_sigma_i > 0) {
-            img = img.bilateral(p.bilateral_sigma_s * 5, 1 / (101 - p.bilateral_sigma_i * 100), 3);
+            img = img.imbilateral(p.bilateral_sigma_s * 10, 1 / (101 - p.bilateral_sigma_i * 100), 1.5);
         }
         if (p.filter !== "none") {
             img = img.filter(Matrix.fspecial(p.filter));
@@ -793,6 +793,54 @@ var colorspace = function () {
     $("resetColorspace").addEventListener("click", colorspace.reset);
 };
 
+var morphology = function () {
+    "use strict";
+
+    filter.reset = function () {
+        $F("strElemSize", 0);
+        $V("morphOp").getElementsByTagName("option")[0].selected = "selected";
+        $V("strElem").getElementsByTagName("option")[0].selected = "selected";
+        updateOutput();
+    };
+
+    var getParameters = function () {
+       return {
+           operation: $V("morphOp"),
+           strElem: $V("strElem"),
+           strElemSize: $F("strElemSize") 
+       };
+    };
+    
+    morphology.fun = function (img, p) {
+        console.log(p);
+        var s = Math.round(p.strElemSize * 12.5) * 2 + 1;
+        if (s > 0) {
+            var strElem;
+            if (p.strElem === "square") {
+  	        strElem = Matrix.ones(s, 'logical');
+            } else if (p.strElem === "circle") {
+                var Y = Matrix.ones(s).cumsum(0)["-"]((s >> 1) + 1);
+  	        strElem = Y[".^"](2)["+"](Y.transpose()[".^"](2))[".^"](0.5)["<="](s >> 1);
+            } 
+            img = img[p.operation](strElem);
+        }
+        return img;
+    };
+    var onChange = function () {
+        change("morphology", getParameters());
+    };
+    var onApply = function () {
+        apply("morphology", getParameters());
+        filter.reset();
+    };
+
+    $("applyMorph").addEventListener("click", onApply);
+    $("resetMorph").addEventListener("click", filter.reset);
+    $("morphOp").addEventListener("change", onChange);
+    $("strElem").addEventListener("change", onChange);
+    $("strElemSize").addEventListener("change", onChange);
+};
+
 window.onload = function () {
     "use strict";
     modules =  [
@@ -807,6 +855,7 @@ window.onload = function () {
         selection,
         colorspace,
         geometric,
+        morphology,
         sharpening
     ];
 
