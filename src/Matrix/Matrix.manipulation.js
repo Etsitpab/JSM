@@ -249,11 +249,11 @@
         }
 
         // Output coarse iterator
-        var io, ito  = ov.getIterator(0), bo = ito.begin, eo = ito.isEnd;
-
+        var iter = ov.getIterator(0);
+        var io, ito = iter.iterator, bo = iter.begin, eo = iter.isEnd;
         for (io = bo(); !eo(); io = ito()) {
             // Ouput subiterator
-            var sov = om.getView(), pos = ito.getPosition();
+            var sov = om.getView(), pos = iter.getPosition();
             // Output fine view arrangement
             for (i = 0, ie = size.length; i < ie; i++) {
                 var sTmp = iSize[i] || 1, tmp = pos[i] * sTmp;
