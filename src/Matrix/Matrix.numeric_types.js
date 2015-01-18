@@ -37,11 +37,14 @@
         case 'bool':
         case "logical":
             flag = true;
+            break;
+        default:
+            flag = false;
         }
 
         Type = Tools.checkType(Type);
         var od = new Type(this.getData());
-        return new Matrix(this.getSize(), od, undefined, flag);
+        return new Matrix(this.getSize(), od, !this.isreal(), flag);
     };
 
     /** Converts a new Matrix to double.
