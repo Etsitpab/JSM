@@ -41,7 +41,7 @@
 
         Type = Tools.checkType(Type);
         var od = new Type(this.getData());
-        return new Matrix(this.getSize(), od, undefined, true);
+        return new Matrix(this.getSize(), od, undefined, flag);
     };
 
     /** Converts a new Matrix to double.
