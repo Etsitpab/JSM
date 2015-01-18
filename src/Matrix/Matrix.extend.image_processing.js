@@ -245,7 +245,7 @@
     /** Return some kernels.
      *
      * __Also see:__
-     * {@link Matrix#filter}
+     * {@link Matrix#imfilter}
      *
      * @param {String} type
      *  Can be 'average', 'disk', 'gaussian', 'log', 'unsharp', 'prewitt'
@@ -723,6 +723,8 @@
         var dx = view.getStep(1), lx = view.getEnd(1);
         var ly = view.getEnd(0);
 
+        sy = (wy / 2) | 0;
+        sx = ((wx / 2) | 0) * dx;
         var sx2 = ((wx / 2) | 0);
 
 	var nx, ny, c, x, y, y_, yx;
@@ -818,9 +820,7 @@
     //////////////////////////////////////////////////////////////////
 
 
-    /**
-     * Holds kernels generation for filtering.
-     *
+    /** Holds kernels generation for filtering.
      * @private
      */
     var Kernel = {};
@@ -1449,26 +1449,41 @@
         return out;
     };
 
-    /**
-     * Perform an image dilation with a given structuring element.
+    /** Perform an image dilation with a given structuring element.
+     *
+     * __Also see:__
+     * {@link Matrix#imerode},
+     * {@link Matrix#imopen},
+     * {@link Matrix#imclose}.
      * @param{Matrix} elem
      *  The structuring element
      * @return{Matrix}
+     * @matlike
      */
     Matrix_prototype.imdilate = function (mask) {
         return applyFilter(this, mask, f_dilate);
     };
-    /**
-     * Perform an image erosion with a given structuring element.
+    /** Perform an image erosion with a given structuring element.
+     *
+     * __Also see:__
+     * {@link Matrix#imdilate},
+     * {@link Matrix#imopen},
+     * {@link Matrix#imclose}.
      * @param{Matrix} elem
      *  The structuring element
      * @return{Matrix}
+     * @matlike
      */
     Matrix_prototype.imerode = function (mask) {
         return applyFilter(this, mask, f_erode);
     };
-    /**
-     * Perform an image opening with a given structuring element.
+    /** Perform an image opening with a given structuring element.
+     *
+     * __Also see:__
+     * {@link Matrix#imdilate},
+     * {@link Matrix#imerode},
+     * {@link Matrix#imclose}.
+     *
      * @param{Matrix} elem
      *  The structuring element
      * @return{Matrix}
@@ -1476,20 +1491,26 @@
     Matrix_prototype.imopen = function (mask) {
         return applyFilter(applyFilter(this, mask, f_erode), mask, f_dilate);
     };
-    /**
-     * Perform an image closing with a given structuring element.
+    /** Perform an image closing with a given structuring element.
+     *
+     * __Also see:__
+     * {@link Matrix#imdilate},
+     * {@link Matrix#imerode},
+     * {@link Matrix#imopen}.
+     *
      * @param{Matrix} elem
      *  The structuring element
      * @return{Matrix}
+     * @matlike
      */
     Matrix_prototype.imclose = function (mask) {
         return applyFilter(applyFilter(this, mask, f_dilate), mask, f_erode);
     };
-    /**
-     * Filter an image.
+    /** Filter an image.
      * @param{Matrix} filter
      *  The filter to apply (2D kernel).
      * @return{Matrix}
+     * @matlike
      * @todo should check if the kernel is separable with an SVD.
      */
     Matrix_prototype.imfilter = function (mask) {
@@ -1498,7 +1519,7 @@
     /** Bilateral filtering.
      *
      * __Also see:__
-     * {@link Matrix#filter}.
+     * {@link Matrix#imfilter}.
      *
      * @param {Number} sigma_s
      *  Value for spacial sigma.
@@ -1529,8 +1550,7 @@
             return val / sum;
         };
         return applyFilter(this, mask, f_bilat);
-    };
-
+    }
 })(Matrix, Matrix.prototype);
 
 
