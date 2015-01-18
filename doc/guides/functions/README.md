@@ -158,13 +158,16 @@
 ### Image filtering
 
 + {@link Matrix#fspecial}
-+ {@link Matrix#filter}
-+ {@link Matrix#filter1d}
++ {@link Matrix#imfilter}
 + {@link Matrix#separableFilter}
 + {@link Matrix#gaussian}
 + {@link Matrix#gaussianGradient}
-+ {@link Matrix#fastGaussian}
++ {@link Matrix#fastBlur}
 + {@link Matrix#gradient}
++ {@link Matrix#imerode}
++ {@link Matrix#imdilate}
++ {@link Matrix#imopen}
++ {@link Matrix#imclose}
 
 ### Color image processing
 
