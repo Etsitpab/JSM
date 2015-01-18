@@ -9645,7 +9645,7 @@ var IT;
             } else {
                 throw new Error("Matrix.imwrite: invalid file extension.");
             }
-            stream.on('data', function(chunk) {
+            stream.on('data', function (chunk) {
                 out.write(chunk);
             });
             if (callback) {
@@ -9767,346 +9767,6 @@ var IT;
         default:
             return;
         }
-    };
-    /** 2D filtering.
-     *
-     * __Also see:__
-     * {@link Matrix#separableFilter}.
-     *
-     * @param {Matrix} 2D kernel
-     *
-     * @return {Matrix}
-     *
-     * @todo should check if the kernel is separable with an SVD.
-     */
-    Matrix_prototype.filter = function (K) {
-
-        // 1. ARGUMENTS
-        var errMsg = 'Matrix.filter: ';
-
-
-        if (!K.ismatrix()) {
-            throw new Error(errMsg + "Kernel must be a vector.");
-        }
-
-        // 2. Filtering
-        var output = new Matrix(this.getSize(), this.getDataType());
-        var id = this.getData(), od = output.getData();
-
-        // Iterator to scan the view
-        var view = output.getView();
-        var dc = view.getStep(2), lc = view.getEnd(2);
-        var dx = view.getStep(1), lx = view.getEnd(1);
-        var ly = view.getEnd(0);
-
-        var nky = K.getSize(0), nkx = K.getSize(1), kd = K.getData();
-        var viewK = K.getView();
-        var kdx = viewK.getStep(1), klx = viewK.getEnd(1);
-        var kly = viewK.getEnd(0);
-
-        var floor = Math.floor, ceil = Math.ceil;
-        var xstart = floor((nkx - 1) / 2), ystart = floor((nky - 1) / 2);
-        var xstop = ceil((nkx - 1) / 2), ystop = ceil((nky - 1) / 2);
-
-        /*
-         if (xstart >= lx / 2 || ystart >= ly / 2) {
-         throw new Error(errMsg + 'Kernel is too large.');
-         }
-         */
-
-        var sum;
-        var c, x, _x, nx, y, yx, ny, j, ij, kx, k_x, kyx, knx, kny;
-        for (c = 0; c !== lc; c += dc) {
-
-            for (x = 0, _x = c, nx = c + xstart * dx; _x !== nx; x++, _x += dx) {
-
-                for (y = 0, yx = _x, ny = _x + ystart; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = c, kx = xstart - x, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j, kyx = k_x + ystart - y, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-                for (ny = _x + ly - ystop; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = c, kx = xstart - x, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-                for (ny = _x + ly; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = c, kx = xstart - x, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, nky =  k_x + kly + (ly - (y + ystop + 1)); kyx !== nky; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-            }
-            for (nx = c + lx - xstop * dx; _x !== nx; x++, _x += dx) {
-                for (y = 0, yx = _x, ny = _x + ystart; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j, kyx = k_x + ystart - y, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-                for (ny = _x + ly - ystop; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-                for (ny = _x + ly; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, nky =  k_x + kly + (ly - (y + ystop + 1)); kyx !== nky; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-            }
-
-            for (nx = c + lx; _x !== nx; x++, _x += dx) {
-                for (y = 0, yx = _x, ny = _x + ystart; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = 0, knx = klx + (lx / dx - (x + xstop + 1)) * kdx; k_x !== knx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j, kyx = k_x + ystart - y, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-                for (ny = _x + ly - ystop; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = 0, knx = klx + (lx / dx - (x + xstop + 1)) * kdx; k_x !== knx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-                for (ny = _x + ly; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = 0, knx = klx + (lx / dx - (x + xstop + 1)) * kdx; k_x !== knx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, nky =  k_x + kly + (ly - (y + ystop + 1)); kyx !== nky; kyx++, ij++) {
-                            sum += id[ij] * kd[kyx];
-                        }
-                    }
-                    od[yx] = sum;
-                }
-            }
-        }
-        // Return the result
-        return output;
-    };
-
-    /** Bilateral filtering.
-     *
-     * __Also see:__
-     * {@link Matrix#filter}.
-     *
-     * @param {Number} sigma_s
-     *  Value for spacial sigma.
-     *
-     * @param {Number} sigma_i
-     *  Value for intensity sigma.
-     *
-     * @param {Number} [precision=3]
-     *  used to compute the window size (size = precision * sigma_s).
-     *
-     * @return {Matrix}
-     */
-    Matrix_prototype.bilateral = function (sigma_s, sigma_i, prec) {
-
-        // 1. ARGUMENTS
-        var errMsg = 'Matrix.filter: ';
-
-        var prec = prec || 3;
-        var K = Matrix.fspecial('gaussian', Math.round(prec * sigma_s), sigma_s);
-        var cst = -1 / (2 * sigma_i);
-
-        if (!K.ismatrix()) {
-            throw new Error(errMsg + "Kernel must be a vector.");
-        }
-
-        // 2. Filtering
-        var output = new Matrix(this.getSize(), this.getDataType());
-        var id = this.getData(), od = output.getData();
-
-        // Iterator to scan the view
-        var view = output.getView();
-        var dc = view.getStep(2), lc = view.getEnd(2);
-        var dx = view.getStep(1), lx = view.getEnd(1);
-        var ly = view.getEnd(0);
-
-        var nky = K.getSize(0), nkx = K.getSize(1), kd = K.getData();
-        var viewK = K.getView();
-        var kdx = viewK.getStep(1), klx = viewK.getEnd(1);
-        var kly = viewK.getEnd(0);
-
-        var floor = Math.floor, ceil = Math.ceil;
-        var xstart = floor((nkx - 1) / 2), ystart = floor((nky - 1) / 2);
-        var xstop = ceil((nkx - 1) / 2), ystop = ceil((nky - 1) / 2);
-
-        /*
-         if (xstart >= lx / 2 || ystart >= ly / 2) {
-         throw new Error(errMsg + 'Kernel is too large.');
-         }
-         */
-        var exp = Math.exp;
-        var sum;
-        var c, x, _x, nx, y, yx, ny, j, ij, kx, k_x, kyx, knx, kny, v, val, weight, tmp;
-        for (c = 0; c !== lc; c += dc) {
-
-            for (x = 0, _x = c, nx = c + xstart * dx; _x !== nx; x++, _x += dx) {
-
-                for (y = 0, yx = _x, ny = _x + ystart; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = c, kx = xstart - x, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j, kyx = k_x + ystart - y, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-                for (ny = _x + ly - ystop; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = c, kx = xstart - x, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-                for (ny = _x + ly; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = c, kx = xstart - x, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, nky =  k_x + kly + (ly - (y + ystop + 1)); kyx !== nky; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-            }
-            for (nx = c + lx - xstop * dx; _x !== nx; x++, _x += dx) {
-                for (y = 0, yx = _x, ny = _x + ystart; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j, kyx = k_x + ystart - y, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-                for (ny = _x + ly - ystop; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-                for (ny = _x + ly; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = kx * kdx; k_x !== klx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, nky =  k_x + kly + (ly - (y + ystop + 1)); kyx !== nky; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-            }
-
-            for (nx = c + lx; _x !== nx; x++, _x += dx) {
-                for (y = 0, yx = _x, ny = _x + ystart; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = 0, knx = klx + (lx / dx - (x + xstop + 1)) * kdx; k_x !== knx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j, kyx = k_x + ystart - y, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-                for (ny = _x + ly - ystop; yx !== ny; y++, yx++) {
-                    sum = 0;
-                    val = 0;
-                    v = id[yx];
-                    for (j = _x - xstart * dx, kx = 0, k_x = 0, knx = klx + (lx / dx - (x + xstop + 1)) * kdx; k_x !== knx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, kny = k_x + kly; kyx !== kny; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-                for (ny = _x + ly; yx !== ny; y++, yx++) {
-                    v = id[yx];
-                    sum = 0;
-                    val = 0;
-                    for (j = _x - xstart * dx, kx = 0, k_x = 0, knx = klx + (lx / dx - (x + xstop + 1)) * kdx; k_x !== knx; kx++, k_x += kdx, j += dx) {
-                        for (ij = j + y - ystart, kyx = k_x, nky =  k_x + kly + (ly - (y + ystop + 1)); kyx !== nky; kyx++, ij++) {
-    	                    tmp = v - id[ij];
-                            weight = kd[kyx] * exp(cst * tmp * tmp);
-                            sum += weight;
-                            val += id[ij] * weight;
-                        }
-                    }
-                    od[yx] = val / sum;
-                }
-            }
-        }
-        // Return the result
-        return output;
     };
 
     Matrix_prototype.filter1d = function (kernel, origin) {
@@ -10438,20 +10098,6 @@ var IT;
         }
     };
     
-    var getImageColumnArray = function (A) {
-        var m = A.getSize(0), n = A.getSize(1), c = A.getSize(2);
-        var dc = m * n;
-        var ad = A.getData(), col = [];
-        for (var c = 0, lc = ad.length; c < lc; c += dc) {
-            var tmp = []
-            for (var j = 0, _j = 0; j < n; j++, _j += m) {
-                tmp[j] = ad.subarray(_j, m + _j);
-            }
-            col.push(tmp);
-        }
-        return col;
-    };
-
     var computeImageIntegral = function(im) {
         var view = im.getView(), d = im.getData();
         var dc = view.getStep(2), lc = view.getEnd(2);
@@ -10472,7 +10118,6 @@ var IT;
             }
         }
     };
-
     /** Gaussian bluring based on box filtering. 
      * It computes a fast approximation of gaussian blur 
      * in constant time.
@@ -10487,8 +10132,8 @@ var IT;
     Matrix_prototype.fastBlur = function (sx, sy, k) {
         k = k || 3;
         sy = sy || sx;
-        var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1
-        var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1
+        var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1;
+        var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1;
         var imout = Matrix.zeros(this.getSize());
         // Iterator to scan the view
         var view = this.getView();
@@ -10496,7 +10141,7 @@ var IT;
         var dx = view.getStep(1), lx = view.getEnd(1);
         var dy = view.getStep(0), ly = view.getEnd(0);
 
-        var sy = (wy / 2) | 0, sx = ((wx / 2) | 0) * dx, sx2 = ((wx / 2) | 0);
+        var sx2 = ((wx / 2) | 0);
 
 	var nx, ny, c, x, y, y_, yx;
         var cst, cstx, csty, cste;
@@ -10504,7 +10149,7 @@ var IT;
         var imcum = this;
         for (var p = 0; p < k; p++) {
 
-            imcum = imcum.im2double()
+            imcum = imcum.im2double();
             computeImageIntegral(imcum);
 
             var din = imcum.getData(), dout = imout.getData();
@@ -10536,14 +10181,14 @@ var IT;
                 // First columns
                 for (x = c, nx = c + sx + dx; x < nx; x += dx) {
                     // Central part
-                    cst = 1 / (((x - c + sx) / dx + 1) * wy)
+                    cst = 1 / (((x - c + sx) / dx + 1) * wy);
                     for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
                         dout[y] = dinf[y] - dinh[y];
                         dout[y] *= cst;
                     }
                 }
                 // Central part
-                cst = 1 / (wx * wy)
+                cst = 1 / (wx * wy);
                 for (x = c + sx + dx, nx = c + lx - sx; x < nx; x += dx) {
                     // Central part
                     for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
@@ -10553,7 +10198,7 @@ var IT;
                 // Last columns
                 for (x = c + lx - sx, nx = c + lx; x < nx; x += dx) {
                     // Central part
-                    cst = 1 / (((c + lx - x + sx) / dx) * wy)
+                    cst = 1 / (((c + lx - x + sx) / dx) * wy);
                     for (y = x + sy + 1, ny = x + ly - sy; y < ny; y++) {
                         dout[y] = din[y - e] + din[c + lx - dx + y - x + sy] - din[c + lx - dx + y - x - sy - 1] - din[y + g];
                         dout[y] *= cst;
@@ -10571,7 +10216,7 @@ var IT;
                     // Central columns
                     for (x = y + sx + dx, nx = y + lx - sx; x < nx; x += dx) {
                         dout[x] = din[x - y + c + ly - 1 + sx] - din[x - y + c + ly - 1 - sx - dx] + din[x - e] - dinh[x];
-                        dout[x] *= cst
+                        dout[x] *= cst;
                     }
                     // Last columns
                     for (x = y + lx - sx, nx = y + lx; x < nx; x += dx) {
@@ -10585,101 +10230,6 @@ var IT;
         return imout;
     };
 
-    /*
-    var getImageColumnArray = function (d, ly, lx, lc) {
-        var out = [], cols;
-        for (var c = 0, nc = lc * lx * ly ; c < nc;  c += lx * ly) {
-            cols = [];
-            out.push(cols);
-            for (var _x = c, x = 0; x < lx; x++, _x += ly) {
-                cols[x] = d.subarray(_x, _x + ly);
-            }
-        }
-        return out;
-    };
-
-    Matrix_prototype.fastBlur_2 = function (sx, sy, k) {
-
-
-        var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1
-        var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1
-        var sy = (wy / 2) | 0, sx = (wx / 2) | 0;
-
-        var imout = Matrix.zeros(this.getSize());
-
-        var lc = this.getSize(2), lx = this.getSize(1), ly = this.getSize(0); 
-
-        var channelIn, channelOut, colOut, colIn1, colIn2;
-        var c, x, y, nx, ny;
-        var imcum = this;
-        for (var p = 0; p < k; p++) {
-
-            imcum = imcum.im2double()
-            computeImageIntegral(imcum);
-            var dOut = imout.getData(), dIn = imcum.getData();
-            var columnsIn = getImageColumnArray(dIn, ly, lx, lc);
-            var columnsOut = getImageColumnArray(dOut, ly, lx, lc);
-            
-            for (c = 0; c < lc; c++) {
-                channelIn = columnsIn[c];
-                channelOut = columnsOut[c];
-                for (x = 0, nx = sx + 1; x < nx; x++) {
-                    colOut = channelOut[x];
-                    colIn2 = channelIn[x + sx];
-                    for (y = 0, ny = sy + 1; y < ny; y++) {
-                        colOut[y] = colIn2[y + sy];
-                        colOut[y] /= (sx + x + 1) * (sy + y + 1);
-                    }
-                    for (ny = ly - sy; y < ny; y++) {
-                        colOut[y] = colIn2[y + sy] - colIn2[y - sy - 1];
-                        colOut[y] /= (sx + x + 1) * wy;
-                    }
-                    for (; y < ly; y++) {
-                        colOut[y] = colIn2[ly - 1] - colIn2[y - sy - 1];
-                        colOut[y] /= (sx + x + 1) * (ly - y + sy);
-                    }
-                }
-                for (nx = lx - sx; x < nx; x++) {
-                    colOut = channelOut[x];
-                    colIn1 = channelIn[x - sx - 1];
-                    colIn2 = channelIn[x + sx];
-                    for (y = 0, ny = sy + 1; y < ny; y++) {
-                        colOut[y] = colIn2[y + sy] - colIn1[y + sy];
-                        colOut[y] /= wx * (sy + y + 1);
-                    }
-                    var cst = 1 / (wx * wy);
-                    for (ny = ly - sy; y < ny; y++) {
-                        colOut[y] = colIn2[y + sy] + colIn1[y - sy - 1] - colIn1[y + sy] - colIn2[y - sy - 1]
-                        colOut[y] *= cst;
-                    }
-                    for (; y < ly; y++) {
-                        colOut[y] = colIn2[ly - 1] + colIn1[y - sy - 1] - colIn1[ly - 1] - colIn2[y - sy - 1]
-                        colOut[y] /= wx * (ly - y + sy);
-                    }
-                }
-                for (; x < lx; x++) {
-                    colOut = channelOut[x];
-                    colIn1 = channelIn[x - sx - 1];
-                    colIn2 = channelIn[lx - 1];
-                    for (y = 0, ny = sy + 1; y < ny; y++) {
-                        colOut[y] = colIn2[y + sy] - colIn1[y + sy];
-                        colOut[y] /= (lx - x + sx) * (sy + y + 1);
-                    }
-                    for (ny = ly - sy; y < ny; y++) {
-                        colOut[y] = colIn2[y + sy] + colIn1[y - sy - 1] - colIn1[y + sy] - colIn2[y - sy - 1]
-                        colOut[y] /= (lx - x + sx) * wy;
-                    }
-                    for (; y < ly; y++) {
-                        colOut[y] = colIn2[ly - 1] + colIn1[y - sy - 1] - colIn1[ly - 1] - colIn2[y - sy - 1]
-                        colOut[y] /= (lx - x + sx) * (ly - y + sy);
-                    }
-                }
-            }
-            imcum = imout;
-        }
-        return imout;
-    };
-     */
     
     //////////////////////////////////////////////////////////////////
     //                          KERNEL TOOLS                        //
@@ -10883,7 +10433,6 @@ var IT;
 
         return w || this;
     };
-
     /** Display a Matrix into an HTML5 canvas element in a popup
      * and open the the print menu.
      *
@@ -10898,7 +10447,6 @@ var IT;
         w.close();
         return this;
     };
-
     /** Display a Matrix into an HTML5 canvas element by streching
      * the values in order to fit the display range.
      *
@@ -10922,7 +10470,6 @@ var IT;
         }
         return this['-'](min)['./'](max - min).imshow(canvas, scale);
     };
-
     /** Apply an affine transformation to an Image.
      * __Only works with `Uint8` images.__
      *
@@ -10953,7 +10500,6 @@ var IT;
         ctx2.drawImage(c1, 0, 0);
         return Matrix.imread(c2).convertImage(this.type());
     };
-
     /** Compute the histogram of an grey-level image.
      *
      * @param {Matrix} bins
@@ -10988,7 +10534,6 @@ var IT;
         }
         return hist;
     };
-
     (function () {
         var computeHistogram = function (src, n) {
             var srcLength = src.length;
@@ -11035,7 +10580,6 @@ var IT;
             return im.set([], [], 2, lumOut).applycform("HSL to RGB");
         };
     })();
-
 
     /** Transform a RGB image to a gray level image.
      *
@@ -11090,6 +10634,7 @@ var IT;
 
 (function () {
 
+    /* Class for Tree creation */
     var Node = function (x, y, parent) {
         this.x = x;
         this.y = y;
@@ -11121,7 +10666,7 @@ var IT;
             this.left = undefined;
         }
         return this;
-    }
+    };
     Node.prototype.getNext = function () {
         if (this.top) {
 	    return this.top;
@@ -11153,7 +10698,6 @@ var IT;
      *  Return a Matrix with boolean values.
      */
     Matrix.prototype.getConnectedComponent = function (xRef, yRef, t) {
-        'use strict';
         
         // Get image height, width and depth
         var h = this.getSize(0), w = this.getSize(1), d = this.getSize(2);
@@ -11228,114 +10772,183 @@ var IT;
 
 (function (Matrix, Matrix_prototype) {
     "use strict";
-    /**
-     * Perform an image dilation with a square element.
-     * @param{Number} size
-     *  Size of the structuring element
-     * @return{Matrix}
-     */
-    Matrix_prototype.imdilate = function (FS) {
-        var h = this.getSize(1), w = this.getSize(0), d = this.getSize(2), id = this.getData();
-        var out = new Matrix(this.getSize(), this.type()), od = out.getData();
+
+    var getLoopIndices = function (FX, FY, w, h) {
+        var HFY = FY >> 1, HFX = FX >> 1;
+        return {
+            xS: new Int16Array([0, 0, 0, HFX, HFX, HFX, w - HFX, w - HFX, w - HFX]),
+	    xE: new Int16Array([HFX, HFX, HFX, w - HFX, w - HFX, w - HFX, w, w, w]),
+            yS: new Int16Array([0, HFY, h - HFY, 0, HFY, h - HFY, 0, HFY, h - HFY]),
+	    yE: new Int16Array([HFY, h - HFY, h, HFY, h - HFY, h, HFY, h - HFY, h]),
         
-        // Half filter size
-        var FS2 = FS >> 1;
+	    jS: new Int16Array([0, 0, 0, -HFX, -HFX, -HFX, -HFX, -HFX, -HFX]),
+	    jE: new Int16Array([HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, w, w, w]),
+	    iS: new Int16Array([0, -HFY, -HFY, 0, -HFY, -HFY, 0, -HFY, -HFY]),
+	    iE: new Int16Array([HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h]),
         
-        // Loop start (S) and end (E) indices
-        var yS = [0, 0, 0, FS2, FS2, FS2, h - FS2, h - FS2, h - FS2],
-	    xS = [0, FS2, w - FS2, 0, FS2, w - FS2, 0, FS2, w - FS2],
-	    yE = [FS2, FS2, FS2, h - FS2, h - FS2, h - FS2, h, h, h],
-	    xE = [FS2, w - FS2, w, FS2, w - FS2, w, FS2, w - FS2, w],
-	    jyS = [0, 0, 0, 1, 1, 1, 1, 1, 1],
-	    ixS = [0, 1, 1, 0, 1, 1, 0, 1, 1],
-	    jyE = [1, 1, 1, 1, 1, 1, 0, 0, 0],
-	    ixE = [1, 1, 0, 1, 1, 0, 1, 1, 0],
-	    jS = [0, 0, 0, -FS2, -FS2, -FS2, -FS2, -FS2, -FS2],
-	    iS = [0, -FS2, -FS2, 0, -FS2, -FS2, 0, -FS2, -FS2],
-	    jE = [FS2, FS2, FS2, FS2, FS2, FS2, h, h, h],
-	    iE = [FS2, FS2, w, FS2, FS2, w, FS2, FS2, w];
+	    lS: new Int16Array([HFX, HFX, HFX,  0,  0,  0 ,      0,       0,       0]),
+	    lE: new Int16Array([ FX,  FX,  FX, FX, FX, FX, HFX + w, HFX + w, HFX + w]),
+	    kS: new Int16Array([HFY,  0,       0, HFY,  0,       0, HFY,  0,       0]),
+	    kE: new Int16Array([ FY, FY, HFY + h,  FY, FY, HFY + h,  FY, FY, HFY + h]),
+            
+            jxS: new Int16Array([0, 0, 0, 1, 1, 1, 1, 1, 1]),
+	    jxE: new Int16Array([1, 1, 1, 1, 1, 1, 0, 0, 0]),
+	    iyS: new Int16Array([0, 1, 1, 0, 1, 1, 0, 1, 1]),
+	    iyE: new Int16Array([1, 1, 0, 1, 1, 0, 1, 1, 0])
+        };
+
+    };
+    
+    var f_dilate = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
+        var max = -Infinity;
+        for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
+	    for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+                if (d[ij] > max && m[kl]) {
+		    max = d[ij];
+                }
+	    }
+        }
+        return max;
+    };
+    var f_erode = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
+        var min = Infinity;
+        for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
+	    for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+                if (d[ij] < min && m[kl]) {
+		    min = d[ij];
+                }
+	    }
+        }
+        return min;
+    };
+    var f_filt = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
+        var sum = 0;
+        for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
+	    for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+		sum += d[ij] * m[kl];
+	    }
+        }
+        return sum;
+    };
+
+    var applyFilter = function (im, mask, f) {
+        var h = im.getSize(0), w = im.getSize(1), d = im.getSize(2), id = im.getData();
+        var out = new Matrix(im.getSize(), im.type()), od = out.getData();
+
+        // Filter size and data
+        var FY = mask.getSize(0), FX = mask.getSize(1), md = mask.getData();
         
         // Loop indices
-        var l, x, y, _y, xy, i, j, _j, ij;
-        
+        var li = getLoopIndices(FX, FY, w, h);
+        // Loop start (S) and end (E) indices
+        var xS  = li.xS,  xE  = li.xE,   yS  = li.yS,  yE  = li.yE,
+	    jS  = li.jS,  jE  = li.jE,   iS  = li.iS,  iE  = li.iE,
+	    lS  = li.lS,  kS  = li.kS,
+            jxS = li.jxS, jxE = li.jxE, iyS = li.iyS, iyE = li.iyE;
+
+        // Loop indices
+        var b, c, x, y, _x, yx, _j, ij, _l, kl;
         // Loop end indices
-        var xe, ye, ie, je;
-        var c, ce;
+        var ce, xe, ye, ije;
         for (c = 0, ce = id.length; c < ce; c += w * h) {
-            var idc = id.subarray(c, c + w * h);
-            var odc = od.subarray(c, c + w * h);
-            for (l = 0; l < 9; l++) {
-	        for (y = yS[l], ye = yE[l], _y = w * y; y < ye; y++, _y += w) {
-	            for (x = xS[l], xe = xE[l], xy = x + _y; x < xe; x++, xy++) {
-		        var max = 0;
-		        for (j = (jyS[l] ? y : 0) + jS[l], je = (jyE[l] ? y : 0) + jE[l], _j = j * w; j < je; j++, _j += w) {
-		            for (i = (ixS[l] ? x : 0) + iS[l], ie = (ixE[l] ? x : 0) + iE[l], ij = i + _j; i < ie; i++, ij++) {
-                      	        if (idc[ij] > max) {
-			            max = idc[ij];
-			        }
-                            }
-		        }
-	                odc[xy] = max;
-	            }
+            var idc = id.subarray(c, c + w * h), odc = od.subarray(c, c + w * h);
+            for (b = 0; b < 9; b++) {
+	        for (x = xS[b], xe = xE[b], _x = x * h; x < xe; x++, _x += h) {
+                    var js = (jS[b] + (jxS[b] ? x : 0)) * h, _je = (jE[b] + (jxE[b] ? x : 0)) * h;
+                    var ls = (lS[b] - (jxS[b] ? 0 : x)) * FY;
+	            for (y = yS[b], ye = yE[b], yx = y + _x; y < ye; y++, yx++) {
+                        var is = iS[b] + (iyS[b] ? y : 0), ie = iE[b] + (iyE[b] ? y : 0);
+                        var ks = kS[b] - (iyS[b] ? 0 : y);
+                        odc[yx] = f(idc, md, h, FY, yx, is, js, ks, ie, ls, _je);
+		    }
 	        }
-            }
+	    }
         }
         return out;
     };
+
     /**
-     * Perform an image erosion with a square element.
-     * @param{Number} size
-     *  Size of the structuring element
+     * Perform an image dilation with a given structuring element.
+     * @param{Matrix} elem
+     *  The structuring element
      * @return{Matrix}
      */
-    Matrix_prototype.imerode = function (FS) {
-        var h = this.getSize(1), w = this.getSize(0), id = this.getData();
-        var out = new Matrix(this.getSize(), this.type()), od = out.getData();
-        
-        // Half filter size
-        var FS2 = FS >> 1;
-        
-        // Loop start (S) and end (E) indices
-        var yS = [0, 0, 0, FS2, FS2, FS2, h - FS2, h - FS2, h - FS2],
-	    xS = [0, FS2, w - FS2, 0, FS2, w - FS2, 0, FS2, w - FS2],
-	    yE = [FS2, FS2, FS2, h - FS2, h - FS2, h - FS2, h, h, h],
-	    xE = [FS2, w - FS2, w, FS2, w - FS2, w, FS2, w - FS2, w],
-	    jyS = [0, 0, 0, 1, 1, 1, 1, 1, 1],
-	    ixS = [0, 1, 1, 0, 1, 1, 0, 1, 1],
-	    jyE = [1, 1, 1, 1, 1, 1, 0, 0, 0],
-	    ixE = [1, 1, 0, 1, 1, 0, 1, 1, 0],
-	    jS = [0, 0, 0, -FS2, -FS2, -FS2, -FS2, -FS2, -FS2],
-	    iS = [0, -FS2, -FS2, 0, -FS2, -FS2, 0, -FS2, -FS2],
-	    jE = [FS2, FS2, FS2, FS2, FS2, FS2, h, h, h],
-	    iE = [FS2, FS2, w, FS2, FS2, w, FS2, FS2, w];
-        
-        // Loop indices
-        var l, x, y, _y, xy, i, j, _j, ij;
-        
-        // Loop end indices
-        var xe, ye, ie, je;
-        var c, ce;
-        for (c = 0, ce = id.length; c < ce; c += w * h) {
-            var idc = id.subarray(c);
-            var odc = od.subarray(c);
-            for (l = 0; l < 9; l++) {
-	        for (y = yS[l], ye = yE[l], _y = w * y; y < ye; y++, _y += w) {
-	            for (x = xS[l], xe = xE[l], xy = x + _y; x < xe; x++, xy++) {
-		        var min = Infinity;
-		        for (j = (jyS[l] ? y : 0) + jS[l], je = (jyE[l] ? y : 0) + jE[l], _j = j * w; j < je; j++, _j += w) {
-		            for (i = (ixS[l] ? x : 0) + iS[l], ie = (ixE[l] ? x : 0) + iE[l], ij = i + _j; i < ie; i++, ij++) {
-                      	        if (idc[ij] < min) {
-			            min = idc[ij];
-			        }
-                            }
-		        }
-	                odc[xy] = min;
-	            }
+    Matrix_prototype.imdilate = function (mask) {
+        return applyFilter(this, mask, f_dilate);
+    };
+    /**
+     * Perform an image erosion with a given structuring element.
+     * @param{Matrix} elem
+     *  The structuring element
+     * @return{Matrix}
+     */
+    Matrix_prototype.imerode = function (mask) {
+        return applyFilter(this, mask, f_erode);
+    };
+    /**
+     * Perform an image opening with a given structuring element.
+     * @param{Matrix} elem
+     *  The structuring element
+     * @return{Matrix}
+     */
+    Matrix_prototype.imopen = function (mask) {
+        return applyFilter(applyFilter(this, mask, f_erode), mask, f_dilate);
+    };
+    /**
+     * Perform an image closing with a given structuring element.
+     * @param{Matrix} elem
+     *  The structuring element
+     * @return{Matrix}
+     */
+    Matrix_prototype.imclose = function (mask) {
+        return applyFilter(applyFilter(this, mask, f_dilate), mask, f_erode);
+    };
+    /**
+     * Filter an image.
+     * @param{Matrix} filter
+     *  The filter to apply (2D kernel).
+     * @return{Matrix}
+     * @todo should check if the kernel is separable with an SVD.
+     */
+    Matrix_prototype.imfilter = function (mask) {
+        return applyFilter(this, mask, f_filt);
+    };
+    /** Bilateral filtering.
+     *
+     * __Also see:__
+     * {@link Matrix#filter}.
+     *
+     * @param {Number} sigma_s
+     *  Value for spacial sigma.
+     *
+     * @param {Number} sigma_i
+     *  Value for intensity sigma.
+     *
+     * @param {Number} [precision=3]
+     *  used to compute the window size (size = precision * sigma_s).
+     *
+     * @return {Matrix}
+     */
+    Matrix_prototype.imbilateral = function (sigma_s, sigma_i, prec) {
+        prec = prec || 3;
+        var mask = Matrix.fspecial('gaussian', Math.round(prec * sigma_s / 2) * 2 + 1, sigma_s);
+        var cst = -1 / (2 * sigma_i);
+        var f_bilat = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
+            var sum = 0, val = 0, v = d[yx];
+            for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
+	        for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+    	            var tmp = v - d[ij];
+                    var weight = m[kl] * Math.exp(cst * tmp * tmp);
+                    sum += weight;
+                    val += d[ij] * weight;
+		    //sum += d[ij] * m[kl];
 	        }
             }
-        }
-        return out;
+            return val / sum;
+        };
+        return applyFilter(this, mask, f_bilat);
     };
+
 })(Matrix, Matrix.prototype);
 
 
@@ -11347,53 +10960,55 @@ var IT;
 (function (Matrix, Matrix_prototype) {
     'use strict';
 
-    var SIZE_PRIME = 460
-    var primes = new Uint16Array([2,3,5,7,11,13,17,19,23,29
-                                  ,31,37,41,43,47,53,59,61,67,71
-                                  ,73,79,83,89,97,101,103,107,109,113
-                                  ,127,131,137,139,149,151,157,163,167,173
-                                  ,179,181,191,193,197,199,211,223,227,229
-                                  ,233,239,241,251,257,263,269,271,277,281
-                                  ,283,293,307,311,313,317,331,337,347,349
-                                  ,353,359,367,373,379,383,389,397,401,409
-                                  ,419,421,431,433,439,443,449,457,461,463
-                                  ,467,479,487,491,499,503,509,521,523,541
-                                  ,547,557,563,569,571,577,587,593,599,601
-                                  ,607,613,617,619,631,641,643,647,653,659
-                                  ,661,673,677,683,691,701,709,719,727,733
-                                  ,739,743,751,757,761,769,773,787,797,809
-                                  ,811,821,823,827,829,839,853,857,859,863
-                                  ,877,881,883,887,907,911,919,929,937,941
-                                  ,947,953,967,971,977,983,991,997,1009,1013
-                                  ,1019,1021,1031,1033,1039,1049,1051,1061,1063,1069
-                                  ,1087,1091,1093,1097,1103,1109,1117,1123,1129,1151
-                                  ,1153,1163,1171,1181,1187,1193,1201,1213,1217,1223
-                                  ,1229,1231,1237,1249,1259,1277,1279,1283,1289,1291
-                                  ,1297,1301,1303,1307,1319,1321,1327,1361,1367,1373
-                                  ,1381,1399,1409,1423,1427,1429,1433,1439,1447,1451
-                                  ,1453,1459,1471,1481,1483,1487,1489,1493,1499,1511
-                                  ,1523,1531,1543,1549,1553,1559,1567,1571,1579,1583
-                                  ,1597,1601,1607,1609,1613,1619,1621,1627,1637,1657
-                                  ,1663,1667,1669,1693,1697,1699,1709,1721,1723,1733
-                                  ,1741,1747,1753,1759,1777,1783,1787,1789,1801,1811
-                                  ,1823,1831,1847,1861,1867,1871,1873,1877,1879,1889
-                                  ,1901,1907,1913,1931,1933,1949,1951,1973,1979,1987
-                                  ,1993,1997,1999,2003,2011,2017,2027,2029,2039,2053
-                                  ,2063,2069,2081,2083,2087,2089,2099,2111,2113,2129
-                                  ,2131,2137,2141,2143,2153,2161,2179,2203,2207,2213
-                                  ,2221,2237,2239,2243,2251,2267,2269,2273,2281,2287
-                                  ,2293,2297,2309,2311,2333,2339,2341,2347,2351,2357
-                                  ,2371,2377,2381,2383,2389,2393,2399,2411,2417,2423
-                                  ,2437,2441,2447,2459,2467,2473,2477,2503,2521,2531
-                                  ,2539,2543,2549,2551,2557,2579,2591,2593,2609,2617
-                                  ,2621,2633,2647,2657,2659,2663,2671,2677,2683,2687
-                                  ,2689,2693,2699,2707,2711,2713,2719,2729,2731,2741
-                                  ,2749,2753,2767,2777,2789,2791,2797,2801,2803,2819
-                                  ,2833,2837,2843,2851,2857,2861,2879,2887,2897,2903
-                                  ,2909,2917,2927,2939,2953,2957,2963,2969,2971,2999
-                                  ,3001,3011,3019,3023,3037,3041,3049,3061,3067,3079
-                                  ,3083,3089,3109,3119,3121,3137,3163,3167,3169,3181
-                                  ,3187,3191,3203,3209,3217,3221,3229,3251,3253,3257]);
+    var SIZE_PRIME = 460;
+    var primes = new Uint16Array([
+        2,3,5,7,11,13,17,19,23,29,
+        31,37,41,43,47,53,59,61,67,71,
+        73,79,83,89,97,101,103,107,109,113,
+        127,131,137,139,149,151,157,163,167,173,
+        179,181,191,193,197,199,211,223,227,229,
+        233,239,241,251,257,263,269,271,277,281,
+        283,293,307,311,313,317,331,337,347,349,
+        353,359,367,373,379,383,389,397,401,409,
+        419,421,431,433,439,443,449,457,461,463,
+        467,479,487,491,499,503,509,521,523,541,
+        547,557,563,569,571,577,587,593,599,601,
+        607,613,617,619,631,641,643,647,653,659,
+        661,673,677,683,691,701,709,719,727,733,
+        739,743,751,757,761,769,773,787,797,809,
+        811,821,823,827,829,839,853,857,859,863,
+        877,881,883,887,907,911,919,929,937,941,
+        947,953,967,971,977,983,991,997,1009,1013,
+        1019,1021,1031,1033,1039,1049,1051,1061,1063,1069,
+        1087,1091,1093,1097,1103,1109,1117,1123,1129,1151,
+        1153,1163,1171,1181,1187,1193,1201,1213,1217,1223,
+        1229,1231,1237,1249,1259,1277,1279,1283,1289,1291,
+        1297,1301,1303,1307,1319,1321,1327,1361,1367,1373,
+        1381,1399,1409,1423,1427,1429,1433,1439,1447,1451,
+        1453,1459,1471,1481,1483,1487,1489,1493,1499,1511,
+        1523,1531,1543,1549,1553,1559,1567,1571,1579,1583,
+        1597,1601,1607,1609,1613,1619,1621,1627,1637,1657,
+        1663,1667,1669,1693,1697,1699,1709,1721,1723,1733,
+        1741,1747,1753,1759,1777,1783,1787,1789,1801,1811,
+        1823,1831,1847,1861,1867,1871,1873,1877,1879,1889,
+        1901,1907,1913,1931,1933,1949,1951,1973,1979,1987,
+        1993,1997,1999,2003,2011,2017,2027,2029,2039,2053,
+        2063,2069,2081,2083,2087,2089,2099,2111,2113,2129,
+        2131,2137,2141,2143,2153,2161,2179,2203,2207,2213,
+        2221,2237,2239,2243,2251,2267,2269,2273,2281,2287,
+        2293,2297,2309,2311,2333,2339,2341,2347,2351,2357,
+        2371,2377,2381,2383,2389,2393,2399,2411,2417,2423,
+        2437,2441,2447,2459,2467,2473,2477,2503,2521,2531,
+        2539,2543,2549,2551,2557,2579,2591,2593,2609,2617,
+        2621,2633,2647,2657,2659,2663,2671,2677,2683,2687,
+        2689,2693,2699,2707,2711,2713,2719,2729,2731,2741,
+        2749,2753,2767,2777,2789,2791,2797,2801,2803,2819,
+        2833,2837,2843,2851,2857,2861,2879,2887,2897,2903,
+        2909,2917,2927,2939,2953,2957,2963,2969,2971,2999,
+        3001,3011,3019,3023,3037,3041,3049,3061,3067,3079,
+        3083,3089,3109,3119,3121,3137,3163,3167,3169,3181,
+        3187,3191,3203,3209,3217,3221,3229,3251,3253,3257
+    ]);
 
 
     /**
@@ -11409,18 +11024,18 @@ var IT;
 
         // search factors
         for (count = i = 0; i < SIZE_PRIME; i++) {
-            if ((n % primes[i]) == 0) {
+            if ((n % primes[i]) === 0) {
                 p = primes[i];
                 do {
 	            tab[count] = p;
 	            count++;
 	            n = n / p;
-                } while ((n%p) == 0);
+                } while ((n % p) === 0);
             }
         }
         // If n is prime
-        if (n != 1) {
-            tab[count]=n;
+        if (n !== 1) {
+            tab[count] = n;
             count++;
         }
 
@@ -11648,7 +11263,7 @@ var IT;
      */
     Matrix_prototype.ifft = function () {
         return matrix_fft(this, true);
-    }
+    };
     Matrix.ifft = function (X) {
         return matrix_fft(Matrix.toMatrix(X), false);
     };
