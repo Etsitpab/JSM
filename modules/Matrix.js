@@ -2516,7 +2516,6 @@ var IT;
     Matrix_prototype.min = function (dim) {
         return applyDim(this, min, dim);
     };
-
     /** Return the argmin of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2526,7 +2525,6 @@ var IT;
     Matrix_prototype.amin = function (dim) {
         return applyDim(this, amin, dim, undefined, 'uint32');
     };
-
     /** Return the maximum of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2536,7 +2534,6 @@ var IT;
     Matrix_prototype.max = function (dim) {
         return applyDim(this, max, dim);
     };
-
     /** Return the argmax of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2546,7 +2543,6 @@ var IT;
     Matrix_prototype.amax = function (dim) {
         return applyDim(this, amax, dim, undefined, 'uint32');
     };
-
     /** Return the sum of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2556,7 +2552,6 @@ var IT;
     Matrix_prototype.sum = function (dim) {
         return applyDim(this, sum, dim);
     };
-
     /** Return the product of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2566,7 +2561,6 @@ var IT;
     Matrix_prototype.prod = function (dim) {
         return applyDim(this, prod, dim);
     };
-
     /** Return the average value of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2576,7 +2570,6 @@ var IT;
     Matrix_prototype.mean = function (dim) {
         return applyDim(this, mean, dim);
     };
-    
     /** Return the variance of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2611,7 +2604,6 @@ var IT;
         } 
         return applyDim(this, varianceBiased, dim);
     };
-
     /** Return the standard deviation of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2628,7 +2620,6 @@ var IT;
         }
         return v.arrayfun(Math.sqrt);
     };
-
     /** Return the cumulative sum of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2651,7 +2642,7 @@ var IT;
 
 
     (function () {
-        var poissrnd = function (data, lambda) {
+        var poissrnd_lambda = function (data, lambda) {
             var L = Math.exp(-lambda), random = Math.random;
             for (var i = 0, ie = data.length; i < ie; i++) {
                 var p = 1, k = 0;
@@ -2663,6 +2654,18 @@ var IT;
             }
         };
 
+        var poissrnd_lambdas = function (lambda) {
+            var exp = Math.exp, random = Math.random;
+            for (var i = 0, ie = lambda.length; i < ie; i++) {
+                var p = 1, k = 0, L = exp(-lambda[i])
+                do {
+                    k++;
+                    p *= random();
+                } while (p > L);
+                lambda[i] = k - 1;
+            }
+        };
+
         var exprnd = function (data, mu) {
             mu = -mu;
             var random = Math.random, log = Math.log;
@@ -2671,20 +2674,36 @@ var IT;
             }
         };
 
-        /** Generate Poisson random numbers.
+        /** Generate Poisson random numbers. 
+         * 
+         * The `lambda` parameter can a number as well as a Matrix.
+         * - If it is a number then the function returns an array of 
+         * dimension `size`.
+         * - If `lambda` is a Matrix then the function will return 
+         * a Matrix of the same size.
+         * 
+         * Note that to avoid copy, you can use the syntax `mat.poissrnd()`.
+         *
          * @param {Number} lambda
-         * @param {Number} size
+         * @param {Number} [size]
          * @return {Matrix}
          */
         Matrix.poissrnd = function () {
             var lambda = Array.prototype.shift.apply(arguments);
-            var size = Tools.checkSize(arguments, 'square');
-            
-            var mat = new Matrix(size), data = mat.getData();
-            poissrnd(data, lambda);
-            return mat;
+            if (typeof(lambda) === "number") { 
+                var size = Tools.checkSize(arguments, 'square');
+                var mat = new Matrix(size), data = mat.getData();
+                poissrnd_lambda(data, lambda);
+                return mat;
+            }
+            if (lambda instanceof Matrix) {
+                return lambda.getCopy().poissrnd();
+            }
         };
-
+        Matrix_prototype.poissrnd = function() {
+            poissrnd_lambdas(this.getData());
+            return this;
+        };
         /** Generate exponentially distributed random numbers.
          * @param {Number} mu
          * @param {Number} size
@@ -8100,27 +8119,26 @@ var IT;
     var getLoopIndices = function (FX, FY, w, h) {
         var HFY = FY >> 1, HFX = FX >> 1;
         return {
-            xS: new Int16Array([0, 0, 0, HFX, HFX, HFX, w - HFX, w - HFX, w - HFX]),
-	    xE: new Int16Array([HFX, HFX, HFX, w - HFX, w - HFX, w - HFX, w, w, w]),
-            yS: new Int16Array([0, HFY, h - HFY, 0, HFY, h - HFY, 0, HFY, h - HFY]),
-	    yE: new Int16Array([HFY, h - HFY, h, HFY, h - HFY, h, HFY, h - HFY, h]),
+            xS: new Int32Array([0, 0, 0, HFX, HFX, HFX, w - HFX, w - HFX, w - HFX]),
+	    xE: new Int32Array([HFX, HFX, HFX, w - HFX, w - HFX, w - HFX, w, w, w]),
+            yS: new Int32Array([0, HFY, h - HFY, 0, HFY, h - HFY, 0, HFY, h - HFY]),
+	    yE: new Int32Array([HFY, h - HFY, h, HFY, h - HFY, h, HFY, h - HFY, h]),
         
-	    jS: new Int16Array([0, 0, 0, -HFX, -HFX, -HFX, -HFX, -HFX, -HFX]),
-	    jE: new Int16Array([HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, w, w, w]),
-	    iS: new Int16Array([0, -HFY, -HFY, 0, -HFY, -HFY, 0, -HFY, -HFY]),
-	    iE: new Int16Array([HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h]),
+	    jS: new Int32Array([0, 0, 0, -HFX, -HFX, -HFX, -HFX, -HFX, -HFX]),
+	    jE: new Int32Array([HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, w, w, w]),
+	    iS: new Int32Array([0, -HFY, -HFY, 0, -HFY, -HFY, 0, -HFY, -HFY]),
+	    iE: new Int32Array([HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h]),
         
-	    lS: new Int16Array([HFX, HFX, HFX,  0,  0,  0 ,      0,       0,       0]),
-	    lE: new Int16Array([ FX,  FX,  FX, FX, FX, FX, HFX + w, HFX + w, HFX + w]),
-	    kS: new Int16Array([HFY,  0,       0, HFY,  0,       0, HFY,  0,       0]),
-	    kE: new Int16Array([ FY, FY, HFY + h,  FY, FY, HFY + h,  FY, FY, HFY + h]),
+	    lS: new Int32Array([HFX, HFX, HFX,  0,  0,  0 ,      0,       0,       0]),
+	    lE: new Int32Array([ FX,  FX,  FX, FX, FX, FX, HFX + w, HFX + w, HFX + w]),
+	    kS: new Int32Array([HFY,  0,       0, HFY,  0,       0, HFY,  0,       0]),
+	    kE: new Int32Array([ FY, FY, HFY + h,  FY, FY, HFY + h,  FY, FY, HFY + h]),
             
-            jxS: new Int16Array([0, 0, 0, 1, 1, 1, 1, 1, 1]),
-	    jxE: new Int16Array([1, 1, 1, 1, 1, 1, 0, 0, 0]),
-	    iyS: new Int16Array([0, 1, 1, 0, 1, 1, 0, 1, 1]),
-	    iyE: new Int16Array([1, 1, 0, 1, 1, 0, 1, 1, 0])
+            jxS: new Int32Array([0, 0, 0, 1, 1, 1, 1, 1, 1]),
+	    jxE: new Int32Array([1, 1, 1, 1, 1, 1, 0, 0, 0]),
+	    iyS: new Int32Array([0, 1, 1, 0, 1, 1, 0, 1, 1]),
+	    iyE: new Int32Array([1, 1, 0, 1, 1, 0, 1, 1, 0])
         };
-
     };
     
     var f_dilate = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
@@ -8258,6 +8276,23 @@ var IT;
     Matrix_prototype.imfilter = function (mask) {
         return applyFilter(this, mask, f_filt);
     };
+    /*
+    Matrix_prototype.median = function (mask) {
+        var arg = (mask.length * 0.5) | 0;
+        var f_med = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
+            var values = [];
+            for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
+	        for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+                    if (m[kl]) {
+		        values.push(d[ij]);
+                    }
+	        }
+            }
+            return values.sort()[arg];
+        };
+        return applyFilter(this, mask, f_med);
+    };
+     */
     /** Bilateral filtering.
      *
      * __Also see:__
