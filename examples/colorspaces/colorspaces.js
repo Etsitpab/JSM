@@ -1,7 +1,7 @@
 /*global console, document, Matrix, Colorspaces, CIE, open */
 /*jshint indent: 4, unused: true, white: true */
 
-var stack, stackIt, image, modules;
+var stack, stackIt, image, mask, modules;
 
 var onclick, onmousewheel;
 
@@ -47,15 +47,21 @@ function updateOutput(image) {
     if (!stack) {
         return;
     }
-    if (!(image instanceof Matrix)) {
-        image = stack[stackIt].image;
-    }
+
     var outputCanvas = $("outputImage"), div = $("image");
     var canvasXSize = div.offsetWidth;
     var canvasYSize = div.offsetHeight;
 
     outputCanvas.width = canvasXSize;
     outputCanvas.height = canvasYSize;
+
+    if (!(image instanceof Matrix)) {
+        image = stack[stackIt].image;
+    } 
+    if (mask instanceof Matrix) {
+        var m = mask.double().set(mask["<"](1), 0.25).repmat([1, 1, 3]);
+        image = image[".*"](m);
+    }
     image.imshow(outputCanvas, "fit");
     outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
 
@@ -336,7 +342,8 @@ var selection = function () {
     var coord;
     
     selection.reset = function () {
-        $F("threshold", 0);
+        $F("select_threshold", 0.25);
+        mask = undefined;
         updateOutput();
     };
 
@@ -347,8 +354,11 @@ var selection = function () {
         };
     };
     selection.fun = function (img, p) {
-	var cc = img.getConnectedComponent(p.coord[0], p.coord[1], p.threshold * 2);
-        return cc;
+        if (p.threshold > 0) {
+            console.log("titi");
+	    mask = img.getConnectedComponent(p.coord[0], p.coord[1], p.threshold * 2);
+        }
+        return img;
     };
     var onChange = function () {
         change("selection", getParameters());
@@ -360,10 +370,16 @@ var selection = function () {
     };
 
     onmousewheel = function (direction) {
-        console.log(direction);
         $F("select_threshold", $F("select_threshold") + direction);
         onChange();
     };
+    var invert = function () {
+        mask = mask.neg();
+        updateOutput();
+    };
+
+    $("resetSelect").addEventListener("click", selection.reset);
+    $("invertSelect").addEventListener("click", invert);
 };
 
 var colorBalance = function () {
@@ -535,19 +551,26 @@ var noise = function () {
     "use strict";
 
     noise.reset = function () {
-        $F("noise", 0);
+        $F("noiseVar", 0);
         updateOutput();
     };
 
     var getParameters = function () {
         return {
-            noise: $F("noise")
+            noise: $F("noiseVar"),
+            law: $V("noiseLaw")
         };
     };
     noise.fun = function (img, p) {
         if (p.noise !== 0) {
-            var gNoise = Matrix.randn(img.getSize())[".*"](p.noise);
-            img = img["+"](gNoise);
+            if (p.law === "gaussian") {
+                var gNoise = Matrix.randn(img.getSize())[".*"](p.noise);
+                img = img["+"](gNoise);
+                return img;
+            }
+            if (p.law === "poisson") {
+                return Matrix.poissrnd(img[".*"](p.noise * 255))["./"](p.noise * 255);
+            }
         }
         return img;
     };
@@ -561,7 +584,8 @@ var noise = function () {
 
     $("applyNoise").addEventListener("click", onApply);
     $("resetNoise").addEventListener("click", noise.reset);
-    $("noise").addEventListener("change", onChange);
+    $("noiseVar").addEventListener("change", onChange);
+    $("noiseLaw").addEventListener("change", onChange);
 };
 
 var filter = function () {
