@@ -1358,27 +1358,26 @@
     var getLoopIndices = function (FX, FY, w, h) {
         var HFY = FY >> 1, HFX = FX >> 1;
         return {
-            xS: new Int16Array([0, 0, 0, HFX, HFX, HFX, w - HFX, w - HFX, w - HFX]),
-	    xE: new Int16Array([HFX, HFX, HFX, w - HFX, w - HFX, w - HFX, w, w, w]),
-            yS: new Int16Array([0, HFY, h - HFY, 0, HFY, h - HFY, 0, HFY, h - HFY]),
-	    yE: new Int16Array([HFY, h - HFY, h, HFY, h - HFY, h, HFY, h - HFY, h]),
+            xS: new Int32Array([0, 0, 0, HFX, HFX, HFX, w - HFX, w - HFX, w - HFX]),
+	    xE: new Int32Array([HFX, HFX, HFX, w - HFX, w - HFX, w - HFX, w, w, w]),
+            yS: new Int32Array([0, HFY, h - HFY, 0, HFY, h - HFY, 0, HFY, h - HFY]),
+	    yE: new Int32Array([HFY, h - HFY, h, HFY, h - HFY, h, HFY, h - HFY, h]),
         
-	    jS: new Int16Array([0, 0, 0, -HFX, -HFX, -HFX, -HFX, -HFX, -HFX]),
-	    jE: new Int16Array([HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, w, w, w]),
-	    iS: new Int16Array([0, -HFY, -HFY, 0, -HFY, -HFY, 0, -HFY, -HFY]),
-	    iE: new Int16Array([HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h]),
+	    jS: new Int32Array([0, 0, 0, -HFX, -HFX, -HFX, -HFX, -HFX, -HFX]),
+	    jE: new Int32Array([HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, w, w, w]),
+	    iS: new Int32Array([0, -HFY, -HFY, 0, -HFY, -HFY, 0, -HFY, -HFY]),
+	    iE: new Int32Array([HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h]),
         
-	    lS: new Int16Array([HFX, HFX, HFX,  0,  0,  0 ,      0,       0,       0]),
-	    lE: new Int16Array([ FX,  FX,  FX, FX, FX, FX, HFX + w, HFX + w, HFX + w]),
-	    kS: new Int16Array([HFY,  0,       0, HFY,  0,       0, HFY,  0,       0]),
-	    kE: new Int16Array([ FY, FY, HFY + h,  FY, FY, HFY + h,  FY, FY, HFY + h]),
+	    lS: new Int32Array([HFX, HFX, HFX,  0,  0,  0 ,      0,       0,       0]),
+	    lE: new Int32Array([ FX,  FX,  FX, FX, FX, FX, HFX + w, HFX + w, HFX + w]),
+	    kS: new Int32Array([HFY,  0,       0, HFY,  0,       0, HFY,  0,       0]),
+	    kE: new Int32Array([ FY, FY, HFY + h,  FY, FY, HFY + h,  FY, FY, HFY + h]),
             
-            jxS: new Int16Array([0, 0, 0, 1, 1, 1, 1, 1, 1]),
-	    jxE: new Int16Array([1, 1, 1, 1, 1, 1, 0, 0, 0]),
-	    iyS: new Int16Array([0, 1, 1, 0, 1, 1, 0, 1, 1]),
-	    iyE: new Int16Array([1, 1, 0, 1, 1, 0, 1, 1, 0])
+            jxS: new Int32Array([0, 0, 0, 1, 1, 1, 1, 1, 1]),
+	    jxE: new Int32Array([1, 1, 1, 1, 1, 1, 0, 0, 0]),
+	    iyS: new Int32Array([0, 1, 1, 0, 1, 1, 0, 1, 1]),
+	    iyE: new Int32Array([1, 1, 0, 1, 1, 0, 1, 1, 0])
         };
-
     };
     
     var f_dilate = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
@@ -1515,6 +1514,29 @@
      */
     Matrix_prototype.imfilter = function (mask) {
         return applyFilter(this, mask, f_filt);
+    };
+    /** Median filter.
+     *
+     * /!\ This function si currently Very slow.
+     *
+     * @param{Matrix} mask
+     *  Boolean mask.
+     * @return {Matrix} 
+     */ 
+    Matrix_prototype.median = function (mask) {
+        var arg = (mask.length * 0.5) | 0;
+        var f_med = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
+            var values = [];
+            for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
+	        for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+                    if (m[kl]) {
+		        values.push(d[ij]);
+                    }
+	        }
+            }
+            return values.sort()[arg];
+        };
+        return applyFilter(this, mask, f_med);
     };
     /** Bilateral filtering.
      *
