@@ -171,7 +171,6 @@
     Matrix_prototype.min = function (dim) {
         return applyDim(this, min, dim);
     };
-
     /** Return the argmin of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -181,7 +180,6 @@
     Matrix_prototype.amin = function (dim) {
         return applyDim(this, amin, dim, undefined, 'uint32');
     };
-
     /** Return the maximum of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -191,7 +189,6 @@
     Matrix_prototype.max = function (dim) {
         return applyDim(this, max, dim);
     };
-
     /** Return the argmax of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -201,7 +198,6 @@
     Matrix_prototype.amax = function (dim) {
         return applyDim(this, amax, dim, undefined, 'uint32');
     };
-
     /** Return the sum of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -211,7 +207,6 @@
     Matrix_prototype.sum = function (dim) {
         return applyDim(this, sum, dim);
     };
-
     /** Return the product of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -221,7 +216,6 @@
     Matrix_prototype.prod = function (dim) {
         return applyDim(this, prod, dim);
     };
-
     /** Return the average value of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -231,7 +225,6 @@
     Matrix_prototype.mean = function (dim) {
         return applyDim(this, mean, dim);
     };
-    
     /** Return the variance of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -266,7 +259,6 @@
         } 
         return applyDim(this, varianceBiased, dim);
     };
-
     /** Return the standard deviation of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -283,7 +275,6 @@
         }
         return v.arrayfun(Math.sqrt);
     };
-
     /** Return the cumulative sum of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -306,7 +297,7 @@
 
 
     (function () {
-        var poissrnd = function (data, lambda) {
+        var poissrnd_lambda = function (data, lambda) {
             var L = Math.exp(-lambda), random = Math.random;
             for (var i = 0, ie = data.length; i < ie; i++) {
                 var p = 1, k = 0;
@@ -318,6 +309,18 @@
             }
         };
 
+        var poissrnd_lambdas = function (lambda) {
+            var exp = Math.exp, random = Math.random;
+            for (var i = 0, ie = lambda.length; i < ie; i++) {
+                var p = 1, k = 0, L = exp(-lambda[i])
+                do {
+                    k++;
+                    p *= random();
+                } while (p > L);
+                lambda[i] = k - 1;
+            }
+        };
+
         var exprnd = function (data, mu) {
             mu = -mu;
             var random = Math.random, log = Math.log;
@@ -326,20 +329,36 @@
             }
         };
 
-        /** Generate Poisson random numbers.
+        /** Generate Poisson random numbers. 
+         * 
+         * The `lambda` parameter can a number as well as a Matrix.
+         * - If it is a number then the function returns an array of 
+         * dimension `size`.
+         * - If `lambda` is a Matrix then the function will return 
+         * a Matrix of the same size.
+         * 
+         * Note that to avoid copy, you can use the syntax `mat.poissrnd()`.
+         *
          * @param {Number} lambda
-         * @param {Number} size
+         * @param {Number} [size]
          * @return {Matrix}
          */
         Matrix.poissrnd = function () {
             var lambda = Array.prototype.shift.apply(arguments);
-            var size = Tools.checkSize(arguments, 'square');
-            
-            var mat = new Matrix(size), data = mat.getData();
-            poissrnd(data, lambda);
-            return mat;
+            if (typeof(lambda) === "number") { 
+                var size = Tools.checkSize(arguments, 'square');
+                var mat = new Matrix(size), data = mat.getData();
+                poissrnd_lambda(data, lambda);
+                return mat;
+            }
+            if (lambda instanceof Matrix) {
+                return lambda.getCopy().poissrnd();
+            }
         };
-
+        Matrix_prototype.poissrnd = function() {
+            poissrnd_lambdas(this.getData());
+            return this;
+        };
         /** Generate exponentially distributed random numbers.
          * @param {Number} mu
          * @param {Number} size
