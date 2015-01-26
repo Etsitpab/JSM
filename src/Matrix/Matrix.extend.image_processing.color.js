@@ -1078,6 +1078,8 @@
                 Matrix.Colorspaces[cform](this.getData(), N, N, 1);
             } else if (Matrix.Colorspaces[matlabEquivalence[cform]]) {
                 Matrix.Colorspaces[matlabEquivalence[cform]](this.getData(), N, N, 1);
+            } else {
+                throw new Error("Matrix.applycform: Unknown color transformation " + cform);
             }
         } else if (typeof(cform) === "function") {
             if (cform.length === 3) {
@@ -1249,7 +1251,7 @@
     };
 
     Matrix_prototype.CCT2im = function () {
-        var cform = CIE['CCT to xyY'];
+        var cform = Matrix.CIE['CCT to xyY'];
 
         var sizeOut = this.getSize();
         sizeOut[2] = 3;

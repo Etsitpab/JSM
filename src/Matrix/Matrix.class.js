@@ -291,10 +291,10 @@ function Matrix(size, Type, complex, bool) {
      */
     var getDataScalar = function () {
         if (!isreal()) {
-            throw Error("Matrix.getDataScalar: Data must be real.");
+            throw new Error("Matrix.getDataScalar: Data must be real.");
         }
         if (getLength() !== 1) {
-            throw Error("Matrix.getDataScalar: Data length must be 1.");
+            throw new Error("Matrix.getDataScalar: Data length must be 1.");
         }
         return data[0];
     };

@@ -809,11 +809,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
     };
 
     // EXPORTS
-    if (typeof window !== 'undefined') {
-        root.extractModes = extractModes;
-        root.extractGaps = extractGaps;
-        root.extravctModesAndGaps = extractModesAndGaps
-    }
+    root.extractModes = extractModes;
+    root.extractGaps = extractGaps;
+    root.extravctModesAndGaps = extractModesAndGaps
     
 })(Matrix);
 

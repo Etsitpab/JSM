@@ -730,10 +730,9 @@
 	var nx, ny, c, x, y, y_, yx;
         var cst, csty, cste;
 
-        var imcum = this;
+        var imcum = this.im2double();
         for (var p = 0; p < k; p++) {
 
-            imcum = imcum.im2double();
             computeImageIntegral(imcum);
 
             var din = imcum.getData(), dout = imout.getData();
@@ -809,9 +808,11 @@
                     }
                 }
             }
-            imcum = imout;
+            var tmp = imout;
+            imout = imcum;
+            imcum = tmp;
         }
-        return imout;
+        return tmp;
     };
 
     
@@ -1116,8 +1117,9 @@
         }
         return hist;
     };
+    
     (function () {
-        var computeHistogram = function (src, n) {
+        var computeCDF = function (src, n) {
             var srcLength = src.length;
 
             // Compute histogram and histogram sum:
@@ -1128,13 +1130,13 @@
                 bin = bin >= n ? n - 1 : bin;
                 ++hist[bin];
             }
-
+            var norm = 1 / srcLength;
             // Compute integral histogram:
-            var prev = hist[0];
             for (i = 1; i < n; ++i) {
-                prev = hist[i] += prev;
+                hist[i] += hist[i - 1];
+                hist[i - 1] *= norm;
             }
-            hist.sum = src.length;
+            hist[i - 1] *= norm;
             return hist;
         };
 
@@ -1147,19 +1149,25 @@
          * @return {Matrix}
          */
         Matrix_prototype.histeq = function (n) {
-
-            var im = this.im2double().applycform("RGB to HSL");
-            var src = im.select([], [], 2).getData();
-
-            var hist = computeHistogram(src, n);
+            var im = this.im2double();
+            var src = im;
+            if (this.getSize(2) > 1) {
+                src = im.applycform("RGB to HSL").select([], [], 2);
+            } 
+            src = src.getData();
+            var hist = computeCDF(src, n);
 
             // Equalize image:
-            var norm = 1 / hist.sum, floor = Math.floor;
+            var floor = Math.floor;
             for (var i = 0; i < src.length; ++i) {
-                src[i] = hist[floor(src[i] * n)] * norm;
+                src[i] = hist[floor(src[i] * (n - 1))];
             }
             var lumOut = new Matrix([im.size(0), im.size(1)], src);
-            return im.set([], [], 2, lumOut).applycform("HSL to RGB");
+            var out = im.set([], [], 2, lumOut);
+            if (this.getSize(2) > 1) {
+                out = out.applycform("HSL to RGB");
+            }
+            return out;
         };
     })();
 
@@ -1411,7 +1419,6 @@
         }
         return sum;
     };
-
     var applyFilter = function (im, mask, f) {
         var h = im.getSize(0), w = im.getSize(1), d = im.getSize(2), id = im.getData();
         var out = new Matrix(im.getSize(), im.type()), od = out.getData();
