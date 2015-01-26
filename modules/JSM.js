@@ -2970,10 +2970,10 @@ function Matrix(size, Type, complex, bool) {
      */
     var getDataScalar = function () {
         if (!isreal()) {
-            throw Error("Matrix.getDataScalar: Data must be real.");
+            throw new Error("Matrix.getDataScalar: Data must be real.");
         }
         if (getLength() !== 1) {
-            throw Error("Matrix.getDataScalar: Data length must be 1.");
+            throw new Error("Matrix.getDataScalar: Data length must be 1.");
         }
         return data[0];
     };
@@ -8863,6 +8863,8 @@ var IT;
                 Matrix.Colorspaces[cform](this.getData(), N, N, 1);
             } else if (Matrix.Colorspaces[matlabEquivalence[cform]]) {
                 Matrix.Colorspaces[matlabEquivalence[cform]](this.getData(), N, N, 1);
+            } else {
+                throw new Error("Matrix.applycform: Unknown color transformation " + cform);
             }
         } else if (typeof(cform) === "function") {
             if (cform.length === 3) {
@@ -9034,7 +9036,7 @@ var IT;
     };
 
     Matrix_prototype.CCT2im = function () {
-        var cform = CIE['CCT to xyY'];
+        var cform = Matrix.CIE['CCT to xyY'];
 
         var sizeOut = this.getSize();
         sizeOut[2] = 3;
@@ -10170,10 +10172,9 @@ var IT;
 	var nx, ny, c, x, y, y_, yx;
         var cst, csty, cste;
 
-        var imcum = this;
+        var imcum = this.im2double();
         for (var p = 0; p < k; p++) {
 
-            imcum = imcum.im2double();
             computeImageIntegral(imcum);
 
             var din = imcum.getData(), dout = imout.getData();
@@ -10249,9 +10250,11 @@ var IT;
                     }
                 }
             }
-            imcum = imout;
+            var tmp = imout;
+            imout = imcum;
+            imcum = tmp;
         }
-        return imout;
+        return tmp;
     };
 
     
@@ -10556,8 +10559,9 @@ var IT;
         }
         return hist;
     };
+    
     (function () {
-        var computeHistogram = function (src, n) {
+        var computeCDF = function (src, n) {
             var srcLength = src.length;
 
             // Compute histogram and histogram sum:
@@ -10568,13 +10572,13 @@ var IT;
                 bin = bin >= n ? n - 1 : bin;
                 ++hist[bin];
             }
-
+            var norm = 1 / srcLength;
             // Compute integral histogram:
-            var prev = hist[0];
             for (i = 1; i < n; ++i) {
-                prev = hist[i] += prev;
+                hist[i] += hist[i - 1];
+                hist[i - 1] *= norm;
             }
-            hist.sum = src.length;
+            hist[i - 1] *= norm;
             return hist;
         };
 
@@ -10587,19 +10591,25 @@ var IT;
          * @return {Matrix}
          */
         Matrix_prototype.histeq = function (n) {
-
-            var im = this.im2double().applycform("RGB to HSL");
-            var src = im.select([], [], 2).getData();
-
-            var hist = computeHistogram(src, n);
+            var im = this.im2double();
+            var src = im;
+            if (this.getSize(2) > 1) {
+                src = im.applycform("RGB to HSL").select([], [], 2);
+            } 
+            src = src.getData();
+            var hist = computeCDF(src, n);
 
             // Equalize image:
-            var norm = 1 / hist.sum, floor = Math.floor;
+            var floor = Math.floor;
             for (var i = 0; i < src.length; ++i) {
-                src[i] = hist[floor(src[i] * n)] * norm;
+                src[i] = hist[floor(src[i] * (n - 1))];
             }
             var lumOut = new Matrix([im.size(0), im.size(1)], src);
-            return im.set([], [], 2, lumOut).applycform("HSL to RGB");
+            var out = im.set([], [], 2, lumOut);
+            if (this.getSize(2) > 1) {
+                out = out.applycform("HSL to RGB");
+            }
+            return out;
         };
     })();
 
@@ -10851,7 +10861,6 @@ var IT;
         }
         return sum;
     };
-
     var applyFilter = function (im, mask, f) {
         var h = im.getSize(0), w = im.getSize(1), d = im.getSize(2), id = im.getData();
         var out = new Matrix(im.getSize(), im.type()), od = out.getData();
@@ -10955,7 +10964,14 @@ var IT;
     Matrix_prototype.imfilter = function (mask) {
         return applyFilter(this, mask, f_filt);
     };
-    /*
+    /** Median filter.
+     *
+     * /!\ This function si currently Very slow.
+     *
+     * @param{Matrix} mask
+     *  Boolean mask.
+     * @return {Matrix} 
+     */ 
     Matrix_prototype.median = function (mask) {
         var arg = (mask.length * 0.5) | 0;
         var f_med = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
@@ -10971,7 +10987,6 @@ var IT;
         };
         return applyFilter(this, mask, f_med);
     };
-     */
     /** Bilateral filtering.
      *
      * __Also see:__
@@ -12150,11 +12165,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
     };
 
     // EXPORTS
-    if (typeof window !== 'undefined') {
-        root.extractModes = extractModes;
-        root.extractGaps = extractGaps;
-        root.extravctModesAndGaps = extractModesAndGaps
-    }
+    root.extractModes = extractModes;
+    root.extractGaps = extractGaps;
+    root.extravctModesAndGaps = extractModesAndGaps
     
 })(Matrix);
 
