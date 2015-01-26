@@ -49,18 +49,18 @@ p {
 #demo {
     background-color: white;
     box-shadow: 0 8px 24px rgba(100, 100, 100, 0.5);
-    padding: 40px;
+    padding: 20px;
     margin: auto;
     /* margin-top: 30px;*/
     display: absolute;
-    width: calc(100% - 140px);
-    height: calc(100% - 140px);
+    width: calc(100% - 100px);
+    height: calc(100% - 70px);
 }
 
 #interface {
     display: block;
     width: 100%;
-    height: calc(100% - 110px);
+    height: calc(100% - 120px);
 }
 
 #image {

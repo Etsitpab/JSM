@@ -82,6 +82,11 @@
             <input type="range" id="brightness" min="0" step="0.01" max="1" value="0.5"/>
             <label> Contrast: </label>
             <input type="range" id="contrast" min="0" step="0.01" max="1" value="0.5"/>
+            <label> Equalization: </label>
+            <select id="histeq_contrast">
+              <option value="no"> NO </option>
+              <option value="uniform"> UNIFORM </option>
+            </select>
             <hr></hr>
             <input type="button" value="Apply" id="applyContrast">
             <input type="button" value="Reset" id="resetContrast"/>
@@ -126,36 +131,6 @@
           </fieldset>
           
           
-          <fieldset>
-            <legend>Filtering</legend>
-            <label>Gaussian</label>
-            <input type="range" id="gaussian" min="0" step="0.01" max="1" value="0"/>
-            <label>Bilateral</label>
-            <input type="range" id="bilateral_sigma_s" min="0" step="0.05" max="1" value="0"/>
-            <input type="range" id="bilateral_sigma_i" min="0" step="0.05" max="1" value="0"/>
-            <label>Predefined</label>
-            <select id="filter">
-              <option value="none"> NONE </option>
-              <option value="gaussian"> GAUSSIAN </option>
-              <option value="average"> AVERAGE </option>
-              <option value="laplacian"> LAPLACIAN </option>
-              <option value="log"> LOG </option>
-	      <option value="unsharp"> UNSHARP </option>	
-	      <option value="prewitt"> PREWITT </option>	
-	      <option value="sobel"> SOBEL </option>	
-            </select>
-            <select id="filter2">
-              <option value="none"> NONE </option>
-              <option value="x"> X </option>
-              <option value="y"> Y </option>
-              <option value="norm"> NORM </option>
-              <option value="phase"> PHASE </option>
-	      <option value="laplacian"> LAPLACIAN </option>	
-            </select>
-            <hr></hr>
-            <input type="button" value="Apply" id="applyFilter"/>
-            <input type="button" value="Reset" id="resetFilter"/>
-          </fieldset>
           
           <fieldset>
             <legend>Colorspaces</legend>
@@ -167,7 +142,6 @@
               <option value="HSL"> HSL </option>
               <option value="Opponent"> Opponent </option>
               <option value="Ohta"> Ohta </option>
-              <option value="OhtaNorm"> OhtaNorm </option>
               <option value="CMY"> CMY </option>
               <option value="XYZ"> CIE XYZ </option>
               <option value="xyY"> CIE xyY </option>
@@ -287,6 +261,37 @@
             <hr></hr>
             <input type="button" value="Apply" id="applySharp">
             <input type="button" value="Reset" id="resetSharp"/>
+          </fieldset>
+
+          <fieldset>
+            <legend>Filtering</legend>
+            <label>Gaussian</label>
+            <input type="range" id="gaussian" min="0" step="0.01" max="1" value="0"/>
+            <label>Bilateral</label>
+            <input type="range" id="bilateral_sigma_s" min="0" step="0.05" max="1" value="0"/>
+            <input type="range" id="bilateral_sigma_i" min="0" step="0.05" max="1" value="0"/>
+            <label>Predefined</label>
+            <select id="filter">
+              <option value="none"> NONE </option>
+              <option value="gaussian"> GAUSSIAN </option>
+              <option value="average"> AVERAGE </option>
+              <option value="laplacian"> LAPLACIAN </option>
+              <option value="log"> LOG </option>
+	      <option value="unsharp"> UNSHARP </option>	
+	      <option value="prewitt"> PREWITT </option>	
+	      <option value="sobel"> SOBEL </option>	
+            </select>
+            <select id="filter2">
+              <option value="none"> NONE </option>
+              <option value="x"> X </option>
+              <option value="y"> Y </option>
+              <option value="norm"> NORM </option>
+              <option value="phase"> PHASE </option>
+	      <option value="laplacian"> LAPLACIAN </option>	
+            </select>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyFilter"/>
+            <input type="button" value="Reset" id="resetFilter"/>
           </fieldset>
 
           <fieldset>

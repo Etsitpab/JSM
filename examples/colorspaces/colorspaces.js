@@ -248,6 +248,7 @@ var contrast = function () {
     "use strict";
     contrast.reset = function () {
         $("channels_contrast").getElementsByTagName("option")[0].selected = "selected";
+        $("histeq_contrast").getElementsByTagName("option")[0].selected = "selected";
         $F("gamma", 1);
         $F("brightness", 0.5);
         $F("contrast", 0.5);
@@ -257,6 +258,7 @@ var contrast = function () {
     var getParameters = function () {
         return {
             gamma: $F("gamma"), 
+            histeq: $V("histeq_contrast"), 
             brightness: $F("brightness"),
             contrast: $F("contrast"),
             channel: JSON.parse($("channels_contrast").value)
@@ -279,6 +281,10 @@ var contrast = function () {
         if (p.channel.length !== 0) {
             im = img.set([], [], p.channel, im);
         }
+        console.log(p.histeq);
+        if (p.histeq === "uniform") {
+            im = im.histeq(1023);
+        }
         return im;
     };
     var onChange = function () {
@@ -292,6 +298,7 @@ var contrast = function () {
 
     $("resetContrast").addEventListener("click", contrast.reset);
     $("applyContrast").addEventListener("click", onApply);
+    $("histeq_contrast").addEventListener("change", onChange);
     $("channels").addEventListener("change", onChange);
     $("contrast").addEventListener("change", onChange);
     $("brightness").addEventListener("change", onChange);
@@ -355,7 +362,6 @@ var selection = function () {
     };
     selection.fun = function (img, p) {
         if (p.threshold > 0) {
-            console.log("titi");
 	    mask = img.getConnectedComponent(p.coord[0], p.coord[1], p.threshold * 2);
         }
         return img;
@@ -782,7 +788,6 @@ var colorspace = function () {
         }
         var min, max;
         if (p.channels.length !== 0) {
-            console.log(p.channels);
             img = img.select([], [], p.channels);
             if (p.stretch === "YES") {
                 min = img.min().getDataScalar(); 
@@ -795,7 +800,7 @@ var colorspace = function () {
         } else if (p.stretch === "YES") {
             min = img.min();
             max = img.max();
-            img = img["-"](min)["./"](max - min);
+            img = img["-"](min)["./"](max["-"](min));
         }
         return img;
     };
@@ -822,8 +827,8 @@ var morphology = function () {
 
     filter.reset = function () {
         $F("strElemSize", 0);
-        $V("morphOp").getElementsByTagName("option")[0].selected = "selected";
-        $V("strElem").getElementsByTagName("option")[0].selected = "selected";
+        $("morphOp").getElementsByTagName("option")[0].selected = "selected";
+        $("strElem").getElementsByTagName("option")[0].selected = "selected";
         updateOutput();
     };
 
@@ -908,14 +913,20 @@ window.onload = function () {
             var onread = function () {
                 stack = [];
                 stackIt = 0;
-                image = this.im2double()
-                stack[0] = {image: image};
-                updateOutput(image);
-                // Uncomment for working on visible image (lower resolution).
                 if ($V("workImage") === "visible") {
-                    var outputCanvas = $("outputImage");
-                    stack[0].image = Matrix.imread(outputCanvas).im2double();
+                    var outputCanvas = $("outputImage"), div = $("image");
+                    var canvasXSize = div.offsetWidth, canvasYSize = div.offsetHeight;
+                    outputCanvas.width = canvasXSize;
+                    outputCanvas.height = canvasYSize;
+                    outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
+                    this.imshow(outputCanvas, "fit");
+                    image = Matrix.imread(outputCanvas).im2double();
+                } else {
+                    image = this.im2double()
                 }
+                stack[0] = {image: image};
+                mask = undefined;
+                updateOutput(image);
                 var legends = document.getElementsByTagName("legend");
                 var evObj = document.createEvent('Events');
                 evObj.initEvent("click", true, false);
@@ -972,6 +983,5 @@ window.onload = function () {
     };
     canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
     canvas.addEventListener('mousewheel', onMouseWheel, false);
-
 };
 
