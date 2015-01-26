@@ -51,6 +51,10 @@ To be able to read and write images you have to install npm canvas package. To t
 - libgif-dev
 - libjpeg8-dev / libjpeg9-dev
 
+Also, do not forget to add the path to nodejs modules, it should look like that : 
+    `export NODE_PATH="/usr/local/lib/node_modules"`
+
+
 # Why develop a JavaScript numerical computing library  ?
 
 Many reasons can justify this. First, JavaScript is fun. It's easy too use and it has very powerful features (closures, prototype, ...).
