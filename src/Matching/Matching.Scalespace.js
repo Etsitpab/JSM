@@ -53,7 +53,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         sigmaInit: 0.63,
         scaleRatio: 1.26,
         lapThresh: 4e-3,
-        harrisThresh: 1e3,
+        harrisThresh: 1e4,
         /** Function to use for exporting the keypoint list 
          * @return {String}
          */
@@ -111,13 +111,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
          *  An image.
          */
         computeScaleSpace: function (nScale, sigmaInit, scaleRatio) {
-            var normFactor, f = function (t) {
-                if (t > 0) {
-                    return t * normFactor;
-                }
-                return -t * normFactor;
-            };
-
             this.nScale = nScale || this.nScale;
             this.sigmaInit = sigmaInit || this.sigmaInit;
             this.scaleRatio = scaleRatio || this.scaleRatio;
@@ -132,13 +125,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 s.sigma = sigmaInit * Math.pow(scaleRatio, i);
                 s.blur = image.fastBlur(s.sigma);
                 //s.blur = image.gaussian(s.sigma);
-                //s.blur = image.fastGaussian(s.sigma);
                 s.gray = s.blur.rgb2gray();
                 s.gradient = s.gray.gradient(1, 1, 1, 1, 1);
 
                 // Laplacian normalization
-                normFactor = Math.pow(s.sigma, 2);
-                s.gradient.laplacian.arrayfun(f);
+                var normFactor = Math.pow(s.sigma, 2);
+                s.gradient.laplacian.abs().times(normFactor);;
                 this.scale[i] = s;
             }
             return this;
@@ -155,7 +147,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var dx = view.getStep(1), lx = view.getEnd(1);
             var ly = view.getEnd(0);
 
-            var k, ke, x, nx, y, ny, n, l, m, i, j;
+            var maxLocal;
+            var k, ke, x, nx, y, ny, n, l, le, m, me, i, j;
             for (k = 1, ke = s.length - 1; k < ke; k++) {
 
                 sTmp[0] = s[k - 1].gradient.laplacian.getData();
@@ -166,14 +159,15 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     for (y = x + 1, ny = x + ly - 1, j = 1; y < ny; y++, j++) {
                         var p = sTmp[1][y];
                         // Recherche si le point (i, j, k) est bien maximum local
-                        var maxLocal = true;
-                        for (n = 0; n < 3; n++) {
+                        for (maxLocal = true, n = 0; n < 3; n++) {
                             var scale = sTmp[n];
-                            for (l = -1; l < 2; l++) {
-                                var ind = y + l * dx;
-                                for (m = -1; m < 2; m++) {
-                                    if (p < scale[ind + m]) {
+                            for (l = y - dx, le = y + 2 * dx; l < le; l += dx) {
+                                for (m = l - 1, me = l + 2; m < me; m++) {
+                                    if (p < scale[m]) {
                                         maxLocal = false;
+                                        l = le;
+                                        n = 3;
+                                        break;
                                     }
                                 }
                             }
@@ -219,12 +213,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 gradient.x  = gradient.x.gaussian(std);
                 gradient.y  = gradient.y.gaussian(std);
                 */
-                /*
-                 gradient.xy = gradient.xy.fastGaussian(std);
-                 gradient.x  = gradient.x.fastGaussian(std);
-                 gradient.y  = gradient.y.fastGaussian(std);
-                 */
-
             }
             return this;
         },
@@ -298,36 +286,34 @@ var root = typeof window === 'undefined' ? module.exports : window;
          */
         normalizePatch: function (patchRGB) {
             var data = patchRGB.getData();
-            var mask = Matrix.ones(patchRGB.size(0), patchRGB.size(1), 'logical');
-            var maskData = mask.getData();
 
             var size = patchRGB.getSize(0), wSize = Math.floor(size / 2);
-            var wSize2 = wSize * wSize;
-            var c = -2 / wSize2;
+            var wSize2 = wSize * wSize, c = -2 / wSize2;
 
+            var mask = Matrix.ones(size, size, 'logical'), maskData = mask.getData();
             var i, j, _j, r, g, b;
             var x, y, x2, r2, dc = size * size;
 
             var R = 0, G = 0, B = 0, nPoints = 0;
-
+            var exp = Math.exp;
             for (j = 0, _j = 0, x = -wSize; j < size; j++, _j += size, x++) {
                 r = _j;
-                g = _j + dc;
-                b = _j + 2 * dc;
+                g = r + dc;
+                b = g + dc;
                 for (i = 0, x2 = x * x, y = wSize; i < size; i++, r++, g++, b++, y--) {
 
                     r2 = x2 + y * y;
-
+                    
                     if (r2 > wSize2) {
                         maskData[r] = 0;
-                        maskData[g] = 0;
-                        maskData[b] = 0;
                     }
-
-                    var cst = Math.exp(c * r2);
-                    R += (data[r] *= cst);
-                    G += (data[g] *= cst);
-                    B += (data[b] *= cst);
+                    var cst = exp(c * r2);
+                    data[r] *= cst
+                    data[g] *= cst
+                    data[b] *= cst
+                    R += data[r];
+                    G += data[g];
+                    B += data[b];
                     nPoints += cst;
                 }
             }
@@ -335,7 +321,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
             G /= nPoints;
             B /= nPoints;
             var norm = Math.sqrt((R * R + G * G + B * B) / 3);
-
             return {patch: patchRGB, mean: [R / norm, G / norm, B / norm], mask: mask};
         },
         /** Returns the patch corresponding to a keypoint.
@@ -380,7 +365,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 sigma = Math.sqrt(sigma * sigma - sigmaIm * sigmaIm);
                 patch = patch.gaussian(sigma);
             }
-            return this.normalizePatch(patch);
+            // return {patch: patch, mean: [1, 1, 1]};
+            return patch;
         },
         /** Extract the main direction(s) of all keypoint detected in 
          * the scalespace.
@@ -447,6 +433,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             for (k = 0, ek = keypoints.length; k < ek; k++) {
                 var key = keypoints[k];
                 var patchRGB = this.getImagePatch(key, true);
+                patchRGB = this.normalizePatch(patchRGB);
                 var mem = [];
                 for (i = 0; i < descriptors.length; i++) {
                     name = descriptors[i].name;

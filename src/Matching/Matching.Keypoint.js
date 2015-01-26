@@ -61,7 +61,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
     /** Number of bins used to compute the histogram of oriented gradient */
     Keypoint.prototype.nBin = 36;
     /** The algorithm used to compute the main(s) orientation(s) of the keypoint. */
-    Keypoint.prototype.algorithm = "ac";
+    Keypoint.prototype.algorithm = "max";
     /** The factor size used to determine the associated region in the image. */
     Keypoint.prototype.factorSize = 12;
     /** The descriptor(s) used to describe the region of the keypoint. */
@@ -132,8 +132,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         this.algorithm = algo;
         var getIndex = indexCircularPhase;
 
-        patch = patch.patch.gradient(0, 0, 1, 1);
-
+        patch = patch.gradient(0, 0, 1, 1);
         var dPhase = patch.phase.getData(), dNorm = patch.norm.getData();
 
         var size = patch.norm.getSize(0);

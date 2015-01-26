@@ -23,7 +23,9 @@
  */
 var Matching = {};
 
-var Matrix;
 if (typeof window === 'undefined') {
+    var JSM = require('../modules/JSM.js');
+    var Matrix = JSM.Matrix;
+    var Tools = JSM.Tools;
     module.exports.Matching = Matching;
 }

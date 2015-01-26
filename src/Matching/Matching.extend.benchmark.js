@@ -319,9 +319,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             S.scaleSpaces[0]
                 .laplacianThreshold()
                 .harrisThreshold();
-            console.profile();
-            S.extractMainOrientations();
-            console.profileEnd();
+            S.scaleSpaces[0].extractMainOrientations();
             console.log("\t", "Scalespace:",
                         S.scaleSpaces[0].keypoints.length, "keypoints.");
             S.scaleSpaces[1].keypoints = S.scaleSpaces[0].projectKeypoints(mat);

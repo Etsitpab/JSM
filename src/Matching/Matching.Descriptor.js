@@ -88,7 +88,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
     Descriptor.prototype = {
         /** Number of bin used to build the histograms */
-        nBin: 12,
+        nBin: 8,
         /** Are histograms rotated with respect to the main orientation ? */
         relativeOrientation: true,
         /** How many rings, and how many sectors per rings  */
