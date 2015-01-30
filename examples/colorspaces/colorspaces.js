@@ -744,7 +744,7 @@ var sharpening = function () {
        };
     };
     sharpening.fun = function (img, p) {
-        var blur = img.gaussian(p.gradient * 5);
+        var blur = img.fastBlur(p.gradient * 5);
         var grad = img['-'](blur);
         return img['+'](grad['.*'](p.proportion * 5));
     };
