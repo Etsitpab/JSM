@@ -569,7 +569,7 @@ Matrix.prototype._filter1d = function (viewI, kernel, origin, subsample, output,
     var iy_, oy_, ox_;
     var k, s, sTmp, sum;
 
-    for (c = 0; c < 3; c++) {
+    for (c = 0; c < 1; c++) {
         for (y = 0, iy_ = c * nx * ny + iy0, oy_ = c * od.length / 3 + oy0; y < ny; y++, iy_ += iDy, oy_ += oDy) {
             for (x = 0, ox_ = oy_ + ox0; Dout * x < nx; x++, ox_ += oDx) {
                 sum = 0;
@@ -680,8 +680,8 @@ WT.prototype.wt2 = function () {
     // Buffer image
     var halfHeight = (this.redundant) ? this.height : Math.ceil(this.height / 2);
     var buffer = Matrix.zeros(2 * halfHeight, this.width, input.getSize(2));
-    var buffL = buffer.getView().select([0, halfHeight - 1]);
-    var buffH = buffer.getView().select([halfHeight, 2 * halfHeight - 1]);
+    var buffL = buffer.getView();//.select([0, halfHeight - 1]);
+    var buffH = buffer.getView();//.select([halfHeight, 2 * halfHeight - 1]);
     var viewI = input.getView();
     
     // Process each scale
@@ -690,13 +690,14 @@ WT.prototype.wt2 = function () {
         var D = (this.redundant) ? {'Dker': scale.pow} : {'Dout': 2};
 
         // H filtering from image to buffer
-        buffL.select([0, scale.height - 1]);
-        buffH.select([0, scale.height - 1]);
+        buffL.restore().select([0, scale.height - 1], [0, scale.width * 2 - 1]);
+        buffH.restore().select([scale.height, scale.height + scale.height - 1], [0, scale.width * 2 - 1]);
         //buffL.nx = buffH.nx = scale.width;
         
         input._filter1d(viewI, wav.filterL, 'cl', D, buffer, buffL);
         input._filter1d(viewI, wav.filterH, 'cl', D, buffer, buffH);
         window.buffer = buffer;
+        window.data = this.data;
         // Select each subband
         //viewLL.nx = viewHL.nx = viewLH.nx = viewHH.nx = scale.width;
         //viewLL.ny = viewHL.ny = viewLH.ny = viewHH.ny = scale.height;
@@ -709,6 +710,7 @@ WT.prototype.wt2 = function () {
             console.log(s.height, s.cumHeight);
             console.log(s.width, s.cumWidth);
             viewLL.select([0, s.height - 1], [0, s.width - 1]);
+            console.log("viewLH:", s.height, s.cumWidth, s.cumWidth + s.width - 1);
             viewLH.select([0, s.height - 1], [s.cumWidth, s.cumWidth + s.width - 1]);
             viewHL.select([s.cumHeight, s.cumHeight + s.height - 1], [0, s.width - 1]);
             viewHH.select([s.cumHeight, s.cumHeight + s.height - 1], [s.cumWidth, s.cumWidth + s.width - 1]);
@@ -720,18 +722,31 @@ WT.prototype.wt2 = function () {
             'LH': new MatrixView(viewLH),
             'HH': new MatrixView(viewHH)
         };
-
         // V filtering from buffer to data
-        buffer._filter1d(buffL.swapDimensions(0, 1), wav.filterL, 'cl', D, this.data, viewLL.swapDimensions(0, 1));
-        buffer._filter1d(buffL.swapDimensions(0, 1), wav.filterH, 'cl', D, this.data, viewLH.swapDimensions(0, 1));
-        buffer._filter1d(buffH.swapDimensions(0, 1), wav.filterL, 'cl', D, this.data, viewHL.swapDimensions(0, 1));
-        buffer._filter1d(buffH.swapDimensions(0, 1), wav.filterH, 'cl', D, this.data, viewHH.swapDimensions(0, 1));
+        buffL.swapDimensions(0, 1);
+        buffH.swapDimensions(0, 1);
+        viewLL.swapDimensions(0, 1);
+        viewLH.swapDimensions(0, 1);
+        viewHL.swapDimensions(0, 1);
+        viewHH.swapDimensions(0, 1);
+        buffer._filter1d(buffL, wav.filterL, 'cl', D, this.data, viewLL);
+        buffer._filter1d(buffL, wav.filterH, 'cl', D, this.data, viewLH);
+        buffer._filter1d(buffH, wav.filterL, 'cl', D, this.data, viewHL);
+        buffer._filter1d(buffH, wav.filterH, 'cl', D, this.data, viewHH);
+        buffL.swapDimensions(0, 1);
+        buffH.swapDimensions(0, 1);
+        viewLL.restore();
+        viewLH.restore();
+        viewHL.restore();
+        viewHH.restore();
 
-        return;
         // Be ready for next scale
         //buffL.ny = buffH.ny = scale.height;
-        //buffL.select([0, scale.height - 1], [0, scale.width - 1]);
-        //buffH.select([0, scale.height - 1], [0, scale.width - 1]);
+        // var buffL = buffer.getView().select([0, halfHeight - 1]);
+        // var buffH = buffer.getView().select([halfHeight, 2 * halfHeight - 1]);
+        console.log(halfHeight, scale.height);
+        // buffL.select([0, scale.height - 1], [0, scale.width - 1]);
+        // buffH.select([scale.height, scale.height + scale.height - 1], [0, scale.width - 1]);
         viewI = viewLL;
     }
     this.subband[0] = {'LL': input.getView()};
