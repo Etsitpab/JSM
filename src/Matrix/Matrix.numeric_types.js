@@ -47,7 +47,7 @@
         return new Matrix(this.getSize(), od, !this.isreal(), flag);
     };
 
-    /** Converts a new Matrix to double.
+    /** Converts a Matrix to double.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
@@ -60,7 +60,7 @@
         return this.cast('double');
     };
 
-    /** Converts a new Matrix to single.
+    /** Converts a Matrix to single.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
@@ -73,7 +73,7 @@
         return this.cast('single');
     };
 
-    /** Converts a new Matrix to int8.
+    /** Converts a Matrix to int8.
      *
      * Also see {@link Matrix#cast}.
      *
@@ -85,7 +85,7 @@
         return this.cast('int8');
     };
 
-    /** Converts a new Matrix to int16.
+    /** Converts a Matrix to int16.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
@@ -98,7 +98,7 @@
         return this.cast('int16');
     };
 
-    /** Converts a new Matrix to int32.
+    /** Converts a Matrix to int32.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
@@ -111,7 +111,7 @@
         return this.cast('int32');
     };
 
-    /** Converts a new Matrix to uint8.
+    /** Converts a Matrix to uint8.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
@@ -124,7 +124,20 @@
         return this.cast('uint8');
     };
 
-    /** Converts a new Matrix to uint8c.
+    /** Converts a Matrix to logical.
+     *
+     * __Also see:__
+     *  {@link Matrix#cast}.
+     *
+     * @return {Matrix}
+     *
+     * @matlike
+     */
+    Matrix_prototype.logical = function () {
+        return this.cast('logical');
+    };
+
+    /** Converts a Matrix to uint8c.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
@@ -135,7 +148,7 @@
         return this.cast('uint8c');
     };
 
-    /** Converts a new Matrix to uint16.
+    /** Converts a Matrix to uint16.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
@@ -148,7 +161,7 @@
         return this.cast('uint16');
     };
 
-    /** Converts a new Matrix to uint32.
+    /** Converts a Matrix to uint32.
      *
      * __Also see:__
      *  {@link Matrix#cast}.
