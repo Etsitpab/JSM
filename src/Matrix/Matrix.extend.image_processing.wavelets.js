@@ -91,6 +91,7 @@ function Wavelet(name) {
 Wavelet.list = Wavelet.list || {
     'haar': {
         'orthogonal': true,
+        'normalized': false,
         'filterL': [1, 1]
     }
 };
@@ -655,7 +656,7 @@ WT.prototype.wt2 = function () {
     var wav = this.wavelet;
     var input = this.tmp;
     var scaleList = this.getScalesParameters();
-
+    //console.log(scaleList);
     // Create output image
     var lastScale = scaleList[scaleList.length - 1];
     var dataWidth = lastScale.cumWidth + lastScale.width;
@@ -680,42 +681,34 @@ WT.prototype.wt2 = function () {
     // Buffer image
     var halfHeight = (this.redundant) ? this.height : Math.ceil(this.height / 2);
     var buffer = Matrix.zeros(2 * halfHeight, this.width, input.getSize(2));
-    var buffL = buffer.getView();//.select([0, halfHeight - 1]);
-    var buffH = buffer.getView();//.select([halfHeight, 2 * halfHeight - 1]);
+    var buffL = buffer.getView().select([0, halfHeight - 1]);
+    var buffH = buffer.getView().select([halfHeight, -1]);
     var viewI = input.getView();
-    
+
+    window.buffer = buffer;
+    window.data = this.data;
+    console.log(wav.filterL, wav.filterH);
+
     // Process each scale
     while (scaleList.length > 1) {
-        var scale = scaleList.pop();
-        var D = (this.redundant) ? {'Dker': scale.pow} : {'Dout': 2};
+        var s = scaleList.pop();
+        var D = (this.redundant) ? {'Dker': s.pow} : {'Dout': 2};
 
         // H filtering from image to buffer
-        buffL.restore().select([0, scale.height - 1], [0, scale.width * 2 - 1]);
-        buffH.restore().select([scale.height, scale.height + scale.height - 1], [0, scale.width * 2 - 1]);
-        //buffL.nx = buffH.nx = scale.width;
+        buffL.select([0, s.height - 1]);
+        buffH.select([0, s.height - 1]);
         
         input._filter1d(viewI, wav.filterL, 'cl', D, buffer, buffL);
         input._filter1d(viewI, wav.filterH, 'cl', D, buffer, buffH);
-        window.buffer = buffer;
-        window.data = this.data;
-        // Select each subband
-        //viewLL.nx = viewHL.nx = viewLH.nx = viewHH.nx = scale.width;
-        //viewLL.ny = viewHL.ny = viewLH.ny = viewHH.ny = scale.height;
 
         if (this.redundant) {
             // TODO
-            // viewHL.x0 = viewLH.x0 = viewHH.x0 = scale.cumWidth;
+            // viewHL.x0 = viewLH.x0 = viewHH.x0 = s.cumWidth;
         } else {
-            var s = scale;
-            console.log(s.height, s.cumHeight);
-            console.log(s.width, s.cumWidth);
             viewLL.select([0, s.height - 1], [0, s.width - 1]);
-            console.log("viewLH:", s.height, s.cumWidth, s.cumWidth + s.width - 1);
-            viewLH.select([0, s.height - 1], [s.cumWidth, s.cumWidth + s.width - 1]);
-            viewHL.select([s.cumHeight, s.cumHeight + s.height - 1], [0, s.width - 1]);
-            viewHH.select([s.cumHeight, s.cumHeight + s.height - 1], [s.cumWidth, s.cumWidth + s.width - 1]);
-            //viewHL.x0 = viewHH.x0 = scale.cumWidth;
-            //viewLH.y0 = viewHH.y0 = scale.cumHeight;
+            viewLH.select([0, s.height - 1], [s.width, 2 * s.width - 1]);
+            viewHL.select([s.height, 2 * s.height - 1], [0, s.width - 1]);
+            viewHH.select([s.height, 2 * s.height - 1], [s.width, 2 * s.width - 1]);
         }
         this.subband[scaleList.length] = {
             'HL': new MatrixView(viewHL),
@@ -741,13 +734,10 @@ WT.prototype.wt2 = function () {
         viewHH.restore();
 
         // Be ready for next scale
-        //buffL.ny = buffH.ny = scale.height;
-        // var buffL = buffer.getView().select([0, halfHeight - 1]);
-        // var buffH = buffer.getView().select([halfHeight, 2 * halfHeight - 1]);
-        console.log(halfHeight, scale.height);
-        // buffL.select([0, scale.height - 1], [0, scale.width - 1]);
-        // buffH.select([scale.height, scale.height + scale.height - 1], [0, scale.width - 1]);
+        buffL.select([], [0, s.width - 1]);
+        buffH.select([], [0, s.width - 1]);
         viewI = viewLL;
+        input = this.data;
     }
     this.subband[0] = {'LL': input.getView()};
 };
