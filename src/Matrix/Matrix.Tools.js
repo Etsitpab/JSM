@@ -15,7 +15,6 @@
  * @author Baptiste Mazin     <baptiste.mazin@telecom-paristech.fr>
  * @author Guillaume Tartavel <guillaume.tartavel@telecom-paristech.fr>
  */
-var IT;
 /** @class Matrix */
 
 (function (Matrix, Matrix_prototype) {
@@ -377,7 +376,7 @@ var IT;
      *  A lot of time can be spent in this function. It should improved by 
      *  avoiding the type checking for typedArray
      */
-    Matrix.toMatrix = function (data) {
+    Matrix.toMatrix = function (data, type) {
         if (data instanceof Matrix) {
             return data;
         }
@@ -385,22 +384,28 @@ var IT;
             data = [data];
         }
         var d = Array.prototype.concat.apply([], data);
-
-        if (!Tools.isArrayOfNumbers(d)) {
-            throw new Error('Matrix.toMatrix: Array must only contain Number.');
+        var isBoolean = false, size;
+        if (Tools.isArrayOfNumbers(d)) {
+        } else if (Tools.isArrayOfBooleans(d)) {
+            isBoolean = true;
+        } else {
+            throw new Error('Matrix.toMatrix: Array must only contain'
+                            + ' numbers or booleans.');
         }
         if (d.length === 1) {
-            return new Matrix(1, d);
+            size = 1;
+        } else if (d.length === data.length) {
+            size = [d.length, 1];
+        } else {
+            size = [];
+            var t = data;
+            while (t.length) {
+                size.push(t.length);
+                t = t[0];
+            }
+            size = size.reverse();
         }
-        if (d.length === data.length) {
-            return new Matrix([d.length, 1], d);
-        }
-        var size = [], t = data;
-        while (t.length) {
-            size.push(t.length);
-            t = t[0];
-        }
-        return new Matrix(size.reverse(), d);
+        return new Matrix(size, d, false, isBoolean);
     };
 
 
