@@ -275,7 +275,7 @@ if (typeof window === 'undefined') {
          }
 
          for (i = 0, ie = obj.length; i < ie; i++) {
-             if (!this.isBoolean(obj[i])) {
+             if (obj[i] !== true && obj[i] !== false) {
                  return false;
              }
          }
