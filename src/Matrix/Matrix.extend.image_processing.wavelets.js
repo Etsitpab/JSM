@@ -760,9 +760,10 @@ WT.prototype.iwt2 = function (output) {
     // If not redundant, oversampled image
     var decimView2;
     if (!re) {
-        var data2 = this.data.getNew(2 * this.data.width, 2 * this.data.height);
-        this.data.exportImage(data2.S(2));
-        decimView2 = function (view) {
+        var size = this.data.getSize();
+        var data2 = Matrix.zeros([size[0] * 2, size[1] * 2]);
+        data2 = data2.set([0, 2, -1], [0, 2, -1], [], this.data);
+         decimView2 = function (view) {
             view.data = data2.data;
             view.width = data2.width;
             view.height = data2.height;
@@ -782,11 +783,11 @@ WT.prototype.iwt2 = function (output) {
     // Buffer image
     var roundedWidth = (re) ? this.width : 2 * Math.ceil(this.width / 2);
     var roundedHeight = (re) ? this.height : 2 * Math.ceil(this.height / 2);
-    var outBuffer = this.data.getNew(roundedWidth * 2 * factor, roundedHeight * 2 * factor);
-    var buffer = this.data.getNew(2 * roundedWidth, roundedHeight);
-    var buffL = buffer.getView();
-    var buffH = buffer.getView();
-    buffL.nx = buffH.nx = buffH.x0 = roundedWidth;
+    var outBuffer = Matrix.zeros([roundedHeight * 2 * factor, roundedWidth * 2 * factor]);
+    var buffer = Matrix.zeros([roundedHeight, 2 * roundedWidth]);
+    var buffL = buffer.getView().select([0, roundedHeight]);
+    var buffH = buffer.getView().select([roundedHeight, 2 * roundedHeight + 1]);
+    // buffL.nx = buffH.nx = buffH.x0 = roundedWidth;
 
     // Process each scale
     var k, decim = Math.pow(2, this.level - 1);
