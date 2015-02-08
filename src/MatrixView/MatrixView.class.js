@@ -685,13 +685,14 @@ function MatrixView(arg) {
             throw new Error('MatrixView.selectBooleanDimension: array dimensions mismatch.');
         }
 
-        var i, ei, ind = [];
-        for (i = 0, ei = boolInd.length; i < ei; i++) {
+        var i, ei, o, ind = new Array(boolInd.length);
+        for (i = 0, o = 0, ei = boolInd.length; i < ei; i++) {
             if (boolInd[i]) {
-                ind.push(i);
+                ind[o] = i;
+                o += 1;
             }
         }
-        return this.selectIndicesDimension(d, ind);
+        return this.selectIndicesDimension(d, ind.slice(0, o));
     }.bind(this);
 
     var swap = function (tab, i, j) {
