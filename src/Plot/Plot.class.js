@@ -270,8 +270,6 @@ var global = typeof window === 'undefined' ? module.exports : window;
         'ownProperties' : {
             // Force to conserve x/y = 1
             'preserve-ratio': false,
-            // Display Axis can be 'box, 'xy', or 'none'
-            'axis-display': 'box',
             // Display ticks.
             'ticks-display': true,
             // Display Title.
@@ -329,7 +327,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
         'grid': {
             'id': 'grid',
             'stroke': 'grey',
-            'stroke-width': 2,
+            'stroke-width': 1,
             'stroke-dasharray': '5 2'
         },
         'xAxis': {
@@ -420,7 +418,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
             'id': 'selectArea',
             'stroke': 'gray',
             'fill': 'none',
-            'stroke-width': 2,
+            'stroke-width': 1,
             'vector-effect': 'non-scaling-stroke',
             'preserveAspectRatio': 'none',
             'markerUnits': 'userSpaceOnUse',
@@ -1960,30 +1958,17 @@ var global = typeof window === 'undefined' ? module.exports : window;
 
         if (this.getOwnProperty('title-display')) {
             dABBox.y = titleBBox.height;
-            dABBox.height -= dABBox.y;
+            dABBox.height -= titleBBox.height;
+            dABBox.y += 5;
+            dABBox.height -= 5;
         }
-
-        if (this.getOwnProperty('axis-display')) {
-            if (this.getOwnProperty('axis-display') === 'xy') {
-                dABBox.x += 2;
-                dABBox.width -= 2;
-                dABBox.height -= 2;
-            } else if (this.getOwnProperty('axis-display') === 'box') {
-                dABBox.x += 2;
-                dABBox.y += 2;
-                dABBox.width -= 4;
-                dABBox.height -= 4;
-            }
-        }
-
-        dABBox.y += 20;
-        dABBox.height -= 20;
 
         if (this.getOwnProperty('ticks-display')) {
             dABBox.x += 40;
             dABBox.width -= 80;
-            dABBox.height -= 30;
-        }
+            dABBox.height -= 50;
+            dABBox.y += 20;
+        } 
 
         var xLabelSpace, yLabelSpace;
         if (this.getOwnProperty('yLabel-display')) {
@@ -3498,7 +3483,6 @@ var global = typeof window === 'undefined' ? module.exports : window;
     };
 
     Plot.prototype.addChromaticityDiagram = function (diagram, args) {
-
         var param = {
             "Planckian locus": true,
             "Daylight locus": true,
