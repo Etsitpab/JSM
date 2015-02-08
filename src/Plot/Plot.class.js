@@ -3598,16 +3598,16 @@ var global = typeof window === 'undefined' ? module.exports : window;
                 defaultArgs[i] = args[i];
             }
         }
-        var XYZ_RGB = Matrix.Colorspaces['LinearRGB to XYZ'];
-        var xyY_XYZ = Matrix.Colorspaces['XYZ to ' + diagram];
+        var N = r.length;
+        var data = new Float32Array(N * 3),
+            x = data.subarray(0, N),
+            y = data.subarray(N, N * 2),
+            z = data.subarray(N * 2);
 
-        var x = new Float32Array(r.length);
-        var y = new Float32Array(r.length);
-        for (i = 0, end = r.length; i < end; i++) {
-            var tmp = xyY_XYZ(XYZ_RGB([r[i], g[i], b[i]]));
-            x[i] = tmp[0];
-            y[i] = tmp[1];
-        }
+        x.set(r);
+        y.set(g);
+        z.set(b);
+        Matrix.Colorspaces['RGB to ' + diagram](data, N, N, 1);
         this.addPath(x, y, defaultArgs);
         return this;
     };
