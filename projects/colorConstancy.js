@@ -41,13 +41,13 @@ Matrix.prototype = Matrix.prototype || {};
         out = out.set([], [], 1, m);
         v = m.select(0, []).cat(0, m.select([0, hh - 2], []));
         out = out.set([], [], 2, v);
-        out2 = out.max([], 2)[0];
+        out2 = out.max(2);
         v = out2.select([], [1, ll - 1]).cat(1, m.select([], [ll - 1]));
         out = out.set([], [], 0, v);
         out = out.set([], [], 1, out2);
         v = out2.select([], 0).cat(1, out2.select([], [0, ll - 2]));
         out = out.set([], [], 2, v);
-        out = out.max([], 2)[0];
+        out = out.max(2);
         return out.cat(2, out, out);
     };
 
@@ -93,7 +93,7 @@ Matrix.prototype = Matrix.prototype || {};
         var im = this.im2double();
 
         mask_im = mask_im || Matrix.zeros(im.getSize(0), im.getSize(1), 1);
-        mask_im = mask_im['+'](im.max([], 2)[0][">="](1));
+        mask_im = mask_im['+'](im.max(2)[">="](1));
         mask_im = dilatation33(mask_im);
 
         mask_im = mask_im['==='](0);
@@ -112,9 +112,9 @@ Matrix.prototype = Matrix.prototype || {};
         var d = im['.*'](mask_im).reshape([size[0] * size[1], size[2]]);
         if (minkNorm !== -1) {
             d = (minkNorm === 1) ? d : d['.^'](minkNorm);
-            ill = d.sum()['.^'](1 / minkNorm);
+            ill = d.sum(0)['.^'](1 / minkNorm);
         } else {
-            ill = d.max()[0];
+            ill = d.max(0);
         }
         var sum = ill['.*'](ill).sum().sqrt();
         ill = ill['./'](sum);
@@ -164,7 +164,7 @@ Matrix.prototype.miredHistogram = function (params) {
 
     var imDist = ((imuv)['-'](imuvP))['.^'](2).sum(2)['.^'](0.5);
     // Pixels masks
-    var imY = imXYZ.select([], [], [1]);
+    var imY = imXYZ.select([], [], 1);
 
     // Discard potentially saturated points or blacks
     var maskSaturated = ((imY)['>'](0))['&&']((imY)['<'](p.s));
@@ -190,7 +190,7 @@ Matrix.prototype.miredHistogram = function (params) {
     }
 
     var max = hs.histw.max();
-    var indice = max[1].getData()[0];
+    var indice = hs.histw.amax().getDataScalar();
     var indiceMin = Math.max(indice - (p.sigma || 2), 0);
     var indiceMax = Math.min(indice + (p.sigma || 2), scaleMired.numel() - 1);
 
@@ -205,7 +205,7 @@ Matrix.prototype.miredHistogram = function (params) {
 
         var maskSelectedTemp  = (maskInf)['&&'](maskSup);
         var pointsKept = weights.select(maskSelectedTemp);
-        var sumWeights = pointsKept.sum2();
+        var sumWeights = pointsKept.sum().getDataScalar();
         var xPoints = imxy.select([], [], 0).select(maskSelectedTemp).getData();
         var yPoints = imxy.select([], [], 1).select(maskSelectedTemp).getData();
         pointsKept = pointsKept.getData();
@@ -218,9 +218,9 @@ Matrix.prototype.miredHistogram = function (params) {
     };
 
     var xyYToRGBNorm = function (xyY) {
-        var f1 = Colorspaces.getConversionFunction('xyY to XYZ');
-        var f2 = Colorspaces.getConversionFunction('XYZ to LinearRGB');
-        var illRGB = f2(f1(xyY));
+        var f1 = Matrix.Colorspaces['xyY to XYZ'];
+        var f2 = Matrix.Colorspaces['XYZ to LinearRGB'];
+        var illRGB = f2(f1(xyY.slice()));
         var s = illRGB[0] + illRGB[1] + illRGB[2];
         illRGB[0] = illRGB[0] * 3 / s;
         illRGB[1] = illRGB[1] * 3 / s;
@@ -270,8 +270,8 @@ function angularError(a, b) {
 
 var correctImage = function (im, ill, illout) {
     "use strict";
-    illout = illout || CIE.getIlluminant('D65');
-    var mat = CIE.getIlluminantConversionMatrix(illout, ill);
+    illout = illout || Matrix.CIE.getIlluminant('D65');
+    var mat = Matrix.CIE.getIlluminantConversionMatrix(illout, ill);
     im = Matrix.applycform(im, 'sRGB to LinearRGB')
         .applycform(mat)
         .applycform('LinearRGB to sRGB');

@@ -176,9 +176,7 @@
                 try {
                     var currentPrimaries = CIE.currentPrimaries;
                     CIE.setPrimaries(primaries);
-                    out.R = global.Colorspaces['xyY to ' + space](out.R);
-                    out.G = global.Colorspaces['xyY to ' + space](out.G);
-                    out.B = global.Colorspaces['xyY to ' + space](out.B);
+                    out = global.Colorspaces['xyY to ' + space](out, 3, 1, 3);
                     CIE.setPrimaries(currentPrimaries);
                 } catch (e) {
                     throw new Error("CIE.getPrimaries: " + e.message);
@@ -326,27 +324,32 @@
          * @todo Why do we change the primaries and the illuminant ?
          */
         getSpectrumLocus: function (diagram) {
-
             diagram = diagram || 'xyY';
 
             var i;
-            var lambda = CIE.colorMatchingFunctions["CIE 1931 XYZ"].lambda;
-            var x = CIE.colorMatchingFunctions["CIE 1931 XYZ"].x;
-            var y = CIE.colorMatchingFunctions["CIE 1931 XYZ"].y;
-            var z = CIE.colorMatchingFunctions["CIE 1931 XYZ"].z;
+            var CMF = CIE.getCMF();
+            var lambda = CMF.lambda,
+                x = CMF.x,
+                y = CMF.y,
+                z = CMF.z;
 
-            var chr1 = new Float64Array(lambda.length + 1);
-            var chr2 = new Float64Array(lambda.length + 1);
+            var data = new Float64Array((lambda.length + 1) * 3),
+                chr1 = data.subarray(0, (lambda.length + 1)),
+                chr2 = data.subarray((lambda.length + 1), (lambda.length + 1) * 2),
+                chr3 = data.subarray((lambda.length + 1) * 2, (lambda.length + 1) * 3);
+            
             for (i = lambda.length; i--; i) {
                 var sum = 1 / (x[i] + y[i] + z[i]);
                 if (sum) {
                     chr1[i] = x[i] * sum;
                     chr2[i] = y[i] * sum;
                 }
+                chr3[i] = 1;
             }
 
             chr1[lambda.length] = chr1[0];
             chr2[lambda.length] = chr2[0];
+            chr3[lambda.length] = chr3[0];
 
             // uv chromaticity conversion
             if (diagram !== 'xyY') {
@@ -362,11 +365,7 @@
                 } catch (e) {
                     throw new Error('CIE.getPlanckianLocus: ' + e.message);
                 }
-                for (i = chr1.length; i--; i) {
-                    var chrTmp = convert([chr1[i], chr2[i], 1]);
-                    chr1[i] = chrTmp[0];
-                    chr2[i] = chrTmp[1];
-                }
+                convert(data, lambda.length + 1, 1, 3);
             }
             var out = [];
             out[0] = chr1;
@@ -409,26 +408,24 @@
                 T = new Float64Array(T);
             }
 
-            var chr1 = new Float64Array(T.length), chr2 = new Float64Array(T.length);
+            var data = new Float64Array(T.length * 3);
+            var chr1 = data.subarray(0, T.length),
+                chr2 = data.subarray(T.length, T.length * 2),
+                chr3 = data.subarray(T.length * 2);
             for (i = 0, ei = T.length; i < ei; i++) {
                 var tmp = f(T[i]);
                 chr1[i] = tmp[0];
                 chr2[i] = tmp[1];
+                chr3[i] = 1;
             }
 
             // Chromaticity conversion if needed
             if (diagram !== 'xyY') {
-                var convert;
-                try {
-                    convert = global.Colorspaces["xyY to " + diagram];
-                } catch (e) {
+                var convert = global.Colorspaces["xyY to " + diagram];
+                if (!Tools.isSet(convert)) {
                     throw new Error("CIE.getIlluminantLocus: " + e.message);
                 }
-                for (i = chr1.length; i--; i) {
-                    var chrTmp = convert([chr1[i], chr2[i], 1]);
-                    chr1[i] = chrTmp[0];
-                    chr2[i] = chrTmp[1];
-                }
+                var chrTmp = convert(data, T.length, T.length, 1);
             }
             var out = [chr1, chr2];
             out.CCT = T;
