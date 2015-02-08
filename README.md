@@ -20,6 +20,16 @@ A list of supported function may be found [here](http://etsitpab.github.io/JSM/#
 The inspiration is the well known [Matlab][1] software though there are some differences in the syntax we used. 
 
 [1]:http://www.mathworks.fr/products/matlab/
+# Demos
+Here is the link to some demos that have been realized with this project:
+- [Image editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html)
+- [Game of life](http://etsitpab.github.io/JSM/JSM/examples/gameoflife/gameoflife.html)
+- [Plot editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html)
+- [Keypoint detector](http://etsitpab.github.io/JSM/JSM/examples/keypoints/keypoints.html)
+- [Color constancy basic algorithms](http://etsitpab.github.io/JSM/JSM/examples/colorconstancy/colorconstancy.html)
+- [Illuminant estimations with projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html)
+- [Image matching](http://etsitpab.github.io/JSM/JSM/examples/sift/sift.html)
+- [Histogram mode detection](http://etsitpab.github.io/JSM/JSM/examples/modes/modes.html)
 
 # [Documentation](http://etsitpab.github.io/JSM/)
 
