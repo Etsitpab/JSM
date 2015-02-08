@@ -126,7 +126,6 @@ var global = typeof window === 'undefined' ? module.exports : window;
 	    'id': id
         };
         var drawing = Tools.createSVGNode('svg', param);
-
         // Allow to retrieve plot from SVG element;
         drawing.getPlot = function () {
             return this;
@@ -952,8 +951,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
         var svg = this.getDrawing();
         var drawingArea = svg.getElementById('drawingArea');
         var curves = svg.getElementById('curves');
-        var w = drawingArea.width.baseVal.value;
-        var h = drawingArea.height.baseVal.value;
+        var w = drawingArea.width.baseVal.value, h = drawingArea.height.baseVal.value;
 
         var BBox, xlim, ylim;
         // Matlab like command
@@ -1030,7 +1028,6 @@ var global = typeof window === 'undefined' ? module.exports : window;
      *  Create xAxis view.
      */
     Plot.prototype.setXAxis = function () {
-
         var svg = this.getDrawing();
 
         var xAxis = svg.getElementById('xAxis');
@@ -1231,6 +1228,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
             var curvesChilds = curves.childNodes;
             for (i = 1; i < curvesChilds.length; i++) {
                 var BB = curvesChilds[i].BBox;
+
                 mBBox[0] = BB[0] < mBBox[0] ? BB[0] : mBBox[0];
                 mBBox[1] = BB[1] < mBBox[1] ? BB[1] : mBBox[1];
                 mBBox[2] = BB[2] > mBBox[2] ? BB[2] : mBBox[2];
@@ -1804,8 +1802,8 @@ var global = typeof window === 'undefined' ? module.exports : window;
 
         this.initializeEvents();
 
-        this.setAxis();
         this.autoDisplay();
+        this.setAxis();
 
         return this;
     };
@@ -1929,10 +1927,10 @@ var global = typeof window === 'undefined' ? module.exports : window;
 
         // drawing area
         var drawingArea = svg.getElementById('drawingArea');
-        drawingArea.setAttributeNS(null, 'x', '0%');
-        drawingArea.setAttributeNS(null, 'y', '0%');
-        drawingArea.setAttributeNS(null, 'width', '100%');
-        drawingArea.setAttributeNS(null, 'height', '100%');
+        drawingArea.setAttributeNS(null, 'x', 0);
+        drawingArea.setAttributeNS(null, 'y', 0);
+        drawingArea.setAttributeNS(null, 'width', svg.width.baseVal.value);
+        drawingArea.setAttributeNS(null, 'height', svg.height.baseVal.value);
 
         var dABBox = {
             'x': drawingArea.x.baseVal.value,
@@ -3577,7 +3575,6 @@ var global = typeof window === 'undefined' ? module.exports : window;
             var sL = Matrix.CIE.getSpectrumLocus(diagram);
             this.addPath(sL[0], sL[1], sLProperties);
         }
-
         // Plot planckian locus
         if (param["Planckian locus"] === true) {
             var pL = Matrix.CIE.getPlanckianLocus(diagram);
@@ -3586,8 +3583,8 @@ var global = typeof window === 'undefined' ? module.exports : window;
 
         // Plot primaries gamut
         if (param["Gamut"] === true) {
-            var xPrim = [prim.R[0], prim.G[0], prim.B[0], prim.R[0]];
-            var yPrim = [prim.R[1], prim.G[1], prim.B[1], prim.R[1]];
+            var xPrim = [prim[0], prim[3], prim[6], prim[0]];
+            var yPrim = [prim[1], prim[4], prim[7], prim[1]];
             this.addPath(xPrim, yPrim, pGProperties);
         }
 
