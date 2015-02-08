@@ -7,6 +7,20 @@ The inspiration is the well known [Matlab][1] software though there are some dif
 
 [1]:http://www.mathworks.fr/products/matlab/
 
+# Demos
+
+Here are some demos that have been realized with this project:
+
+- [Image editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html)
+- [Game of life](http://etsitpab.github.io/JSM/JSM/examples/gameoflife/gameoflife.html)
+- [Plot editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html)
+- [Keypoint detector](http://etsitpab.github.io/JSM/JSM/examples/keypoints/keypoints.html)
+- [Color constancy basic algorithms](http://etsitpab.github.io/JSM/JSM/examples/colorconstancy/colorconstancy.html)
+- [Illuminant estimations with projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html)
+- [Image matching](http://etsitpab.github.io/JSM/JSM/examples/sift/sift.html)
+- [Histogram mode detection](http://etsitpab.github.io/JSM/JSM/examples/modes/modes.html)
+
+
 # Why develop a JavaScript numerical computing library  ?
 
 Many reasons can justify this. First, JavaScript is fun. It's easy too use and it has very powerful features (closures, prototype, ...).
