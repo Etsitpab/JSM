@@ -24,3 +24,9 @@
     width: calc(100% - 290px);
     height: calc(100% - 20px);
 }
+
+#interface {
+    display: block;
+    width: 100%;
+    height: calc(100% - 120px);
+}

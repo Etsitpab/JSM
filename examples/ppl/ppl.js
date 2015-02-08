@@ -119,7 +119,6 @@ function plotScatter(x1, y1, x2, y2) {
     y2 = round(y2);
 
     var subIm = im.select([min(-y1, -y2), max(-y1, -y2)], [min(x1, x2), max(x1, x2)]);
-
     var points = [
         subIm.select([], [], 0).getData(),
         subIm.select([], [], 1).getData(),
@@ -178,7 +177,9 @@ var applyPPL = function (event) {
 
     console.log("Applying the algorithm with parameters : k = ", p.k, "delta = ", p.delta, "bins = ", p.bins, "s = ", p.s);
     Tools.tic();
+    console.profile();
     out = im.miredHistogram(p);
+    console.profileEnd();
     console.log("Time needed:", Tools.toc());
 
 
@@ -353,6 +354,7 @@ window.onload = function () {
     };
     var p = new Plot('chromaticityDiagram', [$('right').clientWidth, $('right').clientHeight / 2], 'right', plotProperties);
     p.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
+
     p.remove("Standards illuminants");
     p.remove("Spectrum locus");
 
@@ -420,13 +422,13 @@ Plot.prototype.drawMode = function (h, s, m, c) {
     var a = Math.round(m.bins[0]), b = Math.round(m.bins[1]);
     var sum;
     if (b >= a) {
-        sum = h.select([a, b]).sum2() / (b - a + 1);
+        sum = h.select([a, b]).sum()["./"](b - a + 1);
         hm = hm.set([a, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});
     } else {
-        sum = h.select([a, -1]).sum2();
-        sum += h.select([0, b]).sum2();
-        sum /= (nBin - a + b + 1);
+        sum = h.select([a, -1]).sum();
+        sum["+="](h.select([0, b]).sum());
+        sum["/="](nBin - a + b + 1);
         hm = hm.set([a, -1], sum);
         hm = hm.set([0, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});

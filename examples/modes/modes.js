@@ -12,21 +12,21 @@ Plot.prototype = Plot.prototype || {};
 Plot.prototype.drawMode = function (h, s, m, c) {
     "use strict";
     var nBin = h.numel();
-    var hm = Matrix.zeros(1, nBin);
+    var hm = Matrix.zeros(nBin, 1);
 
     var a = Math.round(m.bins[0]), b = Math.round(m.bins[1]);
     var sum;
     if (b >= a) {
-        sum = h.select([], [a, b]).sum2() / (b - a + 1);
-        hm = hm.set([], [a, b], sum);
-        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.5});
+        sum = h.select([a, b]).sum()["./"](b - a + 1);
+        hm = hm.set([a, b], sum);
+        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});
     } else {
-        sum = h.select([], [a, -1]).sum2();
-        sum += h.select([], [0, b]).sum2();
-        sum /= (nBin - a + b + 1);
-        hm = hm.set([], [a, -1], sum);
-        hm = hm.set([], [0, b], sum);
-        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.5});
+        sum = h.select([a, -1]).sum();
+        sum["+="](h.select([0, b]).sum());
+        sum["/="](nBin - a + b + 1);
+        hm = hm.set([a, -1], sum);
+        hm = hm.set([0, b], sum);
+        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});
     }
 };
 
@@ -65,7 +65,6 @@ var colorsName = [
 ];
 
 var colorsRGB = {
-
     "red":     [1, 0, 0],
     "lime":    [0, 1, 0],
     "blue":    [0, 0, 1],
@@ -133,22 +132,23 @@ window.onload = function () {
         $("outputImage").setAttribute("display", "none");
         if (METHOD === 0) {
             var c = 1;
-            if (HISTW && HISTW.sum2() !== 0) {
-                c = HISTW.sum2() / HIST.sum2();
+            if (HISTW && HISTW.sum().getDataScalar() !== 0) {
+                c = HISTW.sum()["./"](HIST.sum()).getDataScalar();
             }
+            
             var pdf = HIST['.*'](c).getData();
             pH.addHistogram(s.getData(), pdf, {"fill": "deepskyblue", "fill-opacity": 0.5, colormap: true});
-        } else if (HISTW.sum2()) {
+        } else if (HISTW.sum().getDataScalar()) {
             pH.addHistogram(s.getData(), HISTW.getData(), {"fill": "orange", "fill-opacity": 0.5, colormap: true});
         }
 
         if (MODES) {
             var i, ei;
             for (i = 0; i < MODES.length; i++) {
-                if (HISTW.sum2()) {
-                    pH.drawMode(HISTW.transpose(), s, MODES[i], "black");
+                if (HISTW.sum().getDataScalar()) {
+                    pH.drawMode(HISTW, s, MODES[i], "black");
                 } else {
-                    pH.drawMode(HIST.transpose(), s, MODES[i], "black"/*colorsName[i]*/);
+                    pH.drawMode(HIST, s, MODES[i], "black"/*colorsName[i]*/);
                 }
             }
         }
@@ -281,7 +281,7 @@ window.onload = function () {
         bins = H.select(S0)['.*'](bin).floor();
         bins = bins.set(bins['==='](bin), 0);
         weights = S.select(S0);
-        console.log(bins);
+
         HIST = Matrix.accumarray(bins, Matrix.ones(bins.size()), [bin, 1]);
         HISTW = Matrix.accumarray(bins, weights, [bin, 1]);
 
@@ -355,10 +355,11 @@ window.onload = function () {
         'preserve-ratio': false,
         'legend-display': 'none'
     };
-    var pH = new Plot('HISTOGRAM',
-                      $('image').clientWidth,
-                      $('image').clientHeight,
-                      'image', plotProperties);
+    var pH = new Plot(
+        'HISTOGRAM',
+        [$('image').clientWidth, $('image').clientHeight],
+        'image', plotProperties
+    );
     // pH.getDrawing().setAttribute("display", "none");
     $("outputImage").addEventListener("click", exportImage);
     window.hideFieldset();

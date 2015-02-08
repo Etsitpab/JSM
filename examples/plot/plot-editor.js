@@ -186,7 +186,7 @@ window.onload = function () {
     'use strict';
     hideFieldset();
 
-    plot = new Plot('default-plot', 512, 512);
+    plot = new Plot('default-plot', [512, 512], 'image');
 
     var read = function (evt) {
         var callback = function (evt, type) {
@@ -220,7 +220,6 @@ window.onload = function () {
     $("loadFile").addEventListener("change", read, false);
 
     // Tools.makeDraggable(document, callback);
-    plot.appendTo('image');
     plot.click = function (coord, event) {
         if (!this.getOwnProperty('compute-closest')) {
             return;

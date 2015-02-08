@@ -191,7 +191,7 @@ function computeScaleSpace() {
     if (!IMAGE) {
         return;
     }
-    SCALESPACE = new ScaleSpace(IMAGE, scaleNumber, sigmaInit, scaleRatio);
+    SCALESPACE = new Matching.ScaleSpace(IMAGE, scaleNumber, sigmaInit, scaleRatio);
     SCALESPACE
         .computeScaleSpace()
         .precomputeMaxLaplacian()

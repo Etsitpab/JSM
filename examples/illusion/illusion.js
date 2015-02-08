@@ -36,15 +36,12 @@ window.onload = function () {
     var onread = function () {
         IMAGE = this.im2double();
         updateOutput(IMAGE);
-        var f1 = Colorspaces.getConversionFunction("RGB to CMY");
-        var f2 = Colorspaces.getConversionFunction("RGB to Ohta");
-        var f3 = Colorspaces.getConversionFunction("Ohta to RGB");
-        IMC = IMAGE
-            .applycform(f1)
-            .applycform(f2)
-            .set([], [], [0], 0.5)
-            .applycform(f3);
-        IMG = IMAGE.mean(2);
+        IMC = IMAGE.getCopy()
+            .applycform("RGB to CMY")
+            .applycform("RGB to Ohta")
+            .set([], [], 0, 0.5)
+            .applycform("Ohta to RGB");
+        IMG = IMAGE.rgb2gray(2);
     };
 
     var run = function () {
@@ -85,6 +82,6 @@ window.onload = function () {
     $("loadFile").addEventListener("change", read, false);
 
     window.hideFieldset();
-    Matrix.imread("castle.jpg", onread);
+    //Matrix.imread("castle.jpg", onread);
 
 };

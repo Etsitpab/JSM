@@ -146,7 +146,7 @@ function createGameOfLife(image) {
         if (window.GAME_OF_LIFE) {
             // B3S23 rule
             // Neighborhood for each cell
-            var N = A.filter(H), N3 = N['==='](3), N2 = N['==='](2);
+            var N = A.imfilter(H), N3 = N['==='](3), N2 = N['==='](2);
             // Update step
             A = N3['||'](A['&&'](N2));
 
