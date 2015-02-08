@@ -31,6 +31,7 @@
         "../src/Matrix/Matrix.construction.js",
         "../src/Matrix/Matrix.operators.js",
         "../src/Matrix/Matrix.elementary_math.complex_numbers.js",
+        "../src/Matrix/Matrix.statistics.base.js",
 
         "../src/Matrix/Matrix.extend.elementary_math.special_functions.js",
         "../src/Matrix/Matrix.extend.linear_algebra.js",
@@ -47,6 +48,7 @@
         "../src/Matching/Matching.Sift.js",
 
         "../projects/CIE.js",
+        "../projects/CIE.data.js",
         "../src/Plot/Plot.class.js"
        // "../src/Matrix/Matrix.statistics.base.js",
        // "../src/Matrix/Matrix.elementary_math.special_functions.js",
