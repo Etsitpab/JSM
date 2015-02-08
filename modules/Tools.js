@@ -191,8 +191,11 @@ if (typeof window === 'undefined') {
          if (!this.isArrayLike(obj)) {
              return false;
          }
+         min = this.isSet(min) ? min : -Infinity;
+         max = this.isSet(max) ? max : +Infinity;
          for (i = 0, ie = obj.length; i < ie; i++) {
-             if (!this.isNumber(obj[i], min, max)) {
+             var o = obj[i];
+             if (!((typeof o === 'number') && min <= o && o <= max)) {
                  return false;
              }
          }
@@ -250,8 +253,11 @@ if (typeof window === 'undefined') {
                  return false;
              }
          }
+         min = this.isSet(min) ? min : -Infinity;
+         max = this.isSet(max) ? max : +Infinity;
          for (i = 0, ie = obj.length; i < ie; i++) {
-             if (!this.isInteger(obj[i], min, max)) {
+             var o = obj[i];
+             if (!((typeof o === 'number') && (min <= o && o <= max) && (o % 1 === 0))) {
                  return false;
              }
          }
@@ -275,7 +281,7 @@ if (typeof window === 'undefined') {
          }
 
          for (i = 0, ie = obj.length; i < ie; i++) {
-             if (!this.isBoolean(obj[i])) {
+             if (obj[i] !== true && obj[i] !== false) {
                  return false;
              }
          }

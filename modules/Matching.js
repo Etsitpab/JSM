@@ -2597,6 +2597,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             mask =  mask.cat(2, mask, mask);
         } else if (name === "RGB" || name === "RGBNorm") {
             patch = (name === "RGBNorm") ? global.Descriptor.prototype.normalizeColor(patchRGB) : patchRGB;
+            console.log(patch);
             patch = patch.patch;
             patch = patch.cat(2, Matrix.ones(patch.size(0), patch.size(1)));
             mask = mask.cat(2, mask, mask, mask);
