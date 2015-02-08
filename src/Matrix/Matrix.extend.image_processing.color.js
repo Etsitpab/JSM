@@ -1205,8 +1205,8 @@
 
 
     Matrix_prototype.correctImage = function (ill, illout) {
-        illout = illout || CIE.getIlluminant('D65');
-        var mat = CIE.getIlluminantConversionMatrix(illout, ill);
+        illout = illout || Matrix.CIE.getIlluminant('D65');
+        var mat = Matrix.CIE.getIlluminantConversionMatrix(illout, ill);
         this.applycform('sRGB to LinearRGB')
             .applycform(mat)
             .applycform('LinearRGB to sRGB');
@@ -1218,7 +1218,7 @@
     };
 
     Matrix_prototype.im2CCT = function () {
-        var cform = CIE['xyY to CCT'];
+        var cform = Matrix.CIE['xyY to CCT'];
 
         var sizeOut = this.getSize();
         sizeOut.pop();
