@@ -28,7 +28,7 @@ Here is the link to some demos that have been realized with this project:
 - [Plot editor](http://etsitpab.github.io/JSM/JSM/examples/plot/plot-editor.html)
 - [Keypoint detector](http://etsitpab.github.io/JSM/JSM/examples/keypoints/keypoints.html)
 - [Color constancy basic algorithms](http://etsitpab.github.io/JSM/JSM/examples/colorconstancy/colorconstancy.html)
-- [Illuminant estimations with projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html)
+- [Estimation of illuminants from projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html)
 - [Image matching](http://etsitpab.github.io/JSM/JSM/examples/sift/sift.html)
 - [Histogram mode detection](http://etsitpab.github.io/JSM/JSM/examples/modes/modes.html)
 
