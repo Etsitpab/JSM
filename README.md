@@ -25,7 +25,7 @@ The inspiration is the well known [Matlab][1] software though there are some dif
 Here is the link to some demos that have been realized with this project:
 - [Image editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html)
 - [Game of life](http://etsitpab.github.io/JSM/JSM/examples/gameoflife/gameoflife.html)
-- [Plot editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html)
+- [Plot editor](http://etsitpab.github.io/JSM/JSM/examples/plot/plot-editor.html)
 - [Keypoint detector](http://etsitpab.github.io/JSM/JSM/examples/keypoints/keypoints.html)
 - [Color constancy basic algorithms](http://etsitpab.github.io/JSM/JSM/examples/colorconstancy/colorconstancy.html)
 - [Illuminant estimations with projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html)
