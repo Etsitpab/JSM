@@ -23,14 +23,14 @@ The inspiration is the well known [Matlab][1] software though there are some dif
 
 # Demos and [Documentation](http://etsitpab.github.io/JSM/)
 Here is the link to some demos that have been realized with this project:
-- [Image editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html)
-- [Game of life](http://etsitpab.github.io/JSM/JSM/examples/gameoflife/gameoflife.html)
-- [Plot editor](http://etsitpab.github.io/JSM/JSM/examples/plot/plot-editor.html)
-- [Keypoint detector](http://etsitpab.github.io/JSM/JSM/examples/keypoints/keypoints.html)
-- [Color constancy basic algorithms](http://etsitpab.github.io/JSM/JSM/examples/colorconstancy/colorconstancy.html)
-- [Estimation of illuminants from projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html)
-- [Image matching with local descriptors](http://etsitpab.github.io/JSM/JSM/examples/sift/sift.html)
-- [Histogram mode detection](http://etsitpab.github.io/JSM/JSM/examples/modes/modes.html)
+- [Image editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html) (Beta version)
+- [Game of life](http://etsitpab.github.io/JSM/JSM/examples/gameoflife/gameoflife.html) (Beta version)
+- [Plot editor](http://etsitpab.github.io/JSM/JSM/examples/plot/plot-editor.html) (Beta version)
+- [Keypoint detector](http://etsitpab.github.io/JSM/JSM/examples/keypoints/keypoints.html) (Beta version)
+- [Color constancy basic algorithms](http://etsitpab.github.io/JSM/JSM/examples/colorconstancy/colorconstancy.html) (Beta version)
+- [Estimation of illuminants from projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html) (Beta version)
+- [Image matching with local descriptors](http://etsitpab.github.io/JSM/JSM/examples/sift/sift.html) (Alpha version)
+- [A contrario histogram modes detection](http://etsitpab.github.io/JSM/JSM/examples/modes/modes.html) (Alpha version)
 
 The documentation can be consulted [here](http://etsitpab.github.io/JSM/). The code is documented using [jsduck](https://github.com/senchalabs/jsduck). Once it is installed just use the command `make doc`
 If you experience problem, be sure that you installed the ruby1.9-dev (or more recent) package and check this [page](https://github.com/senchalabs/jsduck/wiki/Installation).
