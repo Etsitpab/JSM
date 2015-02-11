@@ -153,7 +153,6 @@ Wavelet.filter = function (h, action, factor) {
 };
 
 
-
 /* ********** WAVELET TRANSFORM CLASS *************** */
 
 /** Compute the Wavelet Transform of an ImageJS.
@@ -275,14 +274,395 @@ WT.prototype.getScale = function (scale) {
     var subband = this.subband[scale];
 
     if (!scale) {
-        return { 'LL': subband.LL.getView() };
+        return {
+            'LL': new MatrixView(subband.LL)
+        };
     }
     return {
-        'HL': subband.HL.getView(),
-        'LH': subband.LH.getView(),
-        'HH': subband.HH.getView()
+        'HL': new MatrixView(subband.HL),
+        'LH': new MatrixView(subband.LH),
+        'HH': new MatrixView(subband.HH)
     };
 };
+
+
+
+/* ********** WT COMPUTATION *************** */
+
+/** 1D convolution.
+ * @param {float[]} kernel
+ *  Convolution kernel.
+ * @param {String|float} [boundary = 'symmetric']
+ *  Boundary processing:<br />
+ *  - any float value: value assumed outside the image domain;<br />
+ *  - float 0 value is equivalent to 'constant' or 'const';<br />
+ *  - 'symmetric' or 'sym';<br />
+ *  - 'periodic' or 'per'.
+ * @param {int|string} [origin = 'C']
+ *  Origin of the kernel:<br :>
+ *  - positive integer: origin position;<br />
+ *  - negative integer: origin position, from the end;<br />
+ *  - 'L'/'R' for (resp.) left/right, the same as (resp.) 0/-1;<br />
+ *  - 'C' for center,'CL'/'CR' for rounding (resp.) left/right.
+ * @param {int|Object} [subsample = 1]
+ *  Subsampling factor:<br />
+ *   - integer D: the same as filtering and then subsampling with a factor D;<br />
+ *   - Object {'Dout':D1, 'Dker':D2, 'round':fcn}: <br />
+ *       * 'Dout' integer (def. 1) is the subsampling factor for the output (previously called D);<br />
+ *       * 'Dker' integer (def. 1) is the kernel subsampling factor.<br />
+ *  Note that using Dout = Dker is the same (except maybe on boundary) as
+ *      subsampling the image firse, and then filtering with Dout = Dker = 1.
+ * @param {ImageJS} [output]
+ *  Output image
+ * @param {boolean} [add = false]
+ *  Add to the output, instead of erasing it.
+ * @returns {ImageJS}
+ *  Output image
+ * @example
+ *  // Computing the X derivative:
+ *  var gradX = im.filter1d([-1, 0, 1], 'periodic');
+ *
+ *  // Resize image to half its size(with a separable average):
+ *  var ker = [1/3, 1/3, 1/3];
+ *  var tmp = im.filter1d(ker, 'symmetric', 'L', 3).T();    // X filtering then transpose
+ *  var out = tmp.filter1d(ker, 'symmetric', 'L', 3).T();   // Y filtering then transpose back
+ */
+Matrix.prototype._filter1d = function (viewI, kernel, origin, subsample, output, viewO, add) {
+    'use strict';
+
+    // 1. ARGUMENTS
+    var errMsg = this.constructor.name + '.filter1d: ';
+    //kernel = new this.dataType((kernel && kernel.length) ? kernel : [kernel]);
+    var K = kernel.length;
+    var Dout = 1, Dker = 1, bg = 0;
+    var c, x, y;
+    var x_, y_;
+    var nx, ny, dx, dy;
+
+    // add
+    if (add === undefined) {
+        add = false;
+    }
+    // subsample
+    if (typeof subsample === 'number') {
+        Dout = subsample;
+    } else if (typeof subsample === 'object') {
+        Dout = subsample.Dout || Dout;
+        Dker = subsample.Dker || Dker;
+    }
+
+
+    // output
+    if (output === undefined) {
+        output = this.getNew(Math.ceil(this.nx / Dout), this.ny);
+        output.Ch_(this.chan);
+    }
+
+    origin = origin.toUpperCase();
+    if (origin === 'C' || origin === 'CL') {
+        origin = Math.floor((K - 1) / 2);
+    } else if (origin === 'CR') {
+        origin = Math.ceil((K - 1) / 2);
+    }
+    
+    // 2. Filtering
+    /*
+    var iI0 = this.getI0(), oI0 = output.getI0();
+    var iDx = this.getDx(), oDx = output.getDx();
+    var iDy = this.getDy(), oDy = output.getDy();
+    var idata = this.data,  odata = output.data;
+    nx = this.nx;
+    ny = this.ny;
+     */
+    var ix0 = viewI.getFirst(0), ox0 = viewO.getFirst(0);
+    var iy0 = viewI.getFirst(1), oy0 = viewO.getFirst(1);
+    var iDx = viewI.getStep(0), oDx = viewO.getStep(0);
+    var iDy = viewI.getStep(1), oDy = viewO.getStep(1);
+    nx = viewI.getSize(0);
+    ny = viewI.getSize(1);
+
+    var id = this.getData(),  od = output.getData();
+
+    var nx2 = 2 * nx;
+    var iy_, oy_, ox_;
+    var k, s, sTmp, sum;
+
+    for (c = 0; c < 1; c++) {
+        for (y = 0, iy_ = c * nx * ny + iy0, oy_ = c * od.length / 3 + oy0; y < ny; y++, iy_ += iDy, oy_ += oDy) {
+            for (x = 0, ox_ = oy_ + ox0; Dout * x < nx; x++, ox_ += oDx) {
+                sum = 0;
+                s = Dout * x + Dker * origin;
+                for (k = 0; k < K; k++, s -= Dker) {
+                    sTmp = s;
+                    while (sTmp < 0) {
+                            sTmp += nx;
+                    }
+                    while (sTmp >= nx) {
+                        sTmp -= nx;
+                    }
+                    sum += kernel[k] * id[iy_ + sTmp * iDx];
+                }
+                if (add) {
+                    od[ox_] += sum;
+                } else  {
+                    od[ox_] = sum;
+                }
+            }
+        }
+    }
+    
+    // Return the result
+    return output;
+};
+
+/** Compute each scale properties:<br />
+ *  - shape 'width' and 'height' of the coefficients.<br />
+ *  - 'pow' is the subsampling factor.<br />
+ *  - 'cumWidth' and 'cumHeight' from scale 0 to current.
+ * @private
+ * @return {Array of Object}
+ *  The properties for each scale.
+ */
+WT.prototype.getScalesParameters = function () {
+    'use strict';
+    var w = this.width;
+    var h = this.height;
+    var pow = 1;
+    var list = [];
+    var k;
+    for (k = this.level; k > 0; k--, pow *= 2) {
+        if (!this.redundant) {
+            w = Math.ceil(w / 2);
+            h = Math.ceil(h / 2);
+        }
+        list[k] = {
+            'width': w,
+            'height': h,
+            'pow': pow,
+            'cumWidth': 0,
+            'cumHeight': 0
+        };
+    }
+    list[0] = {
+        'width': w,
+        'height': h,
+        'pow': pow,
+        'cumWidth': 0,
+        'cumHeight': 0
+    };
+
+    w = h = 0;
+    for (k = 0; k <= this.level; k++) {
+        list[k].cumWidth = w;
+        list[k].cumHeight = h;
+        w += list[k].width;
+        h += list[k].height;
+    }
+    return list;
+};
+
+/** Perform the 2D wavelet transform
+ *  from the image stored in 'this.tmp'.
+ *  Use 'this.data' to store the coefficients
+ *  and 'this.subband' to store the scale views.
+ * @see WT
+ * @private
+ */
+WT.prototype.wt2 = function () {
+    'use strict';
+    var wav = this.wavelet;
+    var input = this.tmp;
+    var scaleList = this.getScalesParameters();
+    window.scaleList = scaleList;
+    // Create output image
+    var lastScale = scaleList[scaleList.length - 1];
+    var dataWidth = lastScale.cumWidth + lastScale.width;
+    var dataHeight = lastScale.cumHeight + lastScale.height;
+    if (this.redundant) {
+        // TODO
+        // dataHeight = 3 * input.getSize(0);
+    }
+    this.data = Matrix.zeros(dataHeight, dataWidth, input.getSize(2));
+    var viewLL = this.data.getView(), viewLH = this.data.getView();
+    var viewHL = this.data.getView(), viewHH = this.data.getView();
+
+    this.subband = [];
+    if (this.redundant) {
+        // TODO:
+        // viewLL.y0 = input.getSize(0);
+        // viewHH.y0 = input.getSize(0);
+        // viewLH.y0 = 2 * input.getSize(0);
+    }
+
+    // Buffer image
+    var halfHeight = (this.redundant) ? this.height : Math.ceil(this.height / 2);
+    var buffer = Matrix.zeros(2 * halfHeight, this.width, input.getSize(2));
+    var buffL = buffer.getView().select([0, halfHeight - 1]);
+    var buffH = buffer.getView().select([halfHeight, -1]);
+    var viewI = input.getView();
+
+    window.buffer = buffer;
+    window.data = this.data;
+
+    // Process each scale
+    while (scaleList.length > 1) {
+        var s = scaleList.pop();
+        var D = (this.redundant) ? {'Dker': s.pow} : {'Dout': 2};
+
+        // H filtering from image to buffer
+        buffL.select([0, s.height - 1]);
+        buffH.select([0, s.height - 1]);
+        
+        input._filter1d(viewI, wav.filterL, 'cl', D, buffer, buffL);
+        input._filter1d(viewI, wav.filterH, 'cl', D, buffer, buffH);
+
+        if (this.redundant) {
+            // TODO
+            // viewHL.x0 = viewLH.x0 = viewHH.x0 = s.cumWidth;
+        } else {
+            viewLL.select([0, s.height - 1], [0, s.width - 1]);
+            viewLH.select([0, s.height - 1], [s.width, 2 * s.width - 1]);
+            viewHL.select([s.height, 2 * s.height - 1], [0, s.width - 1]);
+            viewHH.select([s.height, 2 * s.height - 1], [s.width, 2 * s.width - 1]);
+        }
+        this.subband[scaleList.length] = {
+            'HL': new MatrixView(viewHL),
+            'LH': new MatrixView(viewLH),
+            'HH': new MatrixView(viewHH)
+        };
+        // V filtering from buffer to data
+        buffL.swapDimensions(0, 1);
+        buffH.swapDimensions(0, 1);
+        viewLL.swapDimensions(0, 1);
+        viewLH.swapDimensions(0, 1);
+        viewHL.swapDimensions(0, 1);
+        viewHH.swapDimensions(0, 1);
+        buffer._filter1d(buffL, wav.filterL, 'cl', D, this.data, viewLL);
+        buffer._filter1d(buffL, wav.filterH, 'cl', D, this.data, viewLH);
+        buffer._filter1d(buffH, wav.filterL, 'cl', D, this.data, viewHL);
+        buffer._filter1d(buffH, wav.filterH, 'cl', D, this.data, viewHH);
+        buffL.swapDimensions(0, 1);
+        buffH.swapDimensions(0, 1);
+        viewLL.restore();
+        viewLH.restore();
+        viewHL.restore();
+        viewHH.restore();
+
+        // Be ready for next scale
+        buffL.select([], [0, s.width - 1]);
+        buffH.select([], [0, s.width - 1]);
+        viewI = viewLL;
+        input = this.data;
+    }
+    this.subband[0] = {'LL': input.getView()};
+};
+
+/** Perform the inverse wavelet transform.
+ * @see WT#inverse
+ * @private
+ * @param {ImageJS} [output]
+ *  Output image.
+ * @return {ImageJS}
+ *  The reconstructed image.
+ */
+WT.prototype.iwt2 = function (output) {
+    'use strict';
+    var re = this.redundant;
+    var factor = (re) ? 0.5 : 1;
+    var filterL = Wavelet.filter(this.wavelet.invFilterL, 'rescale', factor);
+    var filterH = Wavelet.filter(this.wavelet.invFilterH, 'rescale', factor);
+    // If not redundant, oversampled image
+    var decimView2;
+    if (!re) {
+        var size = this.data.getSize();
+        var data2 = Matrix.zeros([size[0] * 2, size[1] * 2]);
+        data2 = data2.set([0, 2, -1], [0, 2, -1], [], this.data);
+        window.data2 = data2;
+
+        var getScaleView = function (scale, band, k) {
+            var H = size[0] * k, W = size[1] * k;
+            var f = Math.pow(2, this.level - scale + 1);
+            var h = H / f, w = W / f;
+            var view = new MatrixView([H, W]);
+            if (band === "LL") {
+                view.select([0, 2 * h - 1], [0, 2 * w - 1]);
+            } else if (band === "LH") {
+                view.select([0, h - 1], [w, 2 * w - 1]);
+            } else if (band === "HL") {
+                view.select([h, 2 * h - 1], [0, w - 1]);
+            } else if (band === "HH") {
+                view.select([h, 2 * h - 1], [w, 2 * w - 1]);
+            } 
+            return view;
+        }.bind(this);
+    }
+
+    // Buffer image
+    var roundedWidth = (re) ? this.width : 2 * Math.ceil(this.width / 2);
+    var roundedHeight = (re) ? this.height : 2 * Math.ceil(this.height / 2);
+    var outBuffer = Matrix.zeros([roundedHeight * 2 * factor, roundedWidth * 2 * factor]);
+    var buffer = Matrix.zeros([2 * roundedHeight, roundedWidth]);
+    window.outBuffer = outBuffer;
+    window.buffer = buffer;
+    var buffL, buffH;
+    // buffL.nx = buffH.nx = buffH.x0 = roundedWidth;
+
+    // Process each scale
+    var k, decim = Math.pow(2, this.level - 1);
+
+    for (k = 1; k <= this.level; k++, decim /= 2) {
+        var view = {
+            LL: getScaleView(k - 1, "LL", re ? 1 : 2),
+            HL: getScaleView(k, "HL", re ? 1 : 2),
+            LH: getScaleView(k, "LH", re ? 1 : 2),
+            HH: getScaleView(k, "HH", re ? 1 : 2)
+        };
+        var D = (!re) ? 1 : {'Dker': decim};
+        //console.log("LL", view.LL.getSize());
+        // console.log("LH", view.LH.getSize());
+        // console.log("HL", view.HL.getSize());
+        // console.log("HH", view.HH.getSize());
+        // console.log("k", k, this.level);
+        
+        // Adapt buffer size
+        if (!re) {
+            var selW = [0, view.LL.getSize(1) - 1];
+            buffL = buffer.getView().select([0, view.LL.getSize(0) - 1], selW);
+            buffH = buffer.getView().select([roundedHeight, roundedHeight + view.LL.getSize(0) - 1], selW);
+            console.log(buffL.getSize(), buffH.getSize());
+        }
+
+        // V filtering
+        // (viewI, kernel, origin, subsample, output, viewO, add)
+        buffL.swapDimensions(0, 1);
+        buffH.swapDimensions(0, 1);
+        viewLL.swapDimensions(0, 1);
+        viewLH.swapDimensions(0, 1);
+        viewHL.swapDimensions(0, 1);
+        viewHH.swapDimensions(0, 1);
+
+        view.LL.T()._filter1d(filterL, 'cr', D, buffL.T(), false);
+        view.LH.T()._filter1d(filterH, 'cr', D, buffL.T(), true);
+        view.HL.T()._filter1d(filterL, 'cr', D, buffH.T(), false);
+        view.HH.T()._filter1d(filterH, 'cr', D, buffH.T(), true);
+
+        // H filtering
+        viewLL = outBuffer.getView();
+        if (!re) {
+            viewLL.S_(2);
+            viewLL.nx = buffL.nx;
+            viewLL.ny = buffL.ny;
+        }
+        buffL._filter1d(filterL, 'cr', D, viewLL, false);
+        buffH._filter1d(filterH, 'cr', D, viewLL, true);
+    }
+    return;
+    // Copy the result
+    viewLL.nx = this.width;
+    viewLL.ny = this.height;
+    return viewLL.exportImage(output);
+};
+
 
 /** Return some statistics about the coefficients.
  * @see WT#getScale
@@ -462,372 +842,4 @@ WT.prototype.thresholdSURE = function () {
     }
     
     return this;
-};
-
-
-/* ********** WT COMPUTATION *************** */
-
-/** 1D convolution.
- * @param {float[]} kernel
- *  Convolution kernel.
- * @param {String|float} [boundary = 'symmetric']
- *  Boundary processing:<br />
- *  - any float value: value assumed outside the image domain;<br />
- *  - float 0 value is equivalent to 'constant' or 'const';<br />
- *  - 'symmetric' or 'sym';<br />
- *  - 'periodic' or 'per'.
- * @param {int|string} [origin = 'C']
- *  Origin of the kernel:<br :>
- *  - positive integer: origin position;<br />
- *  - negative integer: origin position, from the end;<br />
- *  - 'L'/'R' for (resp.) left/right, the same as (resp.) 0/-1;<br />
- *  - 'C' for center,'CL'/'CR' for rounding (resp.) left/right.
- * @param {int|Object} [subsample = 1]
- *  Subsampling factor:<br />
- *   - integer D: the same as filtering and then subsampling with a factor D;<br />
- *   - Object {'Dout':D1, 'Dker':D2, 'round':fcn}: <br />
- *       * 'Dout' integer (def. 1) is the subsampling factor for the output (previously called D);<br />
- *       * 'Dker' integer (def. 1) is the kernel subsampling factor.<br />
- *  Note that using Dout = Dker is the same (except maybe on boundary) as
- *      subsampling the image firse, and then filtering with Dout = Dker = 1.
- * @param {ImageJS} [output]
- *  Output image
- * @param {boolean} [add = false]
- *  Add to the output, instead of erasing it.
- * @returns {ImageJS}
- *  Output image
- * @example
- *  // Computing the X derivative:
- *  var gradX = im.filter1d([-1, 0, 1], 'periodic');
- *
- *  // Resize image to half its size(with a separable average):
- *  var ker = [1/3, 1/3, 1/3];
- *  var tmp = im.filter1d(ker, 'symmetric', 'L', 3).T();    // X filtering then transpose
- *  var out = tmp.filter1d(ker, 'symmetric', 'L', 3).T();   // Y filtering then transpose back
- */
-Matrix.prototype._filter1d = function (viewI, kernel, origin, subsample, output, viewO, add) {
-    'use strict';
-
-    // 1. ARGUMENTS
-    var errMsg = this.constructor.name + '.filter1d: ';
-    //kernel = new this.dataType((kernel && kernel.length) ? kernel : [kernel]);
-    var K = kernel.length;
-    var Dout = 1, Dker = 1, bg = 0;
-    var c, x, y;
-    var x_, y_;
-    var nx, ny, dx, dy;
-
-    // add
-    if (add === undefined) {
-        add = false;
-    }
-    // subsample
-    if (typeof subsample === 'number') {
-        Dout = subsample;
-    } else if (typeof subsample === 'object') {
-        Dout = subsample.Dout || Dout;
-        Dker = subsample.Dker || Dker;
-    }
-
-
-    // output
-    if (output === undefined) {
-        output = this.getNew(Math.ceil(this.nx / Dout), this.ny);
-        output.Ch_(this.chan);
-    }
-
-    origin = origin.toUpperCase();
-    if (origin === 'C' || origin === 'CL') {
-        origin = Math.floor((K - 1) / 2);
-    } else if (origin === 'CR') {
-        origin = Math.ceil((K - 1) / 2);
-    }
-    
-    // 2. Filtering
-    /*
-    var iI0 = this.getI0(), oI0 = output.getI0();
-    var iDx = this.getDx(), oDx = output.getDx();
-    var iDy = this.getDy(), oDy = output.getDy();
-    var idata = this.data,  odata = output.data;
-    nx = this.nx;
-    ny = this.ny;
-     */
-    var ix0 = viewI.getFirst(0), ox0 = viewO.getFirst(0);
-    var iy0 = viewI.getFirst(1), oy0 = viewO.getFirst(1);
-    var iDx = viewI.getStep(0), oDx = viewO.getStep(0);
-    var iDy = viewI.getStep(1), oDy = viewO.getStep(1);
-    nx = viewI.getSize(0);
-    ny = viewI.getSize(1);
-    /*
-    console.log("filter1d");
-    console.log(ix0, iy0, iDx, iDy);
-    console.log(ox0, oy0, oDx, oDy);
-    console.log(nx, ny);
-     */
-    var id = this.getData(),  od = output.getData();
-
-    var nx2 = 2 * nx;
-    var iy_, oy_, ox_;
-    var k, s, sTmp, sum;
-
-    for (c = 0; c < 1; c++) {
-        for (y = 0, iy_ = c * nx * ny + iy0, oy_ = c * od.length / 3 + oy0; y < ny; y++, iy_ += iDy, oy_ += oDy) {
-            for (x = 0, ox_ = oy_ + ox0; Dout * x < nx; x++, ox_ += oDx) {
-                sum = 0;
-                s = Dout * x + Dker * origin;
-                for (k = 0; k < K; k++, s -= Dker) {
-                    sTmp = s;
-                    while (sTmp < 0) {
-                            sTmp += nx;
-                    }
-                    while (sTmp >= nx) {
-                        sTmp -= nx;
-                    }
-                    sum += kernel[k] * id[iy_ + sTmp * iDx];
-                }
-                if (add) {
-                    od[ox_] += sum;
-                } else  {
-                    od[ox_] = sum;
-                }
-            }
-        }
-    }
-    
-    // Return the result
-    return output;
-};
-
-/** Compute each scale properties:<br />
- *  - shape 'width' and 'height' of the coefficients.<br />
- *  - 'pow' is the subsampling factor.<br />
- *  - 'cumWidth' and 'cumHeight' from scale 0 to current.
- * @private
- * @return {Array of Object}
- *  The properties for each scale.
- */
-WT.prototype.getScalesParameters = function () {
-    'use strict';
-    var w = this.width;
-    var h = this.height;
-    var pow = 1;
-    var list = [];
-    var k;
-    for (k = this.level; k > 0; k--, pow *= 2) {
-        if (!this.redundant) {
-            w = Math.ceil(w / 2);
-            h = Math.ceil(h / 2);
-        }
-        list[k] = {
-            'width': w,
-            'height': h,
-            'pow': pow,
-            'cumWidth': 0,
-            'cumHeight': 0
-        };
-    }
-    list[0] = {
-        'width': w,
-        'height': h,
-        'pow': pow,
-        'cumWidth': 0,
-        'cumHeight': 0
-    };
-
-    w = h = 0;
-    for (k = 0; k <= this.level; k++) {
-        list[k].cumWidth = w;
-        list[k].cumHeight = h;
-        w += list[k].width;
-        h += list[k].height;
-    }
-    return list;
-};
-
-/** Perform the 2D wavelet transform
- *  from the image stored in 'this.tmp'.
- *  Use 'this.data' to store the coefficients
- *  and 'this.subband' to store the scale views.
- * @see WT
- * @private
- */
-WT.prototype.wt2 = function () {
-    'use strict';
-    var wav = this.wavelet;
-    var input = this.tmp;
-    var scaleList = this.getScalesParameters();
-    //console.log(scaleList);
-    // Create output image
-    var lastScale = scaleList[scaleList.length - 1];
-    var dataWidth = lastScale.cumWidth + lastScale.width;
-    var dataHeight = lastScale.cumHeight + lastScale.height;
-    if (this.redundant) {
-        // TODO
-        // dataHeight = 3 * input.getSize(0);
-    }
-    
-    this.data = Matrix.zeros(dataHeight, dataWidth, input.getSize(2));
-    var viewLL = this.data.getView(), viewLH = this.data.getView();
-    var viewHL = this.data.getView(), viewHH = this.data.getView();
-
-    this.subband = [];
-    if (this.redundant) {
-        // TODO:
-        // viewLL.y0 = input.getSize(0);
-        // viewHH.y0 = input.getSize(0);
-        // viewLH.y0 = 2 * input.getSize(0);
-    }
-
-    // Buffer image
-    var halfHeight = (this.redundant) ? this.height : Math.ceil(this.height / 2);
-    var buffer = Matrix.zeros(2 * halfHeight, this.width, input.getSize(2));
-    var buffL = buffer.getView().select([0, halfHeight - 1]);
-    var buffH = buffer.getView().select([halfHeight, -1]);
-    var viewI = input.getView();
-
-    window.buffer = buffer;
-    window.data = this.data;
-    console.log(wav.filterL, wav.filterH);
-
-    // Process each scale
-    while (scaleList.length > 1) {
-        var s = scaleList.pop();
-        var D = (this.redundant) ? {'Dker': s.pow} : {'Dout': 2};
-
-        // H filtering from image to buffer
-        buffL.select([0, s.height - 1]);
-        buffH.select([0, s.height - 1]);
-        
-        input._filter1d(viewI, wav.filterL, 'cl', D, buffer, buffL);
-        input._filter1d(viewI, wav.filterH, 'cl', D, buffer, buffH);
-
-        if (this.redundant) {
-            // TODO
-            // viewHL.x0 = viewLH.x0 = viewHH.x0 = s.cumWidth;
-        } else {
-            viewLL.select([0, s.height - 1], [0, s.width - 1]);
-            viewLH.select([0, s.height - 1], [s.width, 2 * s.width - 1]);
-            viewHL.select([s.height, 2 * s.height - 1], [0, s.width - 1]);
-            viewHH.select([s.height, 2 * s.height - 1], [s.width, 2 * s.width - 1]);
-        }
-        this.subband[scaleList.length] = {
-            'HL': new MatrixView(viewHL),
-            'LH': new MatrixView(viewLH),
-            'HH': new MatrixView(viewHH)
-        };
-        // V filtering from buffer to data
-        buffL.swapDimensions(0, 1);
-        buffH.swapDimensions(0, 1);
-        viewLL.swapDimensions(0, 1);
-        viewLH.swapDimensions(0, 1);
-        viewHL.swapDimensions(0, 1);
-        viewHH.swapDimensions(0, 1);
-        buffer._filter1d(buffL, wav.filterL, 'cl', D, this.data, viewLL);
-        buffer._filter1d(buffL, wav.filterH, 'cl', D, this.data, viewLH);
-        buffer._filter1d(buffH, wav.filterL, 'cl', D, this.data, viewHL);
-        buffer._filter1d(buffH, wav.filterH, 'cl', D, this.data, viewHH);
-        buffL.swapDimensions(0, 1);
-        buffH.swapDimensions(0, 1);
-        viewLL.restore();
-        viewLH.restore();
-        viewHL.restore();
-        viewHH.restore();
-
-        // Be ready for next scale
-        buffL.select([], [0, s.width - 1]);
-        buffH.select([], [0, s.width - 1]);
-        viewI = viewLL;
-        input = this.data;
-    }
-    this.subband[0] = {'LL': input.getView()};
-};
-
-/** Perform the inverse wavelet transform.
- * @see WT#inverse
- * @private
- * @param {ImageJS} [output]
- *  Output image.
- * @return {ImageJS}
- *  The reconstructed image.
- */
-WT.prototype.iwt2 = function (output) {
-    'use strict';
-    var re = this.redundant;
-    var factor = (re) ? 0.5 : 1;
-    var filterL = Wavelet.filter(this.wavelet.invFilterL, 'rescale', factor);
-    var filterH = Wavelet.filter(this.wavelet.invFilterH, 'rescale', factor);
-
-    // If not redundant, oversampled image
-    var decimView2;
-    if (!re) {
-        var size = this.data.getSize();
-        var data2 = Matrix.zeros([size[0] * 2, size[1] * 2]);
-        data2 = data2.set([0, 2, -1], [0, 2, -1], [], this.data);
-         decimView2 = function (view) {
-            view.data = data2.data;
-            view.width = data2.width;
-            view.height = data2.height;
-            view.x0 *= 2;
-            view.y0 *= 2;
-            view.nx *= 2;
-            view.ny *= 2;
-            if (view.tx !== 1) {
-                view.tx *= 2;
-            }
-            if (view.ty !== 1) {
-                view.ty *= 2;
-            }
-        };
-    }
-
-    // Buffer image
-    var roundedWidth = (re) ? this.width : 2 * Math.ceil(this.width / 2);
-    var roundedHeight = (re) ? this.height : 2 * Math.ceil(this.height / 2);
-    var outBuffer = Matrix.zeros([roundedHeight * 2 * factor, roundedWidth * 2 * factor]);
-    var buffer = Matrix.zeros([roundedHeight, 2 * roundedWidth]);
-    var buffL = buffer.getView().select([0, roundedHeight]);
-    var buffH = buffer.getView().select([roundedHeight, 2 * roundedHeight + 1]);
-    // buffL.nx = buffH.nx = buffH.x0 = roundedWidth;
-
-    // Process each scale
-    var k, decim = Math.pow(2, this.level - 1);
-    var viewLL = this.getScale(0).LL;
-    if (!re) {
-        decimView2(viewLL);
-    }
-    for (k = 1; k <= this.level; k++, decim /= 2) {
-        var view = this.getScale(k);
-        var D = (!re) ? 1 : {'Dker': decim};
-
-        // Adapt buffer size
-        if (!re) {
-            decimView2(view.HL);
-            decimView2(view.LH);
-            decimView2(view.HH);
-            viewLL.dx = viewLL.dy = 1;
-            buffL.nx = buffH.nx = viewLL.nx = view.HH.nx;
-            buffL.ny = buffH.ny = viewLL.ny = view.HH.ny;
-        }
-
-        // V filtering
-        viewLL.T()._filter1d(filterL, 'cr', D, buffL.T(), false);
-        view.LH.T()._filter1d(filterH, 'cr', D, buffL.T(), true);
-        view.HL.T()._filter1d(filterL, 'cr', D, buffH.T(), false);
-        view.HH.T()._filter1d(filterH, 'cr', D, buffH.T(), true);
-
-        // H filtering
-        viewLL = outBuffer.getView();
-        if (!re) {
-            viewLL.S_(2);
-            viewLL.nx = buffL.nx;
-            viewLL.ny = buffL.ny;
-        }
-        buffL._filter1d(filterL, 'cr', D, viewLL, false);
-        buffH._filter1d(filterH, 'cr', D, viewLL, true);
-    }
-
-    // Copy the result
-    viewLL.nx = this.width;
-    viewLL.ny = this.height;
-    return viewLL.exportImage(output);
 };
