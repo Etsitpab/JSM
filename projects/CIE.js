@@ -23,7 +23,7 @@
     var chromaticAdaptationMatrices = {
         VonKries: [0.3897, -0.2298, 0, 0.689, 1.1834, 0, -0.0787, 0.0464, 1],
         Bradford: [0.8951, -0.7502, 0.0389, 0.2664, 1.7135, -0.0685, -0.1614, 0.0367, 1.0296],
-        CAT02: [0.7328, -0.7036, 0.003, 0.4296, 1.6975, 0.0136, -0.1624, 0.0061, 0.9834]
+        CAT02:    [0.7328, -0.7036, 0.003, 0.4296, 1.6975, 0.0136, -0.1624, 0.0061, 0.9834]
     };
 
     /**     
@@ -127,16 +127,15 @@
             };
             var ill = illuminants[illuminant];
             if (!ill) {
-                throw new Error("CIE.getIlluminant: " +
-			        illuminant +
+                throw new Error("CIE.getIlluminant: " + illuminant +
 			        " is an invalid illuminant request.");
             }
             if (space !== 'xyY') {
-                try {
-                    ill.stdIll = global.Colorspaces['xyY to ' + space](ill.stdIll);
-                } catch (e) {
+                var convert = global.Colorspaces['xyY to ' + space];
+                if (!Tools.isSet(convert)) {
                     throw new Error('CIE.getIlluminant: ' + e.message);
                 }
+                ill.stdIll = global.Colorspaces['xyY to ' + space](ill.stdIll);
             }
             // ill.stdIll.CCT = ill.CCT;
             return ill.stdIll;
