@@ -38,7 +38,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var Ht = Matrix.toMatrix(pData);
             Ht = Ht["-"](o);
             var HI0 = Ht["<"](0);
-            Ht = Ht.set(HI0, Ht.select(HI0)["+"](1));
+            Ht.set(HI0, Ht.get(HI0)["+"](1));
             H.set(Ht.getData());
         } else {
             H.set(pData);
@@ -413,9 +413,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var mask = k.patch.RGB.mask;
             mask =  mask.cat(2, mask, mask)['>'](0);
 
-            var imP = im.select([yMin, yMax], [xMin, xMax], []);
-            imP = imP.set(mask, kp.select(mask));
-            im = im.set([yMin, yMax], [xMin, xMax], [], imP);
+            var imP = im.get([yMin, yMax], [xMin, xMax], []);
+            imP.set(mask, kp.get(mask));
+            im.set([yMin, yMax], [xMin, xMax], [], imP);
         }
         return im;
     };

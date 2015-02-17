@@ -17,15 +17,15 @@ Plot.prototype.drawMode = function (h, s, m, c) {
     var a = Math.round(m.bins[0]), b = Math.round(m.bins[1]);
     var sum;
     if (b >= a) {
-        sum = h.select([a, b]).sum()["./"](b - a + 1);
-        hm = hm.set([a, b], sum);
+        sum = h.get([a, b]).sum()["./"](b - a + 1);
+        hm.set([a, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});
     } else {
-        sum = h.select([a, -1]).sum();
-        sum["+="](h.select([0, b]).sum());
+        sum = h.get([a, -1]).sum();
+        sum["+="](h.get([0, b]).sum());
         sum["/="](nBin - a + b + 1);
-        hm = hm.set([a, -1], sum);
-        hm = hm.set([0, b], sum);
+        hm.set([a, -1], sum);
+        hm.set([0, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});
     }
 };
@@ -165,7 +165,7 @@ window.onload = function () {
         var sigma = $F('sigma'), mu = $F('mu');
         np = Math.pow(10, $I('points'));
         MAT = Matrix.randn(np, 1)['.*'](sigma)['+'](2 * ns * mu);
-        MAT = MAT.select(MAT['>='](0)['&&'](MAT['<='](2 * ns)));
+        MAT = MAT.get(MAT['>='](0)['&&'](MAT['<='](2 * ns)));
         MAT = MAT['.*']((bin) / (2 * ns)).arrayfun(Math.floor);
         HIST = HIST['+'](Matrix.accumarray(MAT, Matrix.ones(MAT.size()), [bin, 1]));
         MODES = HIST.getModes($V("circular") === "yes", 0);
@@ -269,18 +269,18 @@ window.onload = function () {
         var f = CS["HSL to RGB"];
 
         IMAGE = Matrix.applycform(ORIGINAL, "RGB to HSL");
-        var H = IMAGE.select([], [], [0]).select();
-        var S = IMAGE.select([], [], [1]).select();
-        var L = IMAGE.select([], [], [2]).select();
+        var H = IMAGE.get([], [], [0]).get();
+        var S = IMAGE.get([], [], [1]).get();
+        var L = IMAGE.get([], [], [2]).get();
 
         var bins = H['.*'](bin).floor();
 
         var weights = S['.^'](1);
 
         var S0 = weights['>'](0)['&&'](L['>'](0));
-        bins = H.select(S0)['.*'](bin).floor();
-        bins = bins.set(bins['==='](bin), 0);
-        weights = S.select(S0);
+        bins = H.get(S0)['.*'](bin).floor();
+        bins.set(bins['==='](bin), 0);
+        weights = S.get(S0);
 
         HIST = Matrix.accumarray(bins, Matrix.ones(bins.size()), [bin, 1]);
         HISTW = Matrix.accumarray(bins, weights, [bin, 1]);
@@ -310,14 +310,14 @@ window.onload = function () {
             MODES[i].color = f([MODES[i].phase, 1, 0.5]);
             var mask = isInMode(bins, MODES[i].bins);
             SEGMENTED = SEGMENTED ? SEGMENTED['||'](mask) : mask;
-            H = H.set(mask.select(), MODES[i].phase);
+            H.set(mask.get(), MODES[i].phase);
             mask = bin2color(mask['&&'](removed).single(), MODES[i].color);
             MODES[i].mask = mask.reshape(size.concat(3));
             MASK = MASK ? MASK['+'](mask) : mask;
             addOption("modes", i, i);
         }
 
-        S = S.set(SEGMENTED.neg().select(), 0).reshape(size);
+        S = S.set(SEGMENTED.neg().get(), 0).reshape(size);
         MASK = MASK.reshape(size.concat(3));
         IMAGE = Matrix.applycform(IMAGE.set([], [], [0, 1], H.cat(2, S)), "HSL to RGB");
 
