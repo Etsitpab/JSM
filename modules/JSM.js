@@ -3752,7 +3752,7 @@ if (typeof window === 'undefined') {
     };
 
     
-    /** Allow to select an subpart of the Matrix for each dimension
+    /** Allow to extract a subpart of the Matrix for each dimension
      * if no arguments is provided then it will return a new vector
      * with all the elements one after the others.
      * It acts like Matlab colon operator.
@@ -3798,30 +3798,28 @@ if (typeof window === 'undefined') {
         if (sel.length === 1 && sel[0] instanceof Matrix) {
             var valSize = val.getSize(), selSize = sel[0].getSize();
             var out = val.reshape().extractViewTo(view, this.reshape());
-            out = out.reshape(selSize);
             val.reshape(valSize);
-            return out;
+            return out.reshape(selSize);
         }
-
         return val.extractViewTo(view, this);
     };
 
     Matrix.set = function () {
-		var mat = Array.prototype.shift.apply(arguments);
-		if (!(mat instanceof Matrix)) {
-			throw new Error("Matrix.set: Matrix to modify must be provided.");
-		}
+	var mat = Array.prototype.shift.apply(arguments);
+	if (!(mat instanceof Matrix)) {
+	    throw new Error("Matrix.set: Matrix to modify must be provided.");
+	}
         return Matrix_prototype.set.apply(mat.getCopy(), arguments);
-	};
-
-	Matrix.reshape = function () {
-		var mat = Array.prototype.shift.apply(arguments);
-		if (!(mat instanceof Matrix)) {
-			throw new Error("Matrix.set: Matrix to modify must be provided.");
-		}
-		mat = mat.getCopy();
+    };
+    
+    Matrix.reshape = function () {
+	var mat = Array.prototype.shift.apply(arguments);
+	if (!(mat instanceof Matrix)) {
+	    throw new Error("Matrix.set: Matrix to modify must be provided.");
+	}
+	mat = mat.getCopy();
         return mat.reshape.apply(mat, arguments);
-	};
+    };
 	
     //////////////////////////////////////////////////////////////////
     //                      Matrix Manipulation                     //
