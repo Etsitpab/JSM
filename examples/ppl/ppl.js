@@ -118,11 +118,11 @@ function plotScatter(x1, y1, x2, y2) {
     x2 = round(x2);
     y2 = round(y2);
 
-    var subIm = im.select([min(-y1, -y2), max(-y1, -y2)], [min(x1, x2), max(x1, x2)]);
+    var subIm = im.get([min(-y1, -y2), max(-y1, -y2)], [min(x1, x2), max(x1, x2)]);
     var points = [
-        subIm.select([], [], 0).getData(),
-        subIm.select([], [], 1).getData(),
-        subIm.select([], [], 2).getData()
+        subIm.get([], [], 0).getData(),
+        subIm.get([], [], 1).getData(),
+        subIm.get([], [], 2).getData()
     ];
 
     var p = $('chromaticityDiagram').getPlot();
@@ -277,9 +277,9 @@ var eventsFunc =  {
             var x = Math.round(coord.x);
             var y = Math.round(-coord.y);
             var rgb = [
-                im.select(y, x, 0).getData()[0],
-                im.select(y, x, 1).getData()[0],
-                im.select(y, x, 2).getData()[0]
+                im.get(y, x, 0).getData()[0],
+                im.get(y, x, 1).getData()[0],
+                im.get(y, x, 2).getData()[0]
             ];
             var xyY = Matrix.Colorspaces['RGB to xyY'](rgb);
             xyY[2] = 1;
@@ -422,15 +422,15 @@ Plot.prototype.drawMode = function (h, s, m, c) {
     var a = Math.round(m.bins[0]), b = Math.round(m.bins[1]);
     var sum;
     if (b >= a) {
-        sum = h.select([a, b]).sum()["./"](b - a + 1);
-        hm = hm.set([a, b], sum);
+        sum = h.get([a, b]).sum()["./"](b - a + 1);
+        hm.set([a, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});
     } else {
-        sum = h.select([a, -1]).sum();
-        sum["+="](h.select([0, b]).sum());
+        sum = h.get([a, -1]).sum();
+        sum["+="](h.get([0, b]).sum());
         sum["/="](nBin - a + b + 1);
-        hm = hm.set([a, -1], sum);
-        hm = hm.set([0, b], sum);
+        hm.set([a, -1], sum);
+        hm.set([0, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": 0.33});
     }
 };

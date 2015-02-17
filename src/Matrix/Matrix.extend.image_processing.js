@@ -1152,7 +1152,7 @@
             var im = this.im2double();
             var src = im;
             if (this.getSize(2) > 1) {
-                src = im.applycform("RGB to HSL").select([], [], 2);
+                src = im.applycform("RGB to HSL").get([], [], 2);
             } 
             src = src.getData();
             var hist = computeCDF(src, n);
@@ -1163,11 +1163,11 @@
                 src[i] = hist[floor(src[i] * (n - 1))];
             }
             var lumOut = new Matrix([im.size(0), im.size(1)], src);
-            var out = im.set([], [], 2, lumOut);
+            im.set([], [], 2, lumOut);
             if (this.getSize(2) > 1) {
-                out = out.applycform("HSL to RGB");
+                im.applycform("HSL to RGB");
             }
-            return out;
+            return im;
         };
     })();
 

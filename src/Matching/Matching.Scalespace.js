@@ -358,7 +358,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else if (yMax > image.getSize(0) - 1) {
                 return null;
             }
-            var patch = image.select([yMin, yMax], [xMin, xMax]);
+            var patch = image.get([yMin, yMax], [xMin, xMax]);
 
             if (dMin > 1e-2) {
                 var sigmaIm = this.scale[sMin].sigma;

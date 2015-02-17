@@ -553,12 +553,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             switch (this.type) {
             case "GRADIENT":
-                patch = patch.select([], [], cs.channels).gradient(0, 0, 1, 1);
+                patch = patch.get([], [], cs.channels).gradient(0, 0, 1, 1);
                 break;
             case "WEIGHTED-HISTOGRAMS":
                 patch = {
-                    norm: patch.select([], [], cs.weightChannel),
-                    phase: patch.select([], [], cs.phaseChannel)
+                    norm: patch.get([], [], cs.weightChannel),
+                    phase: patch.get([], [], cs.phaseChannel)
                 };
                 break;
             default:
@@ -1893,7 +1893,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else if (yMax > image.getSize(0) - 1) {
                 return null;
             }
-            var patch = image.select([yMin, yMax], [xMin, xMax]);
+            var patch = image.get([yMin, yMax], [xMin, xMax]);
 
             if (dMin > 1e-2) {
                 var sigmaIm = this.scale[sMin].sigma;
@@ -2275,7 +2275,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var Ht = Matrix.toMatrix(pData);
             Ht = Ht["-"](o);
             var HI0 = Ht["<"](0);
-            Ht = Ht.set(HI0, Ht.select(HI0)["+"](1));
+            Ht.set(HI0, Ht.get(HI0)["+"](1));
             H.set(Ht.getData());
         } else {
             H.set(pData);
@@ -2597,7 +2597,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
             mask =  mask.cat(2, mask, mask);
         } else if (name === "RGB" || name === "RGBNorm") {
             patch = (name === "RGBNorm") ? global.Descriptor.prototype.normalizeColor(patchRGB) : patchRGB;
-            console.log(patch);
             patch = patch.patch;
             patch = patch.cat(2, Matrix.ones(patch.size(0), patch.size(1)));
             mask = mask.cat(2, mask, mask, mask);
@@ -2651,9 +2650,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var mask = k.patch.RGB.mask;
             mask =  mask.cat(2, mask, mask)['>'](0);
 
-            var imP = im.select([yMin, yMax], [xMin, xMax], []);
-            imP = imP.set(mask, kp.select(mask));
-            im = im.set([yMin, yMax], [xMin, xMax], [], imP);
+            var imP = im.get([yMin, yMax], [xMin, xMax], []);
+            imP.set(mask, kp.get(mask));
+            im.set([yMin, yMax], [xMin, xMax], [], imP);
         }
         return im;
     };

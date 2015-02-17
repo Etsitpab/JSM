@@ -25,9 +25,9 @@ Matrix.prototype = Matrix.prototype || {};
 
     var correctImage = function (im, c) {
         c = c.getData();
-        var R = im.select([], [], 0)['./'](c[0] * Math.sqrt(3));
-        var G = im.select([], [], 1)['./'](c[1] * Math.sqrt(3));
-        var B = im.select([], [], 2)['./'](c[2] * Math.sqrt(3));
+        var R = im.get([], [], 0)['./'](c[0] * Math.sqrt(3));
+        var G = im.get([], [], 1)['./'](c[1] * Math.sqrt(3));
+        var B = im.get([], [], 2)['./'](c[2] * Math.sqrt(3));
         return R.cat(2, G, B);
     };
 
@@ -36,17 +36,17 @@ Matrix.prototype = Matrix.prototype || {};
         hh = m.getSize(0);
         ll = m.getSize(1);
         out = Matrix.zeros(hh, ll, 3);
-        v = m.select([1, hh - 1], []).cat(0, m.select([hh - 1], []));
-        out = out.set([], [], 0, v);
-        out = out.set([], [], 1, m);
-        v = m.select(0, []).cat(0, m.select([0, hh - 2], []));
-        out = out.set([], [], 2, v);
+        v = m.get([1, hh - 1], []).cat(0, m.get([hh - 1], []));
+        out.set([], [], 0, v);
+        out.set([], [], 1, m);
+        v = m.get(0, []).cat(0, m.get([0, hh - 2], []));
+        out.set([], [], 2, v);
         out2 = out.max(2);
-        v = out2.select([], [1, ll - 1]).cat(1, m.select([], [ll - 1]));
-        out = out.set([], [], 0, v);
-        out = out.set([], [], 1, out2);
-        v = out2.select([], 0).cat(1, out2.select([], [0, ll - 2]));
-        out = out.set([], [], 2, v);
+        v = out2.get([], [1, ll - 1]).cat(1, m.get([], [ll - 1]));
+        out.set([], [], 0, v);
+        out.set([], [], 1, out2);
+        v = out2.get([], 0).cat(1, out2.get([], [0, ll - 2]));
+        out.set([], [], 2, v);
         out = out.max(2);
         return out.cat(2, out, out);
     };
@@ -157,14 +157,14 @@ Matrix.prototype.miredHistogram = function (params) {
     var imMired = Matrix.ldivide(imCCT, 1e6);
     var imuv = Matrix
         .applycform(imxy, 'xyY to 1960 uvY')
-        .select([], [], [0, 1]);
+        .get([], [], [0, 1]);
     var imuvP = Matrix
         .applycform(imCCT.CCT2im(), 'xyY to 1960 uvY')
-        .select([], [], [0, 1]);
+        .get([], [], [0, 1]);
 
     var imDist = ((imuv)['-'](imuvP))['.^'](2).sum(2)['.^'](0.5);
     // Pixels masks
-    var imY = imXYZ.select([], [], 1);
+    var imY = imXYZ.get([], [], 1);
 
     // Discard potentially saturated points or blacks
     var maskSaturated = ((imY)['>'](0))['&&']((imY)['<'](p.s));
@@ -204,10 +204,10 @@ Matrix.prototype.miredHistogram = function (params) {
         var maskSup = imMired['<='](Math.ceil(scaleMired.value([max])));
 
         var maskSelectedTemp  = (maskInf)['&&'](maskSup);
-        var pointsKept = weights.select(maskSelectedTemp);
+        var pointsKept = weights.get(maskSelectedTemp);
         var sumWeights = pointsKept.sum().getDataScalar();
-        var xPoints = imxy.select([], [], 0).select(maskSelectedTemp).getData();
-        var yPoints = imxy.select([], [], 1).select(maskSelectedTemp).getData();
+        var xPoints = imxy.get([], [], 0).get(maskSelectedTemp).getData();
+        var yPoints = imxy.get([], [], 1).get(maskSelectedTemp).getData();
         pointsKept = pointsKept.getData();
         var i, ie, xM = 0, yM = 0;
         for (i = 0, ie = xPoints.length; i < ie; i++) {
@@ -291,15 +291,15 @@ Plot.prototype.drawMode = function (h, s, m, c, op) {
     var sum;
     if (b >= a) {
 
-        sum = h.select([], [a, b]).sum2() / (b - a + 1);
-        hm = hm.set([], [a, b], sum);
+        sum = h.get([], [a, b]).sum2() / (b - a + 1);
+        hm.set([], [a, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": op || 0.33});
     } else {
-        sum = h.select([], [a, -1]).sum2();
-        sum += h.select([], [0, b]).sum2();
+        sum = h.get([], [a, -1]).sum2();
+        sum += h.get([], [0, b]).sum2();
         sum /= (nBin - a + b + 1);
-        hm = hm.set([], [a, -1], sum);
-        hm = hm.set([], [0, b], sum);
+        hm.set([], [a, -1], sum);
+        hm.set([], [0, b], sum);
         this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": op || 0.33});
     }
 };

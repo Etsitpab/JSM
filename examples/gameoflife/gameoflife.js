@@ -113,13 +113,13 @@ function createGameOfLife(image) {
 
 
     //var A = Matrix.zeros(ysize, xsize);
-    //A = A.set([ysize / 2, ysize / 2 + cross.size(0) - 1],
+    //A.set([ysize / 2, ysize / 2 + cross.size(0) - 1],
     //          [xsize / 2, xsize / 2 + cross.size(1) - 1],
     //          cross);
 
     /*
     var A = Matrix.zeros(ysize, xsize);
-    A = A.set([ysize / 2, ysize / 2 + 6], [xsize / 2, xsize / 2 + 6], replicator);
+    A.set([ysize / 2, ysize / 2 + 6], [xsize / 2, xsize / 2 + 6], replicator);
     */
     var H = Matrix.fromArray([[1, 1, 1], [1, 0, 1], [1, 1, 1]]);
 
@@ -133,7 +133,7 @@ function createGameOfLife(image) {
             var i, j;
             for (i = 0; i < z; i++) {
                 for (j = 0; j < z; j++) {
-                    out = out.set([i, z, -1], [j, z, -1], A);
+                    out.set([i, z, -1], [j, z, -1], A);
                 }
             }
             out.imshow(id, 'fit');

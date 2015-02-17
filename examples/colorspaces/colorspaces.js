@@ -67,9 +67,9 @@ function updateOutput(image) {
 
     // Histograms
     if (image.size(2) === 3) {
-        var red_hist = image.select([], [], 0).imhist();
-        var green_hist = image.select([], [], 1).imhist();
-        var blue_hist = image.select([], [], 2).imhist();
+        var red_hist = image.get([], [], 0).imhist();
+        var green_hist = image.get([], [], 1).imhist();
+        var blue_hist = image.get([], [], 2).imhist();
         var grey_hist = image.rgb2gray().imhist();//blue_hist.min(green_hist);
         var M = Math.max(red_hist.max().getDataScalar(), green_hist.max().getDataScalar(),
                          blue_hist.max().getDataScalar(), grey_hist.max().getDataScalar());
@@ -224,7 +224,7 @@ var crop = function () {
         var f = Math.floor;
         x = [f(x * p.x1), f(x * p.x2)];
         y = [f(y * p.y1), f(y * p.y2)];
-        return img.select(y, x);
+        return img.get(y, x);
     };
 
     var onChange = function () {
@@ -267,7 +267,7 @@ var contrast = function () {
     contrast.fun = function (img, p) {
         var im = img;
         if (p.channel.length !== 0) {
-            im = im.select([], [], p.channel);
+            im = im.get([], [], p.channel);
         }
         if (p.gamma !== 1) {
             im = im[".^"](p.gamma);
@@ -279,7 +279,7 @@ var contrast = function () {
             im = im[".*"](p.contrast * 2)["-"](p.contrast - 0.5);
         }
         if (p.channel.length !== 0) {
-            im = img.set([], [], p.channel, im);
+            im = Matrix.set(img, [], [], p.channel, im);
         }
         console.log(p.histeq);
         if (p.histeq === "uniform") {
@@ -405,9 +405,9 @@ var colorBalance = function () {
     };
     colorBalance.fun = function (img, p) {
         var imgRGY = Matrix.applycform(img, "LinearRGB to rgY");
-        var r = imgRGY.select([], [], 0);
-        var g = imgRGY.select([], [], 1);
-        var Y = imgRGY.select([], [], 2);
+        var r = imgRGY.get([], [], 0);
+        var g = imgRGY.get([], [], 1);
+        var Y = imgRGY.get([], [], 2);
         var v1 = 1, v2 = 1;
         if (p.cyanRed > 0.5) {
             v1 += (p.cyanRed - 0.5) * 4;
@@ -623,7 +623,7 @@ var filter = function () {
             img = img.imbilateral(p.bilateral_sigma_s * 10, 1 / (101 - p.bilateral_sigma_i * 100), 1.5);
         }
         if (p.filter !== "none") {
-            img = img.filter(Matrix.fspecial(p.filter));
+            img = img.imfilter(Matrix.fspecial(p.filter));
         }
         if (p.filter2 !== "none") {
             img = img.gradient(1, 1, 1, 1, 1)[p.filter2];
@@ -788,7 +788,7 @@ var colorspace = function () {
         }
         var min, max;
         if (p.channels.length !== 0) {
-            img = img.select([], [], p.channels);
+            img = img.get([], [], p.channels);
             if (p.stretch === "YES") {
                 min = img.min().getDataScalar(); 
                 max = img.max().getDataScalar();
@@ -841,7 +841,6 @@ var morphology = function () {
     };
     
     morphology.fun = function (img, p) {
-        console.log(p);
         var s = Math.round(p.strElemSize * 12.5) * 2 + 1;
         if (s > 0) {
             var strElem;

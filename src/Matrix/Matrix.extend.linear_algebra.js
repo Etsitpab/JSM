@@ -741,11 +741,11 @@
             L = param.LU.getCopy();
             U = param.LU.getCopy();
         } else if (m < n) {
-            L = param.LU.select([], [0, m - 1]);
-            U = param.LU.select([0, m - 1], []);
+            L = param.LU.get([], [0, m - 1]);
+            U = param.LU.get([0, m - 1], []);
         } else {
-            L = param.LU.select([], [0, n - 1]);
-            U = param.LU.select([0, n - 1], []);
+            L = param.LU.get([], [0, n - 1]);
+            U = param.LU.get([0, n - 1], []);
         }
         var view, lm;
         var dn, ln;
@@ -825,7 +825,7 @@
             for (i = 0, ei = piv.length; i < ei; i++) {
                 ipiv[piv[i]] = i;
             }
-            L = L.select([ipiv]);
+            L = L.get([ipiv]);
             return [L, U];
         }
 
@@ -852,7 +852,7 @@
         }
 
         // Data
-        B = B.select([piv]);
+        B = B.get([piv]);
         var rdiag = Matrix.ones(LU.getSize(0)).getData();
         var idiag = Matrix.zeros(LU.getSize(0)).getData();
         gaussianSubstitution(true, LU, B, rdiag, idiag);
@@ -1419,7 +1419,7 @@
             ipiv[piv[i]] = i;
         }
 
-        return X.select([ipiv]);
+        return X.get([ipiv]);
 
     };
 
@@ -1436,7 +1436,7 @@
         for (var i = 0, ei = piv.length; i < ei; i++) {
             ipiv[piv[i]] = i;
         }
-        B = B.select([ipiv]);
+        B = B.get([ipiv]);
 
         var QtX = gaussianSubstitution(true, QR.ctranspose(), B);
 
