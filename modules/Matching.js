@@ -553,12 +553,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             switch (this.type) {
             case "GRADIENT":
-                patch = patch.select([], [], cs.channels).gradient(0, 0, 1, 1);
+                patch = patch.get([], [], cs.channels).gradient(0, 0, 1, 1);
                 break;
             case "WEIGHTED-HISTOGRAMS":
                 patch = {
-                    norm: patch.select([], [], cs.weightChannel),
-                    phase: patch.select([], [], cs.phaseChannel)
+                    norm: patch.get([], [], cs.weightChannel),
+                    phase: patch.get([], [], cs.phaseChannel)
                 };
                 break;
             default:
@@ -1893,7 +1893,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else if (yMax > image.getSize(0) - 1) {
                 return null;
             }
-            var patch = image.select([yMin, yMax], [xMin, xMax]);
+            var patch = image.get([yMin, yMax], [xMin, xMax]);
 
             if (dMin > 1e-2) {
                 var sigmaIm = this.scale[sMin].sigma;

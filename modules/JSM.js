@@ -3688,10 +3688,10 @@ if (typeof window === 'undefined') {
      * @param {Matrix} selection
      *
      *  1. There is only one ND-Matrix containing either:
-     *    a) `Booleans`: select all the correpondings indices,
+     *    a) `Booleans`: select all the corresponding indices,
      *    b) `Integers`: select the indices corresponding to the the integers.
      *  2. There is one or more 1D Matrix containing either:
-     *    a) `Booleans`: select all the correpondings indices,
+     *    a) `Booleans`: select all the corresponding indices,
      *    b) `Integers`: select the indices corresponding to
      *                   the integer.
      *
@@ -3705,7 +3705,7 @@ if (typeof window === 'undefined') {
      *  values. It should work if the indices are valid. The solution may be
      *  not obvious.
      * @fixme
-     *  Due to time spent in checking arguments the resulting function si 
+     *  Due to time spent in checking arguments the resulting function is 
      *  very slow this should be reduce using the type of the array to check 
      *  if values are integer or not.
      */
@@ -3755,10 +3755,10 @@ if (typeof window === 'undefined') {
     /** Allow to select an subpart of the Matrix for each dimension
      * if no arguments is provided then it will return a new vector
      * with all the elements one after the others.
-     * It acts like matlab colon operator.
+     * It acts like Matlab colon operator.
      *
      * @param {Integer[]} [select]
-     *  For each dimension, can be an array-like formated as:
+     *  For each dimension, can be an array-like formatted as:
      *
      *  - `[startValue]`
      *  - `[startValue, endValue]`
@@ -3770,7 +3770,7 @@ if (typeof window === 'undefined') {
      * @fixme when only one number is provided, should the function consider this
      * number as an indice and return the corresponding value ?
      */
-    Matrix_prototype.select = function () {
+    Matrix_prototype.get = function () {
         if (arguments.length === 0) {
             return this.getCopy().reshape(this.getLength());
         }
@@ -3797,23 +3797,39 @@ if (typeof window === 'undefined') {
         var view = this.selectView(sel);
         if (sel.length === 1 && sel[0] instanceof Matrix) {
             var valSize = val.getSize(), selSize = sel[0].getSize();
-            var out = val.reshape().extractViewTo(view, this.getCopy().reshape());
+            var out = val.reshape().extractViewTo(view, this.reshape());
             out = out.reshape(selSize);
             val.reshape(valSize);
             return out;
         }
 
-        return val.extractViewTo(view, this.getCopy());
+        return val.extractViewTo(view, this);
     };
 
+    Matrix.set = function () {
+		var mat = Array.prototype.shift.apply(arguments);
+		if (!(mat instanceof Matrix)) {
+			throw new Error("Matrix.set: Matrix to modify must be provided.");
+		}
+        return Matrix_prototype.set.apply(mat.getCopy(), arguments);
+	};
 
+	Matrix.reshape = function () {
+		var mat = Array.prototype.shift.apply(arguments);
+		if (!(mat instanceof Matrix)) {
+			throw new Error("Matrix.set: Matrix to modify must be provided.");
+		}
+		mat = mat.getCopy();
+        return mat.reshape.apply(mat, arguments);
+	};
+	
     //////////////////////////////////////////////////////////////////
     //                      Matrix Manipulation                     //
     //////////////////////////////////////////////////////////////////
 
 
     /** Repeat the matrix along multiple dimensions.
-     * Matlib-like function repmat.
+     * Matlab-like function repmat.
      *
      * @param {Integer[]} select
      *  For each dimension, specify the number of repetition
@@ -3824,7 +3840,7 @@ if (typeof window === 'undefined') {
      * @todo Create a tag Matlab-like and a tag also see.
      */
     Matrix_prototype.repmat = function () {
-        // Check paramters
+        // Check parameters
         var size = Tools.checkSize(arguments, 'square');
 
         // Input iterator
@@ -3863,7 +3879,7 @@ if (typeof window === 'undefined') {
         var iter = ov.getIterator(0);
         var io, ito = iter.iterator, bo = iter.begin, eo = iter.isEnd;
         for (io = bo(); !eo(); io = ito()) {
-            // Ouput subiterator
+            // Output sub iterator
             var sov = om.getView(), pos = iter.getPosition();
             // Output fine view arrangement
             for (i = 0, ie = size.length; i < ie; i++) {
@@ -3940,7 +3956,7 @@ if (typeof window === 'undefined') {
         return [this.extractViewFrom(v), n];
     };
 
-    /** Rotates Matrix counterclockwise by a multiple of 90 degrees.
+    /** Rotates Matrix counter-clockwise by a multiple of 90 degrees.
      *
      * @param {Integer} k
      *  Defines the number 90 degrees rotation.
@@ -4000,13 +4016,13 @@ if (typeof window === 'undefined') {
         return this.flipdim(0);
     };
 
-    /** Concatenate differents Matrix along a given dimension.
+    /** Concatenate different Matrix along a given dimension.
      *
      * @param {Integer} dimension
      *  The dimension on which the matrix must be concatenate.
      *
      * @param {Matrix} m
-     *  A list of matrix to concatenate. All dimension should be equals
+     *  A list of matrices to concatenate. All dimension should be equals
      *  except the one corresponding to the parameter `dimension`.
      *
      * @return {Matrix}

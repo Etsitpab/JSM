@@ -623,7 +623,7 @@ var filter = function () {
             img = img.imbilateral(p.bilateral_sigma_s * 10, 1 / (101 - p.bilateral_sigma_i * 100), 1.5);
         }
         if (p.filter !== "none") {
-            img = img.filter(Matrix.fspecial(p.filter));
+            img = img.imfilter(Matrix.fspecial(p.filter));
         }
         if (p.filter2 !== "none") {
             img = img.gradient(1, 1, 1, 1, 1)[p.filter2];
@@ -841,7 +841,6 @@ var morphology = function () {
     };
     
     morphology.fun = function (img, p) {
-        console.log(p);
         var s = Math.round(p.strElemSize * 12.5) * 2 + 1;
         if (s > 0) {
             var strElem;
