@@ -34,7 +34,7 @@
 ## Matrix manipulation
 
 + {@link Matrix#set}
-+ {@link Matrix#select}
++ {@link Matrix#get}
 + {@link Matrix#repmat}
 + {@link Matrix#permute}
 + {@link Matrix#ipermute}
@@ -127,22 +127,6 @@
 + {@link Matrix#isinf}
 + {@link Matrix#isfinite}
 
-## Numerical types
-
-+ {@link Matrix#cast}
-+ {@link Matrix#double}
-+ {@link Matrix#single}
-+ {@link Matrix#int8}
-+ {@link Matrix#int16}
-+ {@link Matrix#int32}
-+ {@link Matrix#uint8}
-+ {@link Matrix#uint8c}
-+ {@link Matrix#uint16}
-+ {@link Matrix#uint32}
-+ {@link Matrix#isnan}
-+ {@link Matrix#isinf}
-+ {@link Matrix#isfinite}
-
 ## Image processing
 
 ### Image conversion
@@ -168,6 +152,8 @@
 + {@link Matrix#imdilate}
 + {@link Matrix#imopen}
 + {@link Matrix#imclose}
++ {@link Matrix#fft2}
++ {@link Matrix#ifft2}
 
 ### Color image processing
 
@@ -201,3 +187,24 @@
 + {@link Matrix#erf}
 + {@link Matrix#erfc}
 + {@link Matrix#erfcx}
+
+
+## Basic statistics
+
++ {@link Matrix#min}
++ {@link Matrix#amin}
++ {@link Matrix#max}
++ {@link Matrix#amax}
++ {@link Matrix#sum}
++ {@link Matrix#prod}
++ {@link Matrix#mean}
++ {@link Matrix#variance}
++ {@link Matrix#std}
++ {@link Matrix#cumsum}
++ {@link Matrix#cumprod}
++ {@link Matrix#poissrnd}
++ {@link Matrix#exprnd}
++ {@link Matrix#sort}
++ {@link Matrix#asort}
++ {@link Matrix#accumarray}
+  
