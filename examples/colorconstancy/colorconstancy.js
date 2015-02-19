@@ -22,7 +22,9 @@ function updateOutput(image) {
     var canvasYSize = div.offsetHeight;
     outputCanvas.width = canvasXSize;
     outputCanvas.height = canvasYSize;
-
+    if (image instanceof Matrix) {
+        image.display('Illuminant');
+    }
     var view = $("view");
     if (view.value === 'im') {
         IMAGE.imshow(outputCanvas, "fit");
