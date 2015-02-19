@@ -26,7 +26,7 @@ DOC_DIR = doc/html
 # Licence header
 LIC_HEAD = licence.txt
 
-all: clean Matching Plot JSM projects
+all: clean Matching Image Linalg Plot JSM projects
 
 Tools: $(TOOLS_FILES)
 	$(eval DIR := $(SRC_DIR)/$@)
@@ -44,7 +44,24 @@ MatrixView: Tools
 	mkdir -p $(MOD_DIR); \
 	cat $(CLASSES) $(MODULES) $(EXTENDS) > $(NAME); \
 
+
 Matrix: MatrixView Tools
+	$(eval DIR := $(SRC_DIR)/$@)
+	$(eval NAME := $(MOD_DIR)/$@.js)
+	$(eval NAME_MIN := $(MIN_DIR)/$@.min.js)
+	@echo "* Module "$@" creation"; \
+	mkdir -p $(MOD_DIR); \
+	cat $(CLASSES) $(MODULES) $(EXTENDS) > $(NAME); \
+
+Image: Matrix
+	$(eval DIR := $(SRC_DIR)/$@)
+	$(eval NAME := $(MOD_DIR)/$@.js)
+	$(eval NAME_MIN := $(MIN_DIR)/$@.min.js)
+	@echo "* Module "$@" creation"; \
+	mkdir -p $(MOD_DIR); \
+	cat $(CLASSES) $(MODULES) $(EXTENDS) > $(NAME); \
+
+Linalg: Matrix
 	$(eval DIR := $(SRC_DIR)/$@)
 	$(eval NAME := $(MOD_DIR)/$@.js)
 	$(eval NAME_MIN := $(MIN_DIR)/$@.min.js)
