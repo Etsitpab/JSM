@@ -161,7 +161,7 @@
      */
     Matrix_prototype.get = function () {
         if (arguments.length === 0) {
-            return this.getCopy().reshape(this.getLength());
+            return this.getCopy();
         }
         var view = this.selectView(arguments);
         if (arguments.length === 1 && arguments[0] instanceof Matrix) {
