@@ -28,7 +28,9 @@ Generally, it is more convenient to use some automatic constructors.
     var B = Matrix.ones(5, 2)
     A.display("Filled with ones"); 
 
-There is many constructors that you can use.  
+There is many constructors that you can use. 
+
+
 
 
 # Matrix indexing
@@ -115,6 +117,10 @@ For each one of these possibilities, the indices values may be poitive and nagat
 ## Arithmetic operators
 
 ## Boolean operators
+
+
+# Create a complex Matrix
+
 
 # Import and export your data
 
