@@ -16,7 +16,7 @@ Many modules are developed
 * for image processing, such as filtering, FFT, image matching ;
 * for statistical processing ; ...
 
-A list of supported functions (not necessarily up to date) may be found [here](http://etsitpab.github.io/JSM/#!/guide/functions). A brief introduction is available [here|https://github.com/Etsitpab/JSM/blob/master/doc/guides/getting_started/README.md].
+A list of supported functions (not necessarily up to date) may be found [here](http://etsitpab.github.io/JSM/#!/guide/functions). A brief introduction is available [here|(https://github.com/Etsitpab/JSM/blob/master/doc/guides/getting_started/README.md).
 
 The inspiration is the well known [Matlab][1] software though there are some differences in the syntax we used. 
 
