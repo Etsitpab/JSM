@@ -104,17 +104,79 @@ For each one of these possibilities, the indices values may be poitive and nagat
 
     @example
     // Invert the first and last rows
-    var m = A.get([4, 1, 2, 3, 0], []).display("Same than A but with first and last rows inverted");
+    var m = A.get([[4, 1, 2, 3, 0]], []).display("Same than A but with first and last rows inverted");
 
 ### Boolean list
 
+Another convenient way to select values on a given dimension is to use a boolean list. This can be done using either:
+
++ a JS Array filled with boolean, like `[false, true, ... , false, true]` ;
++ a `logical` `Matrix`.
+
+    @example
+    // Get only the first and last rows
+    var m = A.get([[true, false, false, false, true]], []).display("First and last rows");
+
+### Boolean mask
+
+With the previsou example, we saw how to extract values using a mask along one dimension. This allow only for rectangular pattern. It can be very usefull to use a multidimensional mask to extract arbitrarily organized values. For instance, if we want to extract values greater than 3 in our `Matrix`, we can do that with the next piece of code:
+
+    @example
+    // Create a logical Matrix indicating wich values are greater than 3
+    var mask = A[">"](3).display("Boolean mask");
+    // Extract corresponding values
+    var v = A.get(mask).display("List of values greater than 3");
 
 ## Modify values
 
+Now, what if we want to modify only the selected values ? In the last example, we extract values greater than 3, The following code shows how to replace these values by 3:
+
+    @example
+    // Set the values selected by mask to 3
+    var B = Matrix.set(A, mask, 3).display("Matrix with values clipped to 3");
+
+The next example shows how to multiply by two the selected values:
+
+    @example
+    // selected values are multiplied by 2
+    var values = A.get(mask)[".*"](2);
+    // Set the values selected by mask to 3
+    var B = Matrix.set(A, mask, values).display("Matrix with some values multiplied by two");
+
+Note that the function `Matrix.set` creates a copy of `A`, which therefore is not affected by the operation. Depending on the situation, it might be desirable to avoid creating a copy. To act in place, the method set can be used. We can now rewrite the previous example:
+
+    @example
+    // selected values are multiplied by 2
+    var values = A.get(mask)[".*"](2);
+    // Set the values selected by mask to 3
+    A.set(mask, values).display("Matrix with some values multiplied by two");
+
+Now, `A` is modified directly. In a general manner and when it makes sense, methods act in place while function like `Matrix.<function>` work on a copy. 
 
 # Matrix operators
 
+Now, we know how to manipulate `Matrix` values. But how to perform basics operations ? 
+
 ## Arithmetic operators
+
+Let's talk about the `+` which performs an addition on 2 Matrix. There is 2 ways to use it:
+
++ `var C = Matrix.plus(A, B);`
++ `var C = A['+'](B);`
+
+For the operator `+=`, there is similar syntaxe:
++ `A.plus(A, B);`
++ `A['+='](B);`
+
+Note that as explained before, the using the method `plus` allows to act in place while using the syntax `Matrix.plus` perform the operation on a copy.
+
+Here is a list of basic operators and their notations
+
++ addition: `Matrix.plus(A, B)` or `A['+'](B)`
++ subtraction: `Matrix.minus(A, B)` or `A['-'](B)`
++ multiplication: `Matrix.times(A, B)` or `A['.*'](B)`
++ right division: `Matrix.rdivide(A, B)` or `A['./'](B)`
++ left division: `Matrix.ldivide(A, B)` or `A['.\\'](B)`
 
 ## Boolean operators
 
