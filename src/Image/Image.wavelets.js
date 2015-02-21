@@ -1,11 +1,3 @@
-// TO DO:   wavelet examples
-//          high freq. filters using -1/+1
-
-/** 
- * @fileOverview Wavelet Transform toolbox
- */
-
-// Ipij API (c) Copyright 2012, designed by B.Mazin & G.Tartavel
 
 /**
  * @fileOverview Wavelet transform and wavelet tools.
@@ -52,7 +44,7 @@ function Wavelet(name) {
     if (name  === undefined) {
         this.name = 'haar';
     } else {
-        /** Read only<br />Name of the wavelet. */
+        /** Name of the wavelet. */
         this.name = name.toLowerCase();
     }
 
@@ -62,16 +54,16 @@ function Wavelet(name) {
         var normalize = (wav.normalized !== undefined && !wav.normalized)
                 ? function (h) { return Wavelet.filter(h, 'norm'); }
             : function (h) { return h; };
-        /** Read only<br />Low-pass recursive decomposition filter. */
+        /** Low-pass recursive decomposition filter. */
         this.filterL = normalize(wav.filterL);
-        /** Read only<br />Is the wavelet orthogonal? */
+        /** Is the wavelet orthogonal? */
         this.orthogonal = (wav.orthogonal) ? true : false;
         if (wav.filterH) {
-            /** Read only<br />High-pass recursive decomposition filter. */
+            /** High-pass recursive decomposition filter. */
             this.filterH = normalize(wav.filterH);
         }
         if (wav.invFilterL) {
-            /** Read only<br />Low-pass recursive reconstruction filter. */
+            /** Low-pass recursive reconstruction filter. */
             this.invFilterL = normalize(wav.invFilterL);
         }
         if (wav.invFilterH) {
@@ -443,66 +435,6 @@ Wavelet.filter = function (h, action, factor) {
 };
 
 
-/** Compute the Wavelet Transform of an ImageJS.
- * @see Wavelet
- * @see WT#inverse
- * @class
- *  WT (which stands for 'Wavelet Transform') is a class designed
- *  to store the wavelet transform of an ImageJS.
- * @param {ImageJS|WT} image
- *  Image to be transform, or WT to copy.
- * @param {boolean} [redundant=false]
- *  Use a redundant wavelet transform instead.
- * @param {Wavelet|String} wavelet
- *  Wavelet to use, or its name.
- * @param {int} [level=3]
- *  Number of decomposition levels.<br />
- *  - The scale will be from 0 (lowest freq.) to 'level' (highest freq.)<br />
- *  - They are also labelled from -1 (highest freq.) to -level-1 (lowest freq.)
- * @return {WaveletTransform}
- *  The created wavelet transform instance.
- * @example
- *  // Compute the redundant WT
- *  var wt = new WT(im, true);
- *
- *  // Estimate the noise and apply thresholding
- *  var sigma = wt.noiseStd();
- *  wt.threshold(3/2*sigma, 'soft');
- *
- *  // Reconstruct the image
- *  var denoised = wt.inverse();
- */
-function WT(im, redundant, wav, level) {
-    'use strict';
-
-    if (im instanceof Matrix) {
-        if (redundant !== undefined && typeof redundant !== 'boolean') {
-            throw new Error("WT: argument 'redundant' must be boolean");
-        }
-        if (level === undefined) {
-            level = 3;
-        } else if (typeof level !== 'number') {
-            throw new Error("WT: argument 'level' must be an integer");
-        }
-
-        // Arguments
-        this.width = im.getSize(1);
-        this.height = im.getSize(0);
-        this.redundant = (redundant) ? true : false;
-        this.level = (level === undefined) ? 3 : level;
-        this.wavelet = (wav instanceof Wavelet) ? wav : new Wavelet(wav);
-
-        // Compute and return the transform
-        this.tmp = im;
-        this.wt2(); // fill this.data
-        
-        // Copy constructor
-    } else {
-        throw new Error("WT: first parameter must be an ImageJS or a WT");
-    }
-    return this;
-}
-
 Matrix.prototype._filter1d = function (viewI, kernel, origin, s, output, viewO, add) {
     'use strict';
 
@@ -528,7 +460,6 @@ Matrix.prototype._filter1d = function (viewI, kernel, origin, s, output, viewO, 
     var ly = viewI.getEnd(0), oly = viewO.getEnd(0);
 
     var ny = viewI.getSize(0);
-
     var id = this.getData(),  od = output.getData();
 
     var c, oc;
@@ -578,18 +509,14 @@ Matrix.prototype._filter1d = function (viewI, kernel, origin, s, output, viewO, 
  * @return {Array of Object}
  *  The properties for each scale.
  */
-WT.prototype.getScalesParameters = function () {
+var getScalesParameters = function (w, h, level) {
     'use strict';
-    var w = this.width;
-    var h = this.height;
     var pow = 1;
     var list = [];
     var k;
-    for (k = this.level; k > 0; k--, pow *= 2) {
-        if (!this.redundant) {
-            w = Math.ceil(w / 2);
-            h = Math.ceil(h / 2);
-        }
+    for (k = level; k > 0; k--, pow *= 2) {
+        w = Math.ceil(w / 2);
+        h = Math.ceil(h / 2);
         list[k] = {
             'width': w,
             'height': h,
@@ -607,7 +534,7 @@ WT.prototype.getScalesParameters = function () {
     };
 
     w = h = 0;
-    for (k = 0; k <= this.level; k++) {
+    for (k = 0; k <= level; k++) {
         list[k].cumWidth = w;
         list[k].cumHeight = h;
         w += list[k].width;
@@ -623,92 +550,64 @@ WT.prototype.getScalesParameters = function () {
  * @see WT
  * @private
  */
-WT.prototype.wt2 = function () {
+Matrix.prototype.dwt2 = function (name, level) {
     'use strict';
-    var wav = this.wavelet;
-    var input = this.tmp;
-    var scaleList = this.getScalesParameters();
-    window.scaleList = scaleList;
+    var input = this;
+    var wav = new Wavelet(name);
+    var filterL = wav.filterL, filterH = wav.filterH;
+    var width = input.getSize(1), height = input.getSize(0);
+    var scaleList = getScalesParameters(width, height, level);
+
     // Create output image
     var lastScale = scaleList[scaleList.length - 1];
     var dataWidth = lastScale.cumWidth + lastScale.width;
     var dataHeight = lastScale.cumHeight + lastScale.height;
-    if (this.redundant) {
-        // TODO
-        // dataHeight = 3 * input.getSize(0);
-    }
-    this.data = Matrix.zeros(dataHeight, dataWidth, input.getSize(2));
-    var viewLL = this.data.getView(), viewLH = this.data.getView();
-    var viewHL = this.data.getView(), viewHH = this.data.getView();
 
-    this.subband = [];
-    if (this.redundant) {
-        // TODO:
-        // viewLL.y0 = input.getSize(0);
-        // viewHH.y0 = input.getSize(0);
-        // viewLH.y0 = 2 * input.getSize(0);
-    }
+    var data = Matrix.zeros(dataHeight, dataWidth, input.getSize(2));
+    var LL = data.getView(), LH = data.getView();
+    var HL = data.getView(), HH = data.getView();
 
     // Buffer image
-    var halfHeight = (this.redundant) ? this.height : Math.ceil(this.height / 2);
-    var buffer = Matrix.zeros(2 * halfHeight, this.width, input.getSize(2));
+    var halfHeight = Math.ceil(height / 2);
+    var buffer = Matrix.zeros(2 * halfHeight, width, input.getSize(2));
     var buffL = buffer.getView().select([0, halfHeight - 1]);
     var buffH = buffer.getView().select([halfHeight, -1]);
     var viewI = input.getView();
 
-    window.buffer = buffer;
-    window.data = this.data;
-
     // Process each scale
     while (scaleList.length > 1) {
         var s = scaleList.pop();
-        var D = (this.redundant) ? {'Dker': s.pow} : {'Dout': 2};
 
         // H filtering from image to buffer
-        buffL.select([0, s.height - 1]);
-        buffH.select([0, s.height - 1]);
+        var h1 = [0, s.height - 1], h2 = [s.height, 2 * s.height - 1];
+        var w1 = [0, s.width - 1], w2 = [s.width, 2 * s.width - 1];
+        buffL.select(h1);
+        buffH.select(h1);
         
-        input._filter1d(viewLL, wav.filterL, 'cl', D.Dout, buffer, buffL);
-        input._filter1d(viewLL, wav.filterH, 'cl', D.Dout, buffer, buffH);
+        input._filter1d(LL, filterL, 'cl', 2, buffer, buffL);
+        input._filter1d(LL, filterH, 'cl', 2, buffer, buffH);
 
-        if (this.redundant) {
-            // TODO
-            // viewHL.x0 = viewLH.x0 = viewHH.x0 = s.cumWidth;
-        } else {
-            viewLL.select([0, s.height - 1], [0, s.width - 1]);
-            viewLH.select([0, s.height - 1], [s.width, 2 * s.width - 1]);
-            viewHL.select([s.height, 2 * s.height - 1], [0, s.width - 1]);
-            viewHH.select([s.height, 2 * s.height - 1], [s.width, 2 * s.width - 1]);
-        }
-        this.subband[scaleList.length] = {
-            'HL': new MatrixView(viewHL),
-            'LH': new MatrixView(viewLH),
-            'HH': new MatrixView(viewHH)
-        };
+        buffL.swapDimensions(0, 1);
+        buffH.swapDimensions(0, 1);
+
+        LL.select(h1, w1).swapDimensions(0, 1);
+        LH.restore().select(h1, w2).swapDimensions(0, 1);
+        HL.restore().select(h2, w1).swapDimensions(0, 1);
+        HH.restore().select(h2, w2).swapDimensions(0, 1);
+        
         // V filtering from buffer to data
-        buffL.swapDimensions(0, 1);
-        buffH.swapDimensions(0, 1);
-        viewLL.swapDimensions(0, 1);
-        viewLH.swapDimensions(0, 1);
-        viewHL.swapDimensions(0, 1);
-        viewHH.swapDimensions(0, 1);
-        buffer._filter1d(buffL, wav.filterL, 'cl', D.Dout, this.data, viewLL);
-        buffer._filter1d(buffL, wav.filterH, 'cl', D.Dout, this.data, viewLH);
-        buffer._filter1d(buffH, wav.filterL, 'cl', D.Dout, this.data, viewHL);
-        buffer._filter1d(buffH, wav.filterH, 'cl', D.Dout, this.data, viewHH);
-        buffL.swapDimensions(0, 1);
-        buffH.swapDimensions(0, 1);
-        viewLL.restore().select([0, s.height - 1], [0, s.width - 1]);;
-        viewLH.restore();
-        viewHL.restore();
-        viewHH.restore();
+        buffer._filter1d(buffL, filterL, 'cl', 2, data, LL);
+        buffer._filter1d(buffL, filterH, 'cl', 2, data, LH);
+        buffer._filter1d(buffH, filterL, 'cl', 2, data, HL);
+        buffer._filter1d(buffH, filterH, 'cl', 2, data, HH);
 
         // Be ready for next scale
-        buffL.select([], [0, s.width - 1]);
-        buffH.select([], [0, s.width - 1]);
-        input = this.data;
+        LL.restore().select(h1, w1);
+        buffL.swapDimensions(0, 1).select([], w1);
+        buffH.swapDimensions(0, 1).select([], w1);
+        input = data;
     }
-    this.subband[0] = {'LL': input.getView()};
+    return data;
 };
 
 /** Perform the inverse wavelet transform.
@@ -719,94 +618,74 @@ WT.prototype.wt2 = function () {
  * @return {ImageJS}
  *  The reconstructed image.
  */
-WT.prototype.iwt2 = function (output) {
+Matrix.prototype.idwt2 = function (name, level) {
     'use strict';
-    var re = this.redundant;
-    var factor = (re) ? 0.5 : 1;
-    var filterL = Wavelet.filter(this.wavelet.invFilterL, 'rescale', factor);
-    var filterH = Wavelet.filter(this.wavelet.invFilterH, 'rescale', factor);
-    // If not redundant, oversampled image
-    var decimView2;
-    if (!re) {
-        var size = this.data.getSize();
-        if (size.length < 3) {
-            size.push(1);
-        }
-        var data2 = Matrix.zeros(size[0] * 2, size[1] * 2, size[2] || 1);
-        data2 = data2.set([0, 2, -1], [0, 2, -1], [], this.data);
-        window.data2 = data2;
 
-        var getScaleView = function (scale, band, k) {
-            var H = size[0] * k, W = size[1] * k;
-            var f = Math.pow(2, this.level - scale + 1);
-            var h = H / f, w = W / f;
-            var view = new MatrixView([H, W, size[2]]);
-            if (band === "LL") {
-                view.select([0, 2 * h - 1], [0, 2 * w - 1]);
-            } else if (band === "LH") {
-                view.select([0, h - 1], [w, 2 * w - 1]);
-            } else if (band === "HL") {
-                view.select([h, 2 * h - 1], [0, w - 1]);
-            } else if (band === "HH") {
-                view.select([h, 2 * h - 1], [w, 2 * w - 1]);
-            }
-            return view;
-        }.bind(this);
-    }
+    var data = this;
+    var wav = new Wavelet(name);
+    var filterL = wav.invFilterL, filterH = wav.invFilterH;
+
+    var h = data.getSize(0), w = data.getSize(1), c = data.getSize(2);
+    var sub = [0, 2, -1];
+    data = Matrix.zeros(h * 2, w * 2, c).set(sub, sub, data);
+    
+    var getScaleView = function (scale, band, k) {
+        var H = h * k, W = w * k;
+        var f = Math.pow(2, level - scale + 1);
+        var y = H / f, x = W / f;
+        var view = new MatrixView([H, W, c]);
+        if (band === "LL") {
+            view.select([0, 2 * y - 1], [0, 2 * x - 1]);
+        } else if (band === "LH") {
+            view.select([0, y - 1], [x, 2 * x - 1]);
+        } else if (band === "HL") {
+            view.select([y, 2 * y - 1], [0, x - 1]);
+        } else if (band === "HH") {
+            view.select([y, 2 * y - 1], [x, 2 * x - 1]);
+        }
+        return view;
+    };
 
     // Buffer image
-    var roundedWidth = (re) ? this.width : 2 * Math.ceil(this.width / 2);
-    var roundedHeight = (re) ? this.height : 2 * Math.ceil(this.height / 2);
-    var outBuffer = Matrix.zeros(roundedHeight * 2 * factor, roundedWidth * 2 * factor, size[2]);
-    var buffer = Matrix.zeros(2 * roundedHeight, roundedWidth, size[2]);
-    // window.outBuffer = outBuffer;
-    // window.buffer = buffer;
+    var rWidth = 2 * Math.ceil(w / 2), rHeight = 2 * Math.ceil(h / 2);
+    var outBuffer = Matrix.zeros(rHeight * 2, rWidth * 2, c);
+    var buffer = Matrix.zeros(2 * rHeight, rWidth, c);
     var buffL, buffH;
-    // buffL.nx = buffH.nx = buffH.x0 = roundedWidth;
 
     // Process each scale
-    var k, decim = Math.pow(2, this.level - 1);
-    var dataLL = data2;
-    var view = {};
+    var k, decim = Math.pow(2, level - 1);
+    var dataLL = data;
+    var LL, HL, LH, HH;
+    for (k = 1; k <= level; k++, decim /= 2) {
 
-    for (k = 1; k <= this.level; k++, decim /= 2) {
+        LL = getScaleView(k - 1, "LL", 2);
+        HL = getScaleView(k, "HL", 2);
+        LH = getScaleView(k, "LH", 2);
+        HH = getScaleView(k, "HH", 2);
 
-        view.LL = getScaleView(k - 1, "LL", re ? 1 : 2),
-        view.HL = getScaleView(k, "HL", re ? 1 : 2);
-        view.LH = getScaleView(k, "LH", re ? 1 : 2);
-        view.HH = getScaleView(k, "HH", re ? 1 : 2);
-
-        var D = (re) ? {'Dker': decim} : 1;
-        
         // Adapt buffer size
-        if (!re) {
-            var selW = [0, view.LL.getSize(1) - 1];
-            buffL = buffer.getView().select([0, view.LL.getSize(0) - 1], selW);
-            buffH = buffer.getView().select([roundedHeight, roundedHeight + view.LL.getSize(0) - 1], selW);
-        }
-        
-        dataLL._filter1d(view.LL, filterL, 'cr', D, buffer, buffL, false);
-        data2._filter1d(view.HL, filterH, 'cr', D, buffer, buffL, true);
-        data2._filter1d(view.LH, filterL, 'cr', D, buffer, buffH, false);
-        data2._filter1d(view.HH, filterH, 'cr', D, buffer, buffH, true);
+        var vWidth = LL.getSize(1), vHeight = LL.getSize(0);
+        var selW = [0, vWidth - 1];
+        buffL = buffer.getView().select([0, vHeight - 1], selW);
+        buffH = buffer.getView().select([rHeight, rHeight + vHeight - 1], selW);
+
+        dataLL._filter1d(LL, filterL, 'cr', 1, buffer, buffL, false);
+        data._filter1d(HL, filterH, 'cr', 1, buffer, buffL, true);
+        data._filter1d(LH, filterL, 'cr', 1, buffer, buffH, false);
+        data._filter1d(HH, filterH, 'cr', 1, buffer, buffH, true);
 
         // H filtering
         buffL.swapDimensions(0, 1);
         buffH.swapDimensions(0, 1);
         dataLL = outBuffer;
-        if (!re) {
-            view.LL = getScaleView(k, "LL", 2);
-            view.LL.select([0, 2, -1], [0, 2, -1]);
-        }
-        view.LL.swapDimensions(0, 1);
-        buffer._filter1d(buffL, filterL, 'cr', D, dataLL, view.LL, false);
-        buffer._filter1d(buffH, filterH, 'cr', D, dataLL, view.LL, true);
+        LL = getScaleView(k, "LL", 2).select(sub, sub).swapDimensions(0, 1);
+        buffer._filter1d(buffL, filterL, 'cr', 1, dataLL, LL, false);
+        buffer._filter1d(buffH, filterH, 'cr', 1, dataLL, LL, true);
         buffL.swapDimensions(0, 1);
         buffH.swapDimensions(0, 1);
-        
     }
 
-    return outBuffer.extractViewFrom(view.LL.swapDimensions(0, 1));
+    return outBuffer.extractViewFrom(LL.swapDimensions(0, 1));
 };
 
 Matrix.psnr = function (im2, imRef) {
@@ -820,12 +699,4 @@ Matrix.psnr = function (im2, imRef) {
         ssd += tmp * tmp;
     }
     return Matrix.toMatrix(10 * Math.log10(ie / ssd));
-};
-
-Matrix.prototype.dwt2 = function (name) {
-    var wt = new WT(this, false, name, 1);
-    return wt.data;
-};
-
-Matrix.prototype.idwt2 = function () {
 };
