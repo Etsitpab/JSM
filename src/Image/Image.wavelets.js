@@ -434,8 +434,28 @@
         return out;
     };
 
-
-    Matrix.prototype._filter1d = function (viewI, kernel, origin, s, output, viewO, add) {
+    Matrix.wfilters = function (name, type) {
+        var wav = new Wavelet(name);
+        var dl = Matrix.toMatrix(wav.filterL),
+            dh = Matrix.toMatrix(wav.filterH),
+            rl = Matrix.toMatrix(wav.invFilterL),
+            rh = Matrix.toMatrix(wav.invFilterH);
+        if (!type) {
+            return [dl, dh, rl, rh];
+        } else if (type === 'd') {
+            return [dl, dh];
+        } else if (type === 'r') {
+            return [rl, rh];
+        } else if (type === 'l') {
+            return [dl, rl];
+        } else if (type === 'h') {
+            return [dh, rh];
+        } else {
+            throw new Error("Matrix.wfilters: wrong type argument.");
+        }
+    };
+    
+    var filter1d = function (mat, viewI, kernel, origin, s, output, viewO, add) {
         'use strict';
 
         // add
@@ -460,7 +480,7 @@
         var ly = viewI.getEnd(0), oly = viewO.getEnd(0);
 
         var ny = viewI.getSize(0);
-        var id = this.getData(),  od = output.getData();
+        var id = mat.getData(),  od = output.getData();
 
         var c, oc;
 
@@ -500,49 +520,9 @@
         return output;
     };
 
-
-    /** Compute each scale properties:
-     *  - shape 'width' and 'height' of the coefficients.
-     *  - 'pow' is the subsampling factor.
-     *  - 'cumWidth' and 'cumHeight' from scale 0 to current.
-     * @private
-     * @return {Array of Object}
-     *  The properties for each scale.
-     */
-    var getScalesParameters = function (w, h, level) {
+    Matrix.dwt2 = function (input, name) {
         'use strict';
-        var pow = 1, list = [], k;
-        for (k = level; k > 0; k--, pow *= 2) {
-            w = Math.ceil(w / 2);
-            h = Math.ceil(h / 2);
-            list[k] = {
-                'width': w,
-                'height': h,
-                'pow': pow,
-                'cumWidth': 0,
-                'cumHeight': 0
-            };
-        }
-        list[0] = {
-            'width': w,
-            'height': h,
-            'pow': pow,
-            'cumWidth': 0,
-            'cumHeight': 0
-        };
-        w = h = 0;
-        for (k = 0; k <= level; k++) {
-            list[k].cumWidth = w;
-            list[k].cumHeight = h;
-            w += list[k].width;
-            h += list[k].height;
-        }
-        return list;
-    };
 
-    Matrix.prototype.dwt2 = function (name) {
-        'use strict';
-        var input = this;
         var wav = new Wavelet(name);
         var filterL = wav.filterL, filterH = wav.filterH;
         var h = input.getSize(0), w = input.getSize(1), c = input.getSize(2);
@@ -557,34 +537,33 @@
         var LL = dataLL.getView().swapDimensions(0, 1),
             LH = dataLH.getView().swapDimensions(0, 1),
             HL = dataHL.getView().swapDimensions(0, 1),
-            HH = dataHL.getView().swapDimensions(0, 1);
+            HH = dataHH.getView().swapDimensions(0, 1);
 
         // Buffer image
         var buffL = Matrix.zeros(hh, w, c), buffH = Matrix.zeros(hh, w, c);
         var L = buffL.getView(), H = buffH.getView(); 
         // H filtering from image to buffer
-        input._filter1d(input.getView(), filterL, 'cl', 2, buffL, L);
-        input._filter1d(input.getView(), filterH, 'cl', 2, buffH, H);
+        filter1d(input, input.getView(), filterL, 'cl', 2, buffL, L);
+        filter1d(input, input.getView(), filterH, 'cl', 2, buffH, H);
 
         // V filtering from buffer to data
         L.swapDimensions(0, 1)
         H.swapDimensions(0, 1)
-        buffL._filter1d(L, filterL, 'cl', 2, dataLL, LL);
-        buffL._filter1d(L, filterH, 'cl', 2, dataLH, LH);
-        buffH._filter1d(H, filterL, 'cl', 2, dataHL, HL);
-        buffH._filter1d(H, filterH, 'cl', 2, dataHH, HH);
+        filter1d(buffL, L, filterL, 'cl', 2, dataLL, LL);
+        filter1d(buffL, L, filterH, 'cl', 2, dataLH, LH);
+        filter1d(buffH, H, filterL, 'cl', 2, dataHL, HL);
+        filter1d(buffH, H, filterH, 'cl', 2, dataHH, HH);
         
         return [dataLL, dataLH, dataHL, dataHH];
     };
     
-    Matrix.idwt2 = function (name, bands) {
+    Matrix.idwt2 = function (bands, name) {
         'use strict';
 
         var dataLL = bands[0], dataHL = bands[2],
             dataLH = bands[1], dataHH = bands[3];
         var wav = new Wavelet(name);
         var filterL = wav.invFilterL, filterH = wav.invFilterH;
-
         var h = dataLL.getSize(0), w = dataLL.getSize(1), c = dataLL.getSize(2);
 
         var data = Matrix.zeros(h * 4, w * 4, c);
@@ -606,151 +585,85 @@
         // Adapt buffer size
         var buffL = Matrix.zeros(rHeight, rWidth, c);
         var buffH = Matrix.zeros(rHeight, rWidth, c);
-        
-        data._filter1d(LL, filterL, 'cr', 1, buffL, buffL.getView(), false);
-        data._filter1d(HL, filterH, 'cr', 1, buffL, buffL.getView(), true);
-        data._filter1d(LH, filterL, 'cr', 1, buffH, buffH.getView(), false);
-        data._filter1d(HH, filterH, 'cr', 1, buffH, buffH.getView(), true);
+        var L = buffL.getView(), H = buffL.getView();
+        filter1d(data, LL, filterL, 'cr', 1, buffL, L, false);
+        filter1d(data, HL, filterH, 'cr', 1, buffL, L, true);
+        filter1d(data, LH, filterL, 'cr', 1, buffH, H, false);
+        filter1d(data, HH, filterH, 'cr', 1, buffH, H, true);
 
         // H filtering
         LL = new MatrixView([4 * h, 4 * w, c]).select([0, 2, -1], [0, 2, -1]).swapDimensions(0, 1);
-        buffL._filter1d(buffL.getView().swapDimensions(0, 1), filterL, 'cr', 1, outBuffer, LL, false);
-        buffH._filter1d(buffH.getView().swapDimensions(0, 1), filterH, 'cr', 1, outBuffer, LL, true);
+        L.swapDimensions(0, 1);
+        filter1d(buffL, L, filterL, 'cr', 1, outBuffer, LL, false);
+        filter1d(buffH, L, filterH, 'cr', 1, outBuffer, LL, true);
 
         return outBuffer.extractViewFrom(LL.swapDimensions(0, 1));
     };
 
-    Matrix.prototype.dwt2_full = function (name, level) {
+    var filter = function (mat, viewI, kernel, origin, s, output, viewO, add) {
         'use strict';
-        var input = this;
+        
+        // add
+        add = add ? true : false;
+        
+        // 1. ARGUMENTS
+        
+        var K = kernel.length;
+        origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
+        
+        // 2. Filtering
+        var ys = viewI.getFirst(0), dy = viewI.getStep(0);
+        var ly = viewI.getEnd(0), ny = viewI.getSize(0);
+        var oys = viewO.getFirst(0), ody = viewO.getStep(0);
+        var id = mat.getData(),  od = output.getData();
+
+        var y, oy;
+        var k, s, sTmp, sum;
+        
+        var nydy = ny * dy;
+        var o = origin * dy;
+        var kdy = dy;
+        dy *= s;
+            
+        for (y = ys, oy = oys; y < ly; y += dy, oy += ody) {
+            for (k = 0, s = y - o, sum = 0; k < K; k++, s += kdy) {
+                sTmp = s;
+                while (sTmp < ys) {
+                    sTmp += nydy;
+                }
+                while (sTmp >= ly) {
+                    sTmp -= nydy;
+                }
+                sum += kernel[k] * id[sTmp];
+            }
+            if (add) {
+                od[oy] += sum;
+            } else  {
+                od[oy] = sum;
+            }
+        }
+    };
+
+    Matrix.dwt = function (input, name) {
         var wav = new Wavelet(name);
         var filterL = wav.filterL, filterH = wav.filterH;
-        var width = input.getSize(1), height = input.getSize(0);
-        var scaleList = getScalesParameters(width, height, level);
+        var h = input.getSize(0);
 
         // Create output image
-        var lastScale = scaleList[scaleList.length - 1];
-        var dataWidth = lastScale.cumWidth + lastScale.width;
-        var dataHeight = lastScale.cumHeight + lastScale.height;
+        var hh = Math.ceil(h / 2);
 
-        var data = Matrix.zeros(dataHeight, dataWidth, input.getSize(2));
-        var LL = data.getView(), LH = data.getView();
-        var HL = data.getView(), HH = data.getView();
+        var dataL = Matrix.zeros(hh, 1);
+        var dataH = Matrix.zeros(hh, 1);
+        var L = dataL.getView(),
+            H = dataH.getView();
 
-        // Buffer image
-        var halfHeight = Math.ceil(height / 2);
-        var buffer = Matrix.zeros(2 * halfHeight, width, input.getSize(2));
-        var buffL = buffer.getView().select([0, halfHeight - 1]);
-        var buffH = buffer.getView().select([halfHeight, -1]);
-        var viewI = input.getView();
+        // H filtering from image to buffer
+        filter(input, input.getView(), filterL, 'cl', 2, dataL, L);
+        filter(input, input.getView(), filterH, 'cl', 2, dataH, H);
 
-        // Process each scale
-        while (scaleList.length > 1) {
-            var s = scaleList.pop();
-
-            // H filtering from image to buffer
-            var h1 = [0, s.height - 1], h2 = [s.height, 2 * s.height - 1];
-            var w1 = [0, s.width - 1], w2 = [s.width, 2 * s.width - 1];
-            buffL.select(h1);
-            buffH.select(h1);
-            
-            input._filter1d(LL, filterL, 'cl', 2, buffer, buffL);
-            input._filter1d(LL, filterH, 'cl', 2, buffer, buffH);
-
-            buffL.swapDimensions(0, 1);
-            buffH.swapDimensions(0, 1);
-
-            LL.select(h1, w1).swapDimensions(0, 1);
-            LH.restore().select(h1, w2).swapDimensions(0, 1);
-            HL.restore().select(h2, w1).swapDimensions(0, 1);
-            HH.restore().select(h2, w2).swapDimensions(0, 1);
-            
-            // V filtering from buffer to data
-            buffer._filter1d(buffL, filterL, 'cl', 2, data, LL);
-            buffer._filter1d(buffL, filterH, 'cl', 2, data, LH);
-            buffer._filter1d(buffH, filterL, 'cl', 2, data, HL);
-            buffer._filter1d(buffH, filterH, 'cl', 2, data, HH);
-
-            // Be ready for next scale
-            LL.restore().select(h1, w1);
-            buffL.swapDimensions(0, 1).select([], w1);
-            buffH.swapDimensions(0, 1).select([], w1);
-            input = data;
-        }
-        return data;
+        return [dataL, dataH];
     };
-
-    Matrix.prototype.idwt2_full = function (name, level) {
-        'use strict';
-
-        var data = this;
-        var wav = new Wavelet(name);
-        var filterL = wav.invFilterL, filterH = wav.invFilterH;
-
-        var h = data.getSize(0), w = data.getSize(1), c = data.getSize(2);
-        var sub = [0, 2, -1];
-        data = Matrix.zeros(h * 2, w * 2, c).set(sub, sub, data);
-        
-        var getScaleView = function (scale, band, k) {
-            var H = h * k, W = w * k;
-            var f = Math.pow(2, level - scale + 1);
-            var y = H / f, x = W / f;
-            var view = new MatrixView([H, W, c]);
-            if (band === "LL") {
-                view.select([0, 2 * y - 1], [0, 2 * x - 1]);
-            } else if (band === "LH") {
-                view.select([0, y - 1], [x, 2 * x - 1]);
-            } else if (band === "HL") {
-                view.select([y, 2 * y - 1], [0, x - 1]);
-            } else if (band === "HH") {
-                view.select([y, 2 * y - 1], [x, 2 * x - 1]);
-            }
-            return view;
-        };
-
-        // Buffer image
-        var rWidth = 2 * Math.ceil(w / 2), rHeight = 2 * Math.ceil(h / 2);
-        var outBuffer = Matrix.zeros(rHeight * 2, rWidth * 2, c);
-        var buffer = Matrix.zeros(2 * rHeight, rWidth, c);
-        var buffL, buffH;
-
-        // Process each scale
-        var k, decim = Math.pow(2, level - 1);
-        var dataLL = data;
-        var LL, HL, LH, HH;
-        for (k = 1; k <= level; k++, decim /= 2) {
-
-            LL = getScaleView(k - 1, "LL", 2);
-            HL = getScaleView(k, "HL", 2);
-            LH = getScaleView(k, "LH", 2);
-            HH = getScaleView(k, "HH", 2);
-
-            // Adapt buffer size
-            var vWidth = LL.getSize(1), vHeight = LL.getSize(0);
-            var selW = [0, vWidth - 1];
-            buffL = buffer.getView().select([0, vHeight - 1], selW);
-            buffH = buffer.getView().select([rHeight, rHeight + vHeight - 1], selW);
-
-            dataLL._filter1d(LL, filterL, 'cr', 1, buffer, buffL, false);
-            data._filter1d(HL, filterH, 'cr', 1, buffer, buffL, true);
-            data._filter1d(LH, filterL, 'cr', 1, buffer, buffH, false);
-            data._filter1d(HH, filterH, 'cr', 1, buffer, buffH, true);
-
-            // H filtering
-            buffL.swapDimensions(0, 1);
-            buffH.swapDimensions(0, 1);
-            dataLL = outBuffer;
-            LL = getScaleView(k, "LL", 2).select(sub, sub).swapDimensions(0, 1);
-            buffer._filter1d(buffL, filterL, 'cr', 1, dataLL, LL, false);
-            buffer._filter1d(buffH, filterH, 'cr', 1, dataLL, LL, true);
-            buffL.swapDimensions(0, 1);
-            buffH.swapDimensions(0, 1);
-        }
-
-        return outBuffer.extractViewFrom(LL.swapDimensions(0, 1));
-    };
-
-
+    
     Matrix.psnr = function (im2, imRef) {
         'use strict';
         im2 = Matrix.toMatrix(im2);
@@ -763,4 +676,5 @@
         }
         return Matrix.toMatrix(10 * Math.log10(ie / ssd));
     };
+
 })();
