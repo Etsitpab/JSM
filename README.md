@@ -67,7 +67,7 @@ Also, do not forget to add the path to nodejs modules, it should look like that 
     `export NODE_PATH="/usr/local/lib/node_modules"`
 
 
-# Why develop a JavaScript numerical computing library  ?
+# Why develop a JavaScript library for numerical computing   ?
 
 Many reasons can justify this. First, JavaScript is fun. It's easy too use and it has very powerful features (closures, prototype, ...).
 Also, put it together with HTML and CSS and you have a perfect team to build great and very efficient UIs.
