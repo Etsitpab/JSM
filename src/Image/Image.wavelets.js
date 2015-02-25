@@ -129,7 +129,6 @@
                 0.23037781330885523
             ])
         },
-
         'db8': {
             'name': 'Daubechies 8',
             'orthogonal': true,
@@ -152,10 +151,7 @@
                 0.054415842243081609
             ])
         },
-
-
         /* Symlets*/
-
         'sym2': {
             'name': 'Symlets 2',
             'orthogonal': true,
@@ -166,7 +162,6 @@
                 0.48296291314469025
             ])
         },
-
         'sym4': {
             'name': 'Symlets 4',
             'orthogonal': true,
@@ -181,7 +176,6 @@
                 0.032223100604042702
             ])
         },
-
         'sym8': {
             'name': 'Symlets 8',
             'orthogonal': true,
@@ -204,10 +198,7 @@
                 0.0018899503327594609
             ])
         },
-
-
         /* Coiflets */
-
         'coif1': {
             'name': 'Coiflets 1',
             'orthogonal': true,
@@ -220,8 +211,7 @@
                     -0.072732619512853897
             ])
         },
-
-        'coif2': {
+		'coif2': {
             'name': 'Coiflets 2',
             'orthogonal': true,
             'filterL': new Float64Array([
@@ -239,7 +229,6 @@
                 0.016387336463522112
             ])
         },
-
         'coif4': {
             'name': 'Coiflets 4',
             'orthogonal': true,
@@ -270,9 +259,7 @@
                 0.00089231366858231456
             ])
         },
-
         /* Bi-orthogonal */
-
         'bi13': {
             'name': 'Biorthogonal 1-3',
             'orthogonal': false,
@@ -289,7 +276,6 @@
                 0.70710678118654757
             ])
         },
-
         'bi31': {
             'name': 'Biorthogonal 3-1',
             'orthogonal': false,
@@ -306,7 +292,6 @@
                 0.17677669529663689
             ])
         },
-
         'bi68': {
             'name': 'Biorthogonal 6-8',
             'orthogonal': false,
@@ -347,7 +332,6 @@
                 0.0
             ])
         },
-
         'bi97': {
             'name': 'Biorthogonal 9-7',
             'orthogonal': false,
@@ -600,7 +584,7 @@
         return outBuffer.extractViewFrom(LL.swapDimensions(0, 1));
     };
 
-    var filter = function (mat, viewI, kernel, origin, s, output, viewO, add) {
+	var filter = function (mat, viewI, kernel, origin, s, output, viewO, add) {
         'use strict';
         
         // add
@@ -626,7 +610,7 @@
         dy *= s;
             
         for (y = ys, oy = oys; y < ly; y += dy, oy += ody) {
-            for (k = 0, s = y - o, sum = 0; k < K; k++, s += kdy) {
+            for (k = 0, s = y + o, sum = 0; k < K; k++, s -= kdy) {
                 sTmp = s;
                 while (sTmp < ys) {
                     sTmp += nydy;
@@ -634,8 +618,10 @@
                 while (sTmp >= ly) {
                     sTmp -= nydy;
                 }
+				// console.log(sTmp, id[sTmp], k, kernel[k])
                 sum += kernel[k] * id[sTmp];
             }
+			// console.log("");
             if (add) {
                 od[oy] += sum;
             } else  {
@@ -658,12 +644,37 @@
             H = dataH.getView();
 
         // H filtering from image to buffer
-        filter(input, input.getView(), filterL, 'cl', 2, dataL, L);
-        filter(input, input.getView(), filterH, 'cl', 2, dataH, H);
+        filter(input, input.getView(), filterL, 'cr', 2, dataL, L);
+        filter(input, input.getView(), filterH, 'cr', 2, dataH, H);
 
         return [dataL, dataH];
     };
     
+	Matrix.idwt = function (bands, name) {
+        var dataL = bands[0], dataH = bands[1];
+        var wav = new Wavelet(name);
+        var filterL = wav.invFilterL, filterH = wav.invFilterH;
+        var h = dataL.getSize(0);
+
+        var data = Matrix.zeros(h * 4, 1);
+        data.set([    0, 2, 2 * h - 1], dataL);
+        data.set([2 * h, 2, 4 * h - 1], dataH);
+        
+        // Buffer image
+        var outBuffer = Matrix.zeros(h * 4, 1);
+
+        // Process scale
+        var L = outBuffer.getView().select([0,     2 * h - 1]);
+        var H = outBuffer.getView().select([2 * h, 4 * h - 1]);
+
+        filter1d(data, L, filterL, 'cl', 1, outBuffer, L, false);
+        filter1d(data, H, filterH, 'cl', 1, outBuffer, H, true);
+
+        // filtering
+        L = outBuffer.getView().select([0, 2, -1]);
+        return outBuffer.extractViewFrom(L);
+	};
+	
     Matrix.psnr = function (im2, imRef) {
         'use strict';
         im2 = Matrix.toMatrix(im2);
@@ -677,4 +688,14 @@
         return Matrix.toMatrix(10 * Math.log10(ie / ssd));
     };
 
+	window.addEventListener('load', function () {
+		var name = 'haar';
+		var s = Matrix.ones(10, 1).cumsum().display("s");
+		var wt = Matrix.dwt(s, name);
+		wt[0].display("a");
+		wt[1].display("d");
+		var out = Matrix.idwt(wt, name);
+		out.display("out");
+		Matrix.psnr(s, out).display("PSNR");
+	});
 })();
