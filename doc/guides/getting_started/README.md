@@ -180,9 +180,16 @@ Here is a list of basic operators and their notations
 
 ## Boolean operators
 
+The same process occurs for logical operators
 
-# Create a complex Matrix
++ greater than: `Matrix.gt(A, B)` or `A['>'](B)`
++ greater than or equal to: `Matrix.ge(A, B)` or `A['>='](B)`
++ lower than: `Matrix.lt(A, B)` or `A['<'](B)`
++ lower than or equal to: `Matrix.le(A, B)` or `A['<='](B)`
++ equal: `Matrix.eq(A, B)` or `A['==='](B)`
++ not equal: `Matrix.ne(A, B)` or `A['!=='](B)`
 
+Not that here a new Matrix with a 'Logical' type is always returned.
 
 # Import and export your data
 
