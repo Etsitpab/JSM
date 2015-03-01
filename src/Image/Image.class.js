@@ -1420,6 +1420,7 @@
         return sum;
     };
     var applyFilter = function (im, mask, f) {
+        mask = Matrix.toMatrix(mask);
         var h = im.getSize(0), w = im.getSize(1), d = im.getSize(2), id = im.getData();
         var out = new Matrix(im.getSize(), im.type()), od = out.getData();
 
