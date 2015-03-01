@@ -83,14 +83,13 @@ function hideFieldset() {
 var readFile = function (file, callback, type) {
     'use strict';
     // Deal with arguments
-    type = (type || file.type).toLowerCase();
+    type = (file.type || type).toLowerCase();
     // File handling functions
     var reader = new FileReader();
     reader.onload = function (evt) {
         callback = callback.bind(evt.target.result);
         callback(evt, type);
     };
-
     switch (type) {
     case 'image/jpeg':
     case 'image/png':
