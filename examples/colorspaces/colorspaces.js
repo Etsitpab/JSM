@@ -21,14 +21,6 @@ var getPosition = function (e, event) {
 function exportImage() {
     "use strict";
     var output = stack[stackIt].image;
-    /* Waiting for chromium url export improvments 
-    if ($V("workImage") === "visible") {
-        var process = getProcess();
-        output = applyProcess(image, process);
-    } else {
-     output = stack[stackIt].image;
-    }
-    */
 
     if ($V("stretchGlobal") === "YES") {
         var min = output.min(); 
@@ -154,6 +146,7 @@ function applyProcess (process) {
 
 function apply (module, parameters) {
     "use strict";
+
     if (stackIt < stack.length - 1) {
         stack = stack.slice(0, stackIt + 1);
     }
@@ -360,12 +353,14 @@ var selection = function () {
             coord: coord
         };
     };
+    
     selection.fun = function (img, p) {
         if (p.threshold > 0) {
 	    mask = img.getConnectedComponent(p.coord[0], p.coord[1], p.threshold * 2);
         }
         return img;
     };
+    
     var onChange = function () {
         change("selection", getParameters());
     };
@@ -379,6 +374,7 @@ var selection = function () {
         $F("select_threshold", $F("select_threshold") + direction);
         onChange();
     };
+    
     var invert = function () {
         mask = mask.neg();
         updateOutput();
@@ -405,9 +401,6 @@ var colorBalance = function () {
     };
     colorBalance.fun = function (img, p) {
         var imgRGY = Matrix.applycform(img, "LinearRGB to rgY");
-        var r = imgRGY.get([], [], 0);
-        var g = imgRGY.get([], [], 1);
-        var Y = imgRGY.get([], [], 2);
         var v1 = 1, v2 = 1;
         if (p.cyanRed > 0.5) {
             v1 += (p.cyanRed - 0.5) * 4;
@@ -416,23 +409,23 @@ var colorBalance = function () {
             v1 -= (0.5 - p.cyanRed) * 2;
             v2 += (0.5 - p.cyanRed);
         }
-        if (yellowBlue > 0.5) {
+        if (p.yellowBlue > 0.5) {
             v1 -= (p.yellowBlue - 0.5) * 2;
             v2 -= (p.yellowBlue - 0.5) * 2;
         } else {
             v1 += (0.5 - p.yellowBlue);
             v2 += (0.5 - p.yellowBlue);
         }
-        if (magentaGreen > 0.5) {
+        if (p.magentaGreen > 0.5) {
             v1 -= (p.magentaGreen - 0.5) * 2;
             v2 += (p.magentaGreen - 0.5) * 4;
         } else {
             v1 += (0.5 - p.magentaGreen);
             v2 -= (0.5 - p.magentaGreen) * 2;
         }
-        r = r[".*"](v1);
-        g = g[".*"](v2);
-        return r.cat(2, g, Y).applycform("rgY to LinearRGB");
+        imgRGY.set([], [], 0, imgRGY.get([], [], 0)[".*"](v1));
+        imgRGY.set([], [], 1, imgRGY.get([], [], 1)[".*"](v2));
+        return imgRGY.applycform("rgY to LinearRGB");
     };
     var onChange = function () {
         change("colorBalance", getParameters());
@@ -880,7 +873,7 @@ window.onload = function () {
         noise,
         filter,
         thresholding,
-        selection,
+        // selection,
         colorspace,
         geometric,
         morphology,
