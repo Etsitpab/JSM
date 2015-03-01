@@ -34,10 +34,13 @@
         "../src/Matrix/Matrix.statistics.base.js",
 
         "../src/Matrix/Matrix.extend.elementary_math.special_functions.js",
-        "../src/Matrix/Matrix.extend.linear_algebra.js",
-        "../src/Matrix/Matrix.extend.image_processing.js",
-        "../src/Matrix/Matrix.extend.image_processing.color.js",
         "../src/Matrix/Matrix.extend.histograms.js",
+
+        "../src/Linalg/Linalg.class.js",
+
+        "../src/Image/Image.class.js",
+        "../src/Image/Image.color.js",
+        "../src/Image/Image.wavelets.js",
 
         "../src/Matching/Matching.class.js",
         "../src/Matching/Matching.Match.js",
