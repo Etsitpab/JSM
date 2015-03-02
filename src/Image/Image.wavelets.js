@@ -454,7 +454,7 @@
         }
     };
     
-    var filter = function (inL, vIL, inH, vIH, kernelL, kernelH, origin, s, outL, vOL, outH, vOH, addL, addH) {
+    var filter = function (inL, inH, vI, kernelL, kernelH, origin, s, outL, outH, vO, addL, addH) {
         // add
         addL = addL ? true : false;
         addH = addH ? true : false;
@@ -466,18 +466,18 @@
         origin = (origin === 'cl' ? f : c)((K - 1) / 2);
 
         // 2. Filtering
-        var cs = vIL.getFirst(2), ocs = vOL.getFirst(2);
-        var xs = vIL.getFirst(1), oxs = vOL.getFirst(1);
-        var ys = vIL.getFirst(0), dy = vIL.getStep(0);
-        var ly = vIL.getEnd(0), ny = vIL.getSize(0);
-        var dc = vIL.getStep(2), odc = vOL.getStep(2);
-        var dx = vIL.getStep(1), odx = vOL.getStep(1);
-        var oys = vOL.getFirst(0), ody = vOL.getStep(0);
+        var cs = vI.getFirst(2), ocs = vO.getFirst(2);
+        var xs = vI.getFirst(1), oxs = vO.getFirst(1);
+        var ys = vI.getFirst(0), dy = vI.getStep(0);
+        var ly = vI.getEnd(0), ny = vI.getSize(0);
+        var dc = vI.getStep(2), odc = vO.getStep(2);
+        var dx = vI.getStep(1), odx = vO.getStep(1);
+        var oys = vO.getFirst(0), ody = vO.getStep(0);
         var idL = inL.getData(),  idH = inH.getData(),
             odL = outL.getData(), odH = outH.getData();
 
-        var lc = vIL.getEnd(2);
-        var lx = vIL.getEnd(1);
+        var lc = vI.getEnd(2);
+        var lx = vI.getEnd(1);
 
         var c, oc, o_x;
         var _x, nx, yx;
@@ -533,7 +533,16 @@
             } else  {
                 od[oy] = sum;
             }
-        }*/
+         }*/
+
+        // Iterator to scan the view on dimension greater than 0
+        
+        // var itI = vI.getIterator(1), itO = vO.getIterator(1);
+        // var i, it = itI.iterator, bi = itI.begin, ei = itI.end();
+        // var o, ot = itO.iterator, bo = itO.begin;
+        //for (_x = bi(), o_x = bo(); _x !== ei; _x = it(), o_x = ot()) {
+            //console.log("i", _x, o_x);
+        //}
         for (c = 0, oc = 0; c < lc; c += dc, oc += odc) {
             for (_x = c + xs, nx = c + lx, o_x = oc + oxs; _x < nx; _x += dx, o_x += odx) {
                 var yx0 = ys + _x, nyx = ly + _x;
@@ -560,6 +569,63 @@
                         odH[oy] = sumH;
                     }
                 }
+            }
+        }
+    };
+
+    var filter = function (inL, inH, vI, kernelL, kernelH, origin, s, outL, outH, vO, addL, addH) {
+        // add
+        addL = addL ? true : false;
+        addH = addH ? true : false;
+        
+        // 1. ARGUMENTS
+        var c = Math.ceil, f = Math.floor;
+        
+        var K = kernelL.length;
+        origin = (origin === 'cl' ? f : c)((K - 1) / 2);
+
+        // 2. Filtering
+        var ys = vI.getFirst(0), dy = vI.getStep(0);
+        var ly = vI.getEnd(0), ny = vI.getSize(0);
+        var oys = vO.getFirst(0), ody = vO.getStep(0);
+
+        var idL = inL.getData(),  idH = inH.getData(),
+            odL = outL.getData(), odH = outH.getData();
+
+        
+        var nydy = ny * dy;
+        var orig = origin * dy;
+        var kdy = dy;
+        dy *= s;
+
+        var itI = vI.getIterator(1), itO = vO.getIterator(1);
+        var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
+        var oy, o, ot = itO.iterator, bo = itO.begin;
+        var k, s, sTmp, sumL, sumH;
+        for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
+            var yx0 = ys + i, nyx = ly + i;
+            for (y = i + ys, oy = o + oys; y < nyx; y += dy, oy += ody) {
+                for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+                    sTmp = s;
+                    while (sTmp < yx0) {
+                        sTmp += nydy;
+                    }
+                    while (sTmp >= nyx) {
+                        sTmp -= nydy;
+                    }
+                    sumL += kernelL[k] * idL[sTmp];
+                        sumH += kernelH[k] * idH[sTmp];
+                }
+                if (addL) {
+                    odL[oy] += sumL;
+                } else  {
+                    odL[oy] = sumL;
+                }
+                if (addH) {
+                    odH[oy] += sumH;
+                } else  {
+                    odH[oy] = sumH;
+                    }
             }
         }
     };
@@ -593,9 +659,9 @@
         // H filtering from image to buffer
         var vI = im.getView();
         filter(
-            im, vI, im, vI,
+            im, im, vI,
             filterL, filterH, 'cr', 2,
-            buffL, vB, buffH, vB
+            buffL, buffH, vB
         );
 
         // V filtering from buffer to data
@@ -606,14 +672,14 @@
 
         vB.swapDimensions(0, 1);
         filter(
-            buffL, vB, buffL, vB,
+            buffL, buffL, vB,
             filterL, filterH, 'cr', 2,
-            dataLL, v, dataLH, v
+            dataLL, dataLH, v
         );
         filter(
-            buffH, vB, buffH, vB,
+            buffH, buffH, vB,
             filterL, filterH, 'cr', 2,
-            dataHL, v, dataHH, v
+            dataHL, dataHH, v
         );
         return [dataLL, dataLH, dataHL, dataHH];
     };
@@ -644,26 +710,24 @@
         dataL.set([0, 2, -1], bands[0]);
         dataH.set([0, 2, -1], bands[2]);
         filter(
-            dataL, dataView, dataH, dataView,
+            dataL, dataH, dataView,
             filterL, filterH, 'cl', 1,
-            buffL, B, buffL, B,
+            buffL, buffL, B,
             false, true
         );
         dataL.set([0, 2, -1], [], bands[1]);
         dataH.set([0, 2, -1], [], bands[3]);
         filter(
-            dataL, dataView, dataH, dataView,
+            dataL, dataH, dataView,
             filterL, filterH, 'cl', 1,
-            buffH, B, buffH, B,
+            buffH, buffH, B,
             false, true
         );
-        window.buffL = buffL;
-        window.buffH = buffH;
         B.restore().swapDimensions(0, 1);
         filter(
-            buffL, B, buffH, B,
+            buffL, buffH, B,
             filterL, filterH, 'cl', 1,
-            out, O, out, O,
+            out, out, O,
             false, true
         );
         return out;
@@ -681,23 +745,22 @@
      * @return {Array}
      *  Array containing approximation coefficients and details.
      */
-    Matrix.dwt = function (im, name) {
+    Matrix.dwt = function (im, name, dim) {
+        dim = dim || 0;
         var wav = new Wavelet(name);
         var fL = wav.filterL, fH = wav.filterH;
-        var h = im.getSize(0);
+        var size = im.getSize(), iV = im.getView().swapDimensions(0, dim);
 
         // Create output image
-        var hh = Math.ceil(h / 2);
-
-        var dataL = zeros(hh, 1), dataH = zeros(hh, 1);
-        var v = dataL.getView();
-        var iV = im.getView()
+        size[dim] = Math.ceil(size[dim] / 2);
+        var dataL = zeros(size), dataH = zeros(size);
+        var v = dataL.getView().swapDimensions(0, dim);
 
         // H filtering from image to buffer
         filter(
-            im, iV, im, iV,
+            im, im, iV,
             fL, fH, 'cr', 2,
-            dataL, v, dataH, v
+            dataL, dataH, v
         );
 
         return [dataL, dataH];
@@ -715,23 +778,25 @@
      * @return {Matrix}
      *  Matrix with the reconstructed signal.
      */
-    Matrix.idwt = function (bands, name) {
+    Matrix.idwt = function (bands, name, dim) {
+        dim = dim || 0;
         var wav = new Wavelet(name);
         var fL = wav.invFilterL, fH = wav.invFilterH;
-        var h2 = bands[0].getSize(0) * 2;
+        var size = bands[0].getSize();
+        size[dim] *= 2;
 
-        var L = zeros(h2, 1).set([0, 2, -1], bands[0]);
-        var H = zeros(h2, 1).set([0, 2, -1], bands[1]);
-        var v = L.getView();
+        var L = zeros(size).set([0, 2, -1], bands[0]);
+        var H = zeros(size).set([0, 2, -1], bands[1]);
+        var v = L.getView().swapDimensions(0, dim);
 
         // Buffer image
-        var O = zeros(h2, 1), vO = O.getView();
+        var O = zeros(size), vO = O.getView().swapDimensions(0, dim);
 
         // Process scale
         filter(
-            L, v, H, v,
+            L, H, v,
             fL, fH, 'cl', 1,
-            O, vO, O, vO,
+            O, O, vO,
             false, true
         );
         return O;
@@ -747,9 +812,8 @@
      */
     Matrix.psnr = function (im2, imRef) {
         im2 = Matrix.toMatrix(im2);
-        i
-mRef = Matrix.toMatrix(imRef);
-        Tools.checkSizeEquals(im2, imRef);
+        imRef = Matrix.toMatrix(imRef);
+        Tools.checkSizeEquals(im2.size(), imRef.size());
         var dRef = imRef.getData(), d2 = im2.getData();
         var i, ie, ssd = 0;
         for (i = 0, ie = d2.length; i < ie; i++) {
@@ -760,23 +824,24 @@ mRef = Matrix.toMatrix(imRef);
     };
 
     Matrix._benchmarkWavelets = function (N, name) {
-        N = N || 500;
+        N = N || 10;
 	name = name || 'haar';
-	var s = Matrix.ones(N * N, 1).cumsum()["-"](1);
+	var s = Matrix.rand(N, N, 1);
         Tools.tic();
-	var wt = Matrix.dwt(s, name);
-	var out = Matrix.idwt(wt, name);
+	var wt = Matrix.dwt(s, name, 1);
+	var out = Matrix.idwt(wt, name, 1);
         var time = Tools.toc()
 	var psnr = Matrix.psnr(s, out).getDataScalar().toFixed(2) + "dB";;
         console.log("DWT 1D decomposotion/recomposition", "PSNR:", psnr, "Time:", time);
 
-	var s = Matrix.ones(N, N, 1).cumsum(0)["-"](1);
+	var s = Matrix.rand(N, N, 1);
   	Tools.tic();
    	var wt = Matrix.dwt2(s, name);
   	var out = Matrix.idwt2(wt, name);
         var time = Tools.toc()
 	var psnr = Matrix.psnr(s, out).getDataScalar().toFixed(2) + "dB";
         console.log("DWT 2D decomposotion/recomposition", "PSNR:", psnr, "Time:", time);
+
     };
 
 })();
