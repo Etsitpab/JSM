@@ -453,7 +453,7 @@
             throw new Error("Matrix.wfilters: wrong type argument.");
         }
     };
-    
+
     var filter = function (inL, inH, vI, kernelL, kernelH, origin, s, outL, outH, vO, addL, addH) {
         // add
         addL = addL ? true : false;
@@ -625,7 +625,7 @@
                     odH[oy] += sumH;
                 } else  {
                     odH[oy] = sumH;
-                    }
+                }
             }
         }
     };
@@ -740,21 +740,24 @@
      * {@link Matrix#dwt2}.
      *
      * @param {Matrix} signal
-     * @param {String} name
+     * @param {String} [name='haar']
      *  Wavelet name.
+     * @param {Number} [dim=0]
+     *  Dimension on which perform th dwt.
      * @return {Array}
      *  Array containing approximation coefficients and details.
      */
     Matrix.dwt = function (im, name, dim) {
-        dim = dim || 0;
+	dim = dim || 0;
         var wav = new Wavelet(name);
         var fL = wav.filterL, fH = wav.filterH;
-        var size = im.getSize(), iV = im.getView().swapDimensions(0, dim);
+	var size = im.getSize();
+        size[dim] = Math.ceil(size[dim] / 2);
 
         // Create output image
-        size[dim] = Math.ceil(size[dim] / 2);
         var dataL = zeros(size), dataH = zeros(size);
         var v = dataL.getView().swapDimensions(0, dim);
+        var iV = im.getView().swapDimensions(0, dim);
 
         // H filtering from image to buffer
         filter(
@@ -773,21 +776,25 @@
      * {@link Matrix#idwt2}.
      * @param {Array} bands
      *  Array containing approximation and details coefficients.
-     * @param {String} name
+     * @param {String} [name='haar']
      *  Wavelet name.
+     * @param {Number} [dim=0]
+     *  Dimension on which perform th idwt.
      * @return {Matrix}
      *  Matrix with the reconstructed signal.
      */
     Matrix.idwt = function (bands, name, dim) {
-        dim = dim || 0;
+	dim = dim || 0;
         var wav = new Wavelet(name);
         var fL = wav.invFilterL, fH = wav.invFilterH;
-        var size = bands[0].getSize();
-        size[dim] *= 2;
-
-        var L = zeros(size).set([0, 2, -1], bands[0]);
-        var H = zeros(size).set([0, 2, -1], bands[1]);
-        var v = L.getView().swapDimensions(0, dim);
+	var size = bands[0].getSize();
+	size[dim] = size[dim] * 2;
+        var L = zeros(size), H = zeros(size);
+	
+        var v = L.getView().selectDimension(dim, [0, 2, -1]);
+        bands[0].extractViewTo(v, L);
+        bands[1].extractViewTo(v, H);
+        v.restore().swapDimensions(0, dim);
 
         // Buffer image
         var O = zeros(size), vO = O.getView().swapDimensions(0, dim);
@@ -810,38 +817,26 @@
      * @return {Matrix}
      *  Scalar Matrix containing the PSNR value.
      */
-    Matrix.psnr = function (im2, imRef) {
-        im2 = Matrix.toMatrix(im2);
-        imRef = Matrix.toMatrix(imRef);
-        Tools.checkSizeEquals(im2.size(), imRef.size());
-        var dRef = imRef.getData(), d2 = im2.getData();
+    Matrix.psnr = function (A, B, peakval) {
+        A = Matrix.toMatrix(A);
+        B = Matrix.toMatrix(B);
+        Tools.checkSizeEquals(A.size(), B.size());
+        if (!Tools.isSet(peakval)) {
+            var tA = A.type(), tB = B.type();
+            var peakval1 = A.isfloat() ? 1 : Matrix.intmax(tA) - Matrix.intmin(tB);
+            var peakval2 = B.isfloat() ? 1 : Matrix.intmax(tB) - Matrix.intmin(tB);
+            peakval = Math.max(peakval1, peakval2); 
+        } else {
+            peakval = 1; 
+        }
+        var dRef = B.getData(), d2 = A.getData();
         var i, ie, ssd = 0;
         for (i = 0, ie = d2.length; i < ie; i++) {
             var tmp = dRef[i] - d2[i];
             ssd += tmp * tmp;
         }
-        return Matrix.toMatrix(10 * Math.log10(ie / ssd));
+        return Matrix.toMatrix(10 * Math.log10(peakval * peakval * ie / ssd));
     };
 
-    Matrix._benchmarkWavelets = function (N, name) {
-        N = N || 10;
-	name = name || 'haar';
-	var s = Matrix.rand(N, N, 1);
-        Tools.tic();
-	var wt = Matrix.dwt(s, name, 1);
-	var out = Matrix.idwt(wt, name, 1);
-        var time = Tools.toc()
-	var psnr = Matrix.psnr(s, out).getDataScalar().toFixed(2) + "dB";;
-        console.log("DWT 1D decomposotion/recomposition", "PSNR:", psnr, "Time:", time);
-
-	var s = Matrix.rand(N, N, 1);
-  	Tools.tic();
-   	var wt = Matrix.dwt2(s, name);
-  	var out = Matrix.idwt2(wt, name);
-        var time = Tools.toc()
-	var psnr = Matrix.psnr(s, out).getDataScalar().toFixed(2) + "dB";
-        console.log("DWT 2D decomposotion/recomposition", "PSNR:", psnr, "Time:", time);
-
-    };
-
+    
 })();
