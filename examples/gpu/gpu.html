@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="../../modules/JSM.js"></script>
+    <script type="text/javascript" src="../../modules/Image.js"></script>
+    <script type="text/javascript" src="../../modules/Image.js"></script>
+
+    <script type="text/javascript" src="../base.js"></script>
+    <script type="text/javascript" src="GLEffect.js"></script>
+    <script type="text/javascript" src="gpu.js"></script>
+
+    <title>GPU Processing</title>
+  </head>
+
+  <body onload="init()">
+
+    <div id="content">
+      <input type="file" id="inputFile" /><br />
+      <canvas id="inputCanvas" width="1" height="1"></canvas>
+      <canvas id="outputCanvas" width="1" height="1"></canvas><br />
+      <textarea cols="60" rows="15" id="shaderCode"></textarea><br />
+      <input type="button" value="Run" onclick="applyEffect()" />
+    </div>
+
+  </body>
+</html>
