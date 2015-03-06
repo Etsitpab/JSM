@@ -312,7 +312,7 @@
         var poissrnd_lambdas = function (lambda) {
             var exp = Math.exp, random = Math.random;
             for (var i = 0, ie = lambda.length; i < ie; i++) {
-                var p = 1, k = 0, L = exp(-lambda[i])
+                var p = 1, k = 0, L = exp(-lambda[i]);
                 do {
                     k++;
                     p *= random();
@@ -501,12 +501,12 @@
         }
 
         if (subs.ndims() > 2) {
-            throw Error("Matrix.accumarray: Subs must be a 2D Array.");
+            throw new Error("Matrix.accumarray: Subs must be a 2D Array.");
         }
         
         // Scaning the from the second dimension (dim = 1)
         var sd = subs.getData(), N = subs.numel(), ni = subs.getSize(0);
-        var i, j, _j, ij, ie, s;
+        var i, j, _j, ij, s;
 
         var ind = new Uint32Array(ni);
         for (j = 0, _j = 0; _j < N; j++, _j += ni) {

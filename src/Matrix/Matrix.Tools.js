@@ -371,10 +371,6 @@
      *  Data to convert
      *
      * @return {Matrix}
-     *
-     * @fixme
-     *  A lot of time can be spent in this function. It should improved by 
-     *  avoiding the type checking for typedArray
      */
     Matrix.toMatrix = function (data, type) {
         if (data instanceof Matrix) {

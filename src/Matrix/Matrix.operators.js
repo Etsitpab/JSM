@@ -490,7 +490,9 @@
     //                     Arithmetic Operators                     //
     //////////////////////////////////////////////////////////////////
 
-    /* Function used to generate automatically the other function */
+    /* Function generating automatically the arithmetic operators 
+       functions 
+    */
     var generateArithmeticOperators = function () {
         var operators = {
             '+': {
@@ -656,7 +658,6 @@
 
         // Template function
         var fct = (function (b) {
-            "use strict";
             b = Matrix.toMatrix(b);
             var x, n = this.numel();
             var a = this, ar, ai, br, bi;
@@ -718,7 +719,6 @@
         }).toString();
 
         var fct2 = (function (A, B) {
-            'use strict';
             A = Matrix.toMatrix(A);
             B = Matrix.toMatrix(B);
 
@@ -745,16 +745,18 @@
 
         var o, op, fun;
         for (o in operators) {
-            op = operators[o];
-            fun = replace(fct, op, "real/real");
-            fun = replace(fun, op, "real/imag");
-            fun = replace(fun, op, "imag/real");
-            fun = replace(fun, op, "imag/imag");
-            eval("Matrix.prototype." + op.name + " = " + fun);
+            if (operators.hasOwnProperty(o)) {
+                op = operators[o];
+                fun = replace(fct, op, "real/real");
+                fun = replace(fun, op, "real/imag");
+                fun = replace(fun, op, "imag/real");
+                fun = replace(fun, op, "imag/imag");
+                eval("Matrix.prototype." + op.name + " = " + fun);
 
-            fun = fct2.replace("\"AIsScalar\";", op.AIsScalar);
-            fun = fun.replace("\"AIsMatrix\";", op.AIsMatrix);
-            eval("Matrix." + op.name + " = " + fun);
+                fun = fct2.replace("\"AIsScalar\";", op.AIsScalar);
+                fun = fun.replace("\"AIsMatrix\";", op.AIsMatrix);
+                eval("Matrix." + op.name + " = " + fun);
+            }
         }
     };
 
@@ -1711,7 +1713,7 @@
         return D;
     };
 
-    /* Apply a function on two Matrix by extending the non-singleton 
+    /** Apply a function on two Matrix by extending the non-singleton 
      * dimensions.
      *
      * @param {Function|String} fun
