@@ -182,6 +182,7 @@
                 var residual = Q.mtimes(R).minus(A.mtimes(P)).norm();
                 return [time, residual];
             },
+            /*
             "LU Inversion": function (A) {
                 tic();
                 var eye = Matrix.eye(A.getSize(0));
@@ -190,7 +191,7 @@
                 var residual = A.mtimes(iA).minus(eye).norm();
                 return [time, residual];
             },
-
+             */
             "QR Inversion": function (A) {
                 tic();
                 var eye = Matrix.eye(A.getSize(0));
@@ -275,25 +276,33 @@
     };
 
     Matrix._benchmarkFourier = function (N) {
-        N = N || 5;
-        var s, fft, out, time, psnr;
+        N = N || 10;
+        var s, fft, out, time, l2;
         var SQN = Math.round(Math.sqrt(N));
-        s = Matrix.randi(9, N, 1);//ones(N * N, 1).cumsum()["-"](1);
-        s = Matrix.toMatrix([7, 0, 2, 1, 4]);
+        s = Matrix.complex(Matrix.randi(9, N, 1), Matrix.randi(9, N, 1));
         Tools.tic();
         fft = Matrix.fft(s);
         out = Matrix.ifft(fft);
         time = Tools.toc();
-        psnr = s["-"](out)[".^"](2).abs().mean().getDataScalar();
-        console.log("FFT 1D decomposotion/recomposition", "L2:", psnr, "Time:", time);
+        l2 = s["-"](out)[".^"](2).abs().mean().getDataScalar();
+        console.log("FFT 1D decomposotion/recomposition", "L2:", l2, "Time:", time);
 
         s = Matrix.randi(9, N, N);
         Tools.tic();
         fft = Matrix.fft2(s);
         out = Matrix.ifft2(fft);
         time = Tools.toc();
-        psnr = s["-"](out)[".^"](2).mean().getDataScalar();
-        console.log("FFT 2D decomposotion/recomposition", "PSNR:", psnr, "Time:", time);
+        l2 = s["-"](out)[".^"](2).mean().getDataScalar();
+        console.log("FFT 2D decomposotion/recomposition", "PSNR:", l2, "Time:", time);
     };
 
+    Matrix._benchmark = function () {
+        var i;
+        for (i in Matrix) {
+            if (Matrix.hasOwnProperty(i) && i.match(/benchmark/)) {
+                console.log(i);
+                //Matrix[i]();
+            }
+        }
+    }
 })(Matrix, Matrix.prototype);
