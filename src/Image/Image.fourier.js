@@ -311,7 +311,6 @@
      */
     Matrix.fft2 = function (X) {
         var Y = matrix_fft(Matrix.toMatrix(X), false);
-        console.log(Y);
         Y = matrix_fft(Y.transpose(), false);
         return Y.transpose();
     };
