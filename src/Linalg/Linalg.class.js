@@ -1163,6 +1163,7 @@
         return [getU(UBV), getB(UBV), getV(UBV)];
     };
 
+    /*
     Matrix.golubStep = function (mu, n) {
         var y = t11 - mu;
         var z = t12;
@@ -1170,6 +1171,7 @@
             
         }
     };
+     */
     
     var getR = function (QR) {
         var R = QR[0].getCopy();
