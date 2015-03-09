@@ -293,7 +293,7 @@
         out = Matrix.ifft2(fft);
         time = Tools.toc();
         l2 = s["-"](out)[".^"](2).mean().getDataScalar();
-        console.log("FFT 2D decomposotion/recomposition", "PSNR:", l2, "Time:", time);
+        console.log("FFT 2D decomposotion/recomposition", "L2:", l2, "Time:", time);
     };
 
     Matrix._benchmark = function () {
