@@ -1880,7 +1880,7 @@
 
         // accumulation of right hand gtransformations
 
-        for (i = n - 1; i != -1; i += -1) {
+        for (i = n - 1; i !== -1; i += -1) {
             if (g !== 0.0) {
                 h = g * u[i][i + 1];
                 for (j = l; j < n; j++) {
@@ -1908,7 +1908,7 @@
         // Accumulation of left hand transformations
 
 
-        for (i = n - 1; i != -1; i += -1) {
+        for (i = n - 1; i !== -1; i += -1) {
             l = i + 1;
             g = q[i];
             for (j = l; j < n; j++) {
@@ -1942,11 +1942,11 @@
         // diagonalization of the bidiagonal form
         prec = prec * x;
         var iteration;
-        for (k = n - 1; k != -1; k += -1) {
+        for (k = n - 1; k !== -1; k += -1) {
             for (iteration = 0; iteration < itmax; iteration++) {
                 // test f splitting
                 var test_convergence = false;
-                for (l = k; l != -1; l += -1) {
+                for (l = k; l !== -1; l += -1) {
                     if (Math.abs(e[l]) <= prec) {
                         test_convergence = true;
                         break;
