@@ -455,11 +455,7 @@
         }
     };
 
-    var filter = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO, addL, addH) {
-        // add
-        addL = addL ? true : false;
-        addH = addH ? true : false;
-
+    var filter = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
         // 1. ARGUMENTS
         var ce = Math.ceil, fl = Math.floor;
 
@@ -559,33 +555,19 @@
                         sumL += kernelL[k] * idL[sTmp];
                         sumH += kernelH[k] * idH[sTmp];
                     }
-                    if (addL) {
-                        odL[oy] += sumL;
-                    } else {
-                        odL[oy] = sumL;
-                    }
-                    if (addH) {
-                        odH[oy] += sumH;
-                    } else {
-                        odH[oy] = sumH;
-                    }
+                    odL[oy] += sumL;
+                    odH[oy] += sumH;
                 }
             }
         }
     };
 
-    var filterND = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO, addL, addH) {
-        // add
-        addL = addL ? true : false;
-        addH = addH ? true : false;
-
-        // 1. ARGUMENTS
-        var c = Math.ceil, f = Math.floor;
+    var filterND = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
 
         var K = kernelL.length;
-        origin = (origin === 'cl' ? f : c)((K - 1) / 2);
-
-        // 2. Filtering
+        origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
+        var isOdd = vI.getSize(0) % 2 ? 1 : 0; 
+        
         var ys = vI.getFirst(0), dy = vI.getStep(0);
         var ly = vI.getEnd(0), ny = vI.getSize(0);
         var oys = vO.getFirst(0), ody = vO.getStep(0);
@@ -593,8 +575,7 @@
         var idL = inL.getData(),  idH = inH.getData(),
             odL = outL.getData(), odH = outH.getData();
 
-
-        var nydy = ny * dy;
+        var ndy = ny * dy;
         var orig = origin * dy;
         var kdy = dy;
         dy *= sub;
@@ -602,31 +583,27 @@
         var itI = vI.getIterator(1), itO = vO.getIterator(1);
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
+        
         var k, s, sTmp, sumL, sumH;
         for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
-            var yx0 = ys + i, nyx = ly + i;
+            var yx0 = ys + i, nyx = ly + i + isOdd * dy;
             for (y = i + ys, oy = o + oys; y < nyx; y += dy, oy += ody) {
                 for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                     sTmp = s;
                     while (sTmp < yx0) {
-                        sTmp += nydy;
+                        sTmp += ndy;
                     }
                     while (sTmp >= nyx) {
-                        sTmp -= nydy;
+                        sTmp -= ndy;
+                    }
+                    if (isOdd && sTmp === nyx - dy) {
+                        sTmp -= dy; 
                     }
                     sumL += kernelL[k] * idL[sTmp];
                     sumH += kernelH[k] * idH[sTmp];
                 }
-                if (addL) {
-                    odL[oy] += sumL;
-                } else {
-                    odL[oy] = sumL;
-                }
-                if (addH) {
-                    odH[oy] += sumH;
-                } else {
-                    odH[oy] = sumH;
-                }
+                odL[oy] += sumL;
+                odH[oy] += sumH;
             }
         }
     };
@@ -698,12 +675,12 @@
         B.select([], [0, 2, -1]);
         dL.set([0, 2, -1], bands[0]);
         dH.set([0, 2, -1], bands[2]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B, false, true);
+        filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B);
         dL.set([0, 2, -1], [], bands[1]);
         dH.set([0, 2, -1], [], bands[3]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B, false, true);
+        filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B);
         B.restore().swapDimensions(0, 1);
-        filterND(bL, bH, B, fL, fH, 'cl', 1, out, out, O, false, true);
+        filterND(bL, bH, B, fL, fH, 'cl', 1, out, out, O);
         return out;
     };
 
@@ -729,14 +706,14 @@
         size[dim] = Math.ceil(size[dim] / 2);
 
         // Create output image
-        var dataL = zeros(size), dataH = zeros(size);
-        var v = dataL.getView().swapDimensions(0, dim);
+        var dL = zeros(size), dH = zeros(size);
+        var v = dL.getView().swapDimensions(0, dim);
         var iV = im.getView().swapDimensions(0, dim);
 
         // H filtering from image to buffer
-        filterND(im, im, iV, fL, fH, 'cr', 2, dataL, dataH, v);
+        filterND(im, im, iV, fL, fH, 'cr', 2, dL, dH, v);
 
-        return [dataL, dataH];
+        return [dL, dH];
     };
 
     /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
@@ -770,7 +747,7 @@
         var O = zeros(size), vO = O.getView().swapDimensions(0, dim);
 
         // Process scale
-        filterND(L, H, v, fL, fH, 'cl', 1, O, O, vO, false, true);
+        filterND(L, H, v, fL, fH, 'cl', 1, O, O, vO);
         return O;
     };
 
