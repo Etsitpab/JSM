@@ -242,8 +242,16 @@
 
     Matrix._benchmarkWavelets = function (N, name, dim) {
         N = N || 100;
-        name = name || 'haar';
+        name = name || 'bi97';
         dim = dim || 1;
+
+        var log = function (msg, psnr, time) {
+            if (psnr < 100) {
+                console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
+            } else {
+                console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
+            }
+        };
 
         var s, wt, out, time, psnr;
         var SQN = Math.round(Math.pow(N * N, 1 / 4) / 2) * 2;
@@ -252,16 +260,26 @@
         wt = Matrix.dwt(s, name, dim);
         out = Matrix.idwt(wt, name, dim);
         time = Tools.toc();
-        psnr = Matrix.psnr(s, out).getDataScalar().toFixed(2) + "dB";
-        console.log("DWT 1D decomposotion/recomposition", "PSNR:", psnr, "Time:", time);
+        psnr = Matrix.psnr(s, out).getDataScalar();
+        log("DWT 1D decomposotion/recomposition", psnr, time);
+
+
+        SQN = Math.round(Math.pow(N * N, 1 / 4) / 2) * 2 + 1;
+        s = Matrix.ones(SQN, SQN).cumsum(1)["-"](1);
+        Tools.tic();
+        wt = Matrix.dwt(s, name, 1);
+        out = Matrix.idwt(wt, name, 1).get([], [0, -2]);
+        time = Tools.toc();
+        psnr = Matrix.psnr(s, out).getDataScalar();
+        log("DWT 1D decomposotion/recomposition Odd signal", psnr, time);
 
         s = Matrix.ones(N, N, 3).cumsum(0)["-"](1);
         Tools.tic();
         wt = Matrix.dwt2(s, name);
         out = Matrix.idwt2(wt, name);
         time = Tools.toc();
-        psnr = Matrix.psnr(s, out).getDataScalar().toFixed(2) + "dB";
-        console.log("DWT 2D decomposotion/recomposition", "PSNR:", psnr, "Time:", time);
+        psnr = Matrix.psnr(s, out).getDataScalar();
+        log("DWT 2D decomposotion/recomposition", psnr, time);
 
         Tools.tic();
         wt = Matrix.dwt(s, name, 0);
@@ -271,8 +289,8 @@
         var iwt2 = Matrix.idwt(wt2, name, 1);
         out = Matrix.idwt([iwt1, iwt2], name, 0);
         time = Tools.toc();
-        psnr = Matrix.psnr(s, out).getDataScalar().toFixed(2) + "dB";
-        console.log("DWT 2D decomposotion/recomposition from DWT 1D", "PSNR:", psnr, "Time:", time);
+        psnr = Matrix.psnr(s, out).getDataScalar();
+        log("DWT 2D decomposotion/recomposition from DWT 1D", psnr, time);
     };
 
     Matrix._benchmarkFourier = function (N) {
@@ -304,5 +322,5 @@
                 //Matrix[i]();
             }
         }
-    }
+    };
 })(Matrix, Matrix.prototype);

@@ -566,7 +566,7 @@
 
         var K = kernelL.length;
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
-        var isOdd = vI.getSize(0) % 2 ? 1 : 0; 
+        var isOdd = vI.getSize(0) % 2 ? true : false; 
         
         var ys = vI.getFirst(0), dy = vI.getStep(0);
         var ly = vI.getEnd(0), ny = vI.getSize(0);
@@ -583,10 +583,10 @@
         var itI = vI.getIterator(1), itO = vO.getIterator(1);
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
-        
+        ly += isOdd ? kdy : 0;
         var k, s, sTmp, sumL, sumH;
         for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
-            var yx0 = ys + i, nyx = ly + i + isOdd * dy;
+            var yx0 = ys + i, nyx = ly + i;
             for (y = i + ys, oy = o + oys; y < nyx; y += dy, oy += ody) {
                 for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                     sTmp = s;
@@ -596,8 +596,8 @@
                     while (sTmp >= nyx) {
                         sTmp -= ndy;
                     }
-                    if (isOdd && sTmp === nyx - dy) {
-                        sTmp -= dy; 
+                    if (isOdd && sTmp === nyx - kdy) {
+                        sTmp -= kdy; 
                     }
                     sumL += kernelL[k] * idL[sTmp];
                     sumH += kernelH[k] * idH[sTmp];
