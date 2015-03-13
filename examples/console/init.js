@@ -22,6 +22,12 @@ window.$ = function (id) {
     return document.getElementById(id);
 };
 
+// Raccourci $(id) pour getElementById
+window.$M = function (data) {
+    'use strict';
+    return Matrix.toMatrix(data);
+};
+
 // Ajout d'un fichier .js
 function include(jsFile) {
     'use strict';
