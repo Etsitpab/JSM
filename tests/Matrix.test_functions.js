@@ -254,23 +254,23 @@
         };
 
         var s, wt, out, time, psnr;
-        var SQN = Math.round(Math.pow(N * N, 1 / 4) / 2) * 2;
-        s = Matrix.ones(SQN, SQN, SQN, SQN).cumsum(dim)["-"](1);
+        var SQN = Math.round(Math.pow(N * N * 3, 1 / 3));
+        s = Matrix.ones(SQN, SQN, SQN).cumsum(dim)["-"](1);
         Tools.tic();
         wt = Matrix.dwt(s, name, dim);
         out = Matrix.idwt(wt, name, dim);
         time = Tools.toc();
-        psnr = Matrix.psnr(s, out).getDataScalar();
+        psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
         log("DWT 1D decomposotion/recomposition", psnr, time);
 
 
-        SQN = Math.round(Math.pow(N * N, 1 / 4) / 2) * 2 + 1;
-        s = Matrix.ones(SQN, SQN).cumsum(1)["-"](1);
+        var SQN = Math.round(Math.pow(N * N * 3, 1 / 3)) + 1;
+        s = Matrix.ones(SQN, SQN, SQN).cumsum(1)["-"](1);
         Tools.tic();
         wt = Matrix.dwt(s, name, 1);
         out = Matrix.idwt(wt, name, 1).get([], [0, -2]);
         time = Tools.toc();
-        psnr = Matrix.psnr(s, out).getDataScalar();
+        psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
         log("DWT 1D decomposotion/recomposition Odd signal", psnr, time);
 
         s = Matrix.ones(N, N, 3).cumsum(0)["-"](1);
@@ -278,7 +278,7 @@
         wt = Matrix.dwt2(s, name);
         out = Matrix.idwt2(wt, name);
         time = Tools.toc();
-        psnr = Matrix.psnr(s, out).getDataScalar();
+        psnr = Matrix.psnr(s, out.get([0, s.size(0) - 1], [0, s.size(1) - 1])).getDataScalar();
         log("DWT 2D decomposotion/recomposition", psnr, time);
 
         Tools.tic();
@@ -289,7 +289,7 @@
         var iwt2 = Matrix.idwt(wt2, name, 1);
         out = Matrix.idwt([iwt1, iwt2], name, 0);
         time = Tools.toc();
-        psnr = Matrix.psnr(s, out).getDataScalar();
+        psnr = Matrix.psnr(s, out.get([0, s.size(0) - 1], [0, s.size(1) - 1])).getDataScalar();
         log("DWT 2D decomposotion/recomposition from DWT 1D", psnr, time);
     };
 
