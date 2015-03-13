@@ -268,7 +268,7 @@
         s = Matrix.ones(SQN, SQN, SQN).cumsum(1)["-"](1);
         Tools.tic();
         wt = Matrix.dwt(s, name, 1);
-        out = Matrix.idwt(wt, name, 1).get([], [0, -2]);
+        out = Matrix.idwt(wt, name, 1);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
         log("DWT 1D decomposotion/recomposition Odd signal", psnr, time);
