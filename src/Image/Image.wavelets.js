@@ -531,15 +531,6 @@
                 od[oy] = sum;
             }
          }*/
-
-        // Iterator to scan the view on dimension greater than 0
-
-        // var itI = vI.getIterator(1), itO = vO.getIterator(1);
-        // var i, it = itI.iterator, bi = itI.begin, ei = itI.end();
-        // var o, ot = itO.iterator, bo = itO.begin;
-        //for (_x = bi(), o_x = bo(); _x !== ei; _x = it(), o_x = ot()) {
-            //console.log("i", _x, o_x);
-        //}
         for (c = 0, oc = 0; c < lc; c += dc, oc += odc) {
             for (_x = c + xs, nx = c + lx, o_x = oc + oxs; _x < nx; _x += dx, o_x += odx) {
                 var yx0 = ys + _x, nyx = ly + _x;
@@ -584,6 +575,7 @@
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
         ly += isOdd ? kdy : 0;
+        ndy += isOdd ? kdy : 0;
         var k, s, sTmp, sumL, sumH;
         for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
             var yx0 = ys + i, nyx = ly + i;
@@ -750,34 +742,4 @@
         filterND(L, H, v, fL, fH, 'cl', 1, O, O, vO);
         return O;
     };
-
-    /** Compute the PSNR of two signal of the same size.
-     * __See also :__
-     * {@link Matrix#norm}.
-     * @param {Matrix} signal
-     * @param {Matrix} ref
-     * @return {Matrix}
-     *  Scalar Matrix containing the PSNR value.
-     */
-    Matrix.psnr = function (A, B, peakval) {
-        A = Matrix.toMatrix(A);
-        B = Matrix.toMatrix(B);
-        Tools.checkSizeEquals(A.size(), B.size());
-        if (!Tools.isSet(peakval)) {
-            var tA = A.type(), tB = B.type();
-            var peakval1 = A.isfloat() ? 1 : Matrix.intmax(tA) - Matrix.intmin(tB);
-            var peakval2 = B.isfloat() ? 1 : Matrix.intmax(tB) - Matrix.intmin(tB);
-            peakval = Math.max(peakval1, peakval2);
-        } else {
-            peakval = 1;
-        }
-        var dRef = B.getData(), d2 = A.getData();
-        var i, ie, ssd = 0;
-        for (i = 0, ie = d2.length; i < ie; i++) {
-            var tmp = dRef[i] - d2[i];
-            ssd += tmp * tmp;
-        }
-        return Matrix.toMatrix(10 * Math.log10(peakval * peakval * ie / ssd));
-    };
-
 })();
