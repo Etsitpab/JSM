@@ -566,7 +566,8 @@
         var idL = inL.getData(),  idH = inH.getData(),
             odL = outL.getData(), odH = outH.getData();
 
-        var ndy = ny * dy;
+        var ndy = ny * dy + isOdd ? dy : 0;
+        ly += isOdd ? dy : 0;
         var orig = origin * dy;
         var kdy = dy;
         dy *= sub;
@@ -574,8 +575,7 @@
         var itI = vI.getIterator(1), itO = vO.getIterator(1);
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
-        ly += isOdd ? kdy : 0;
-        ndy += isOdd ? kdy : 0;
+
         var k, s, sTmp, sumL, sumH;
         for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
             var yx0 = ys + i, nyx = ly + i;
