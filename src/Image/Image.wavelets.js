@@ -560,14 +560,12 @@
         var isOdd = vI.getSize(0) % 2 ? true : false; 
         
         var ys = vI.getFirst(0), dy = vI.getStep(0);
-        var ly = vI.getEnd(0), ny = vI.getSize(0);
+        var ly = vI.getEnd(0) + (isOdd ? dy : 0);
         var oys = vO.getFirst(0), ody = vO.getStep(0);
 
         var idL = inL.getData(),  idH = inH.getData(),
             odL = outL.getData(), odH = outH.getData();
 
-        var ndy = ny * dy + (isOdd ? dy : 0);
-        ly += isOdd ? dy : 0;
         var orig = origin * dy;
         var kdy = dy;
         dy *= sub;
@@ -583,10 +581,10 @@
                 for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                     sTmp = s;
                     while (sTmp < yx0) {
-                        sTmp += ndy;
+                        sTmp += ly;
                     }
                     while (sTmp >= nyx) {
-                        sTmp -= ndy;
+                        sTmp -= ly;
                     }
                     if (isOdd && sTmp === nyx - kdy) {
                         sTmp -= kdy; 
@@ -601,8 +599,117 @@
     };
 
     var zeros = Matrix.zeros;
+    
+    var dwt = function (im, name, dim, dL, dH) {
+        var wav = new Wavelet(name);
+        var fL = wav.filterL, fH = wav.filterH;
+        var size = im.getSize();
+        size[dim] = Math.ceil(size[dim] / 2);
+
+        // Create output image
+        dL = new Matrix(size, dL) || zeros(size);
+        dH = new Matrix(size, dH) || zeros(size);
+        var v = dL.getView().swapDimensions(0, dim);
+        var iV = im.getView().swapDimensions(0, dim);
+
+        // H filtering from image to buffer
+        filterND(im, im, iV, fL, fH, 'cr', 2, dL, dH, v);
+
+        return [dL, dH];
+    };
+
+    var idwt = function (bands, name, dim, out) {
+        var wav = new Wavelet(name);
+        var fL = wav.invFilterL, fH = wav.invFilterH;
+        var size = bands[0].getSize();
+        size[dim] = size[dim] * 2;
+        var L = zeros(size), H = zeros(size);
+
+        var v = L.getView().selectDimension(dim, [0, 2, -1]);
+        bands[0].extractViewTo(v, L);
+        bands[1].extractViewTo(v, H);
+        v.restore().swapDimensions(0, dim);
+
+        // Out array
+        out = zeros(size);
+        var vO = out.getView().swapDimensions(0, dim);
+
+        // Process scale
+        filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
+        return out;
+    };
 
     /** Compute the 1D DWT (Discrete Wavelet Transform)
+     * of a column vector.
+     * __See also :__
+     * {@link Matrix#idwt},
+     * {@link Matrix#dwt2}.
+     *
+     * @param {Matrix} signal
+     * @param {String} [name='haar']
+     *  Wavelet name.
+     * @param {Number} [dim=0]
+     *  Dimension on which perform th dwt.
+     * @return {Array}
+     *  Array containing approximation coefficients and details.
+     */
+    Matrix.dwt = function (im, name, dim) {
+        dim = dim || 0;
+        return dwt(im, name, dim);
+    };
+
+    Matrix.wavedec = function (s, n, name, dim) {
+        dim = dim || 0;
+        var sd = new Uint16Array(n + 2), outSize = 0;
+        sd[n + 1] = s.getSize(dim);
+        var l;
+        for (l = n; l >= 1; l--) {
+            sd[l] = Math.ceil(sd[l + 1] / 2);
+            outSize += sd[l];
+        }
+        sd[0] = sd[1];
+        outSize += sd[0];
+
+        var cumsize = [0, sd[0]];
+        for (l = 2; l < n + 2; l++) {
+            cumsize[l] = sd[l - 1] + cumsize[l - 1];
+        }
+
+        var input = s.getData(), output = new Float64Array(outSize);
+        var dL, dH;
+        for (l = n; l >= 2; l--) {
+            dL = new Float64Array(cumsize[l + 1] - cumsize[l]);
+            dH = output.subarray(cumsize[l], cumsize[l + 1]);
+            dwt(new Matrix([input.length], input), name, dim, dL, dH);
+            input = dL;
+        }
+        
+        dL = output.subarray(cumsize[0], cumsize[1]);
+        dH = output.subarray(cumsize[1], cumsize[2]);
+        dwt(new Matrix([input.length], input), name, dim, dL, dH);
+        return [new Matrix(outSize, output), new Matrix([sd.length], sd)];
+    };
+
+    /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
+     *
+     * __See also :__
+     * {@link Matrix#dwt},
+     * {@link Matrix#idwt2}.
+     * @param {Array} bands
+     *  Array containing approximation and details coefficients.
+     * @param {String} [name='haar']
+     *  Wavelet name.
+     * @param {Number} [dim=0]
+     *  Dimension on which perform th idwt.
+     * @return {Matrix}
+     *  Matrix with the reconstructed signal.
+     */
+    Matrix.idwt = function (bands, name, dim) {
+        dim = dim || 0;
+        return idwt(bands, name, dim);
+    };
+
+    /** Compute the 2D DWT (Discrete Wavelet Transform)
      * of a column vector.
      * __See also :__
      * {@link Matrix#idwt},
@@ -676,70 +783,4 @@
         return out;
     };
 
-    /** Compute the 1D DWT (Discrete Wavelet Transform)
-     * of a column vector.
-     * __See also :__
-     * {@link Matrix#idwt},
-     * {@link Matrix#dwt2}.
-     *
-     * @param {Matrix} signal
-     * @param {String} [name='haar']
-     *  Wavelet name.
-     * @param {Number} [dim=0]
-     *  Dimension on which perform th dwt.
-     * @return {Array}
-     *  Array containing approximation coefficients and details.
-     */
-    Matrix.dwt = function (im, name, dim) {
-        dim = dim || 0;
-        var wav = new Wavelet(name);
-        var fL = wav.filterL, fH = wav.filterH;
-        var size = im.getSize();
-        size[dim] = Math.ceil(size[dim] / 2);
-
-        // Create output image
-        var dL = zeros(size), dH = zeros(size);
-        var v = dL.getView().swapDimensions(0, dim);
-        var iV = im.getView().swapDimensions(0, dim);
-
-        // H filtering from image to buffer
-        filterND(im, im, iV, fL, fH, 'cr', 2, dL, dH, v);
-
-        return [dL, dH];
-    };
-
-    /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
-     *
-     * __See also :__
-     * {@link Matrix#dwt},
-     * {@link Matrix#idwt2}.
-     * @param {Array} bands
-     *  Array containing approximation and details coefficients.
-     * @param {String} [name='haar']
-     *  Wavelet name.
-     * @param {Number} [dim=0]
-     *  Dimension on which perform th idwt.
-     * @return {Matrix}
-     *  Matrix with the reconstructed signal.
-     */
-    Matrix.idwt = function (bands, name, dim) {
-        dim = dim || 0;
-        var wav = new Wavelet(name);
-        var fL = wav.invFilterL, fH = wav.invFilterH;
-        var size = bands[0].getSize();
-        size[dim] = size[dim] * 2;
-        var L = zeros(size), H = zeros(size);
-
-        var v = L.getView().selectDimension(dim, [0, 2, -1]);
-        bands[0].extractViewTo(v, L);
-        bands[1].extractViewTo(v, H);
-        v.restore().swapDimensions(0, dim);
-
-        // Buffer image
-        var O = zeros(size), vO = O.getView().swapDimensions(0, dim);
-
-        // Process scale
-        filterND(L, H, v, fL, fH, 'cl', 1, O, O, vO);
-        return O;
-    };
 })();
