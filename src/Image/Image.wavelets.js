@@ -566,7 +566,7 @@
         var idL = inL.getData(),  idH = inH.getData(),
             odL = outL.getData(), odH = outH.getData();
 
-        var ndy = ny * dy + isOdd ? dy : 0;
+        var ndy = ny * dy + (isOdd ? dy : 0);
         ly += isOdd ? dy : 0;
         var orig = origin * dy;
         var kdy = dy;
