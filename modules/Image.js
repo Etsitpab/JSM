@@ -1581,6 +1581,36 @@
         };
         return applyFilter(this, mask, f_bilat);
     }
+    
+    /** Compute the PSNR of two signal of the same size.
+     * __See also :__
+     * {@link Matrix#norm}.
+     * @param {Matrix} signal
+     * @param {Matrix} ref
+     * @return {Matrix}
+     *  Scalar Matrix containing the PSNR value.
+     */
+    Matrix.psnr = function (A, B, peakval) {
+        A = Matrix.toMatrix(A);
+        B = Matrix.toMatrix(B);
+        Tools.checkSizeEquals(A.size(), B.size());
+        if (!Tools.isSet(peakval)) {
+            var tA = A.type(), tB = B.type();
+            var peakval1 = A.isfloat() ? 1 : Matrix.intmax(tA) - Matrix.intmin(tB);
+            var peakval2 = B.isfloat() ? 1 : Matrix.intmax(tB) - Matrix.intmin(tB);
+            peakval = Math.max(peakval1, peakval2);
+        } else {
+            peakval = 1;
+        }
+        var dRef = B.getData(), d2 = A.getData();
+        var i, ie, ssd = 0;
+        for (i = 0, ie = d2.length; i < ie; i++) {
+            var tmp = dRef[i] - d2[i];
+            ssd += tmp * tmp;
+        }
+        return Matrix.toMatrix(10 * Math.log10(peakval * peakval * ie / ssd));
+    };
+    
 })(Matrix, Matrix.prototype);
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -2115,15 +2145,6 @@
                 od[oy] = sum;
             }
          }*/
-
-        // Iterator to scan the view on dimension greater than 0
-
-        // var itI = vI.getIterator(1), itO = vO.getIterator(1);
-        // var i, it = itI.iterator, bi = itI.begin, ei = itI.end();
-        // var o, ot = itO.iterator, bo = itO.begin;
-        //for (_x = bi(), o_x = bo(); _x !== ei; _x = it(), o_x = ot()) {
-            //console.log("i", _x, o_x);
-        //}
         for (c = 0, oc = 0; c < lc; c += dc, oc += odc) {
             for (_x = c + xs, nx = c + lx, o_x = oc + oxs; _x < nx; _x += dx, o_x += odx) {
                 var yx0 = ys + _x, nyx = ly + _x;
@@ -2150,7 +2171,7 @@
 
         var K = kernelL.length;
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
-        var isOdd = vI.getSize(0) % 2 ? 1 : 0; 
+        var isOdd = vI.getSize(0) % 2 ? true : false; 
         
         var ys = vI.getFirst(0), dy = vI.getStep(0);
         var ly = vI.getEnd(0), ny = vI.getSize(0);
@@ -2159,7 +2180,8 @@
         var idL = inL.getData(),  idH = inH.getData(),
             odL = outL.getData(), odH = outH.getData();
 
-        var ndy = ny * dy;
+        var ndy = ny * dy + (isOdd ? dy : 0);
+        ly += isOdd ? dy : 0;
         var orig = origin * dy;
         var kdy = dy;
         dy *= sub;
@@ -2167,10 +2189,10 @@
         var itI = vI.getIterator(1), itO = vO.getIterator(1);
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
-        
+
         var k, s, sTmp, sumL, sumH;
         for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
-            var yx0 = ys + i, nyx = ly + i + isOdd * dy;
+            var yx0 = ys + i, nyx = ly + i;
             for (y = i + ys, oy = o + oys; y < nyx; y += dy, oy += ody) {
                 for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                     sTmp = s;
@@ -2180,8 +2202,8 @@
                     while (sTmp >= nyx) {
                         sTmp -= ndy;
                     }
-                    if (isOdd && sTmp === nyx - dy) {
-                        sTmp -= dy; 
+                    if (isOdd && sTmp === nyx - kdy) {
+                        sTmp -= kdy; 
                     }
                     sumL += kernelL[k] * idL[sTmp];
                     sumH += kernelH[k] * idH[sTmp];
@@ -2194,7 +2216,7 @@
 
     var zeros = Matrix.zeros;
 
-    /** Compute the 1D DWT (Discrete Wavelet Transform)
+    /** Compute the 2D DWT (Discrete Wavelet Transform)
      * of a column vector.
      * __See also :__
      * {@link Matrix#idwt},
@@ -2268,7 +2290,7 @@
         return out;
     };
 
-    /** Compute the 1D DWT (Discrete Wavelet Transform)
+        /** Compute the 1D DWT (Discrete Wavelet Transform)
      * of a column vector.
      * __See also :__
      * {@link Matrix#idwt},
@@ -2333,35 +2355,6 @@
         // Process scale
         filterND(L, H, v, fL, fH, 'cl', 1, O, O, vO);
         return O;
-    };
-
-    /** Compute the PSNR of two signal of the same size.
-     * __See also :__
-     * {@link Matrix#norm}.
-     * @param {Matrix} signal
-     * @param {Matrix} ref
-     * @return {Matrix}
-     *  Scalar Matrix containing the PSNR value.
-     */
-    Matrix.psnr = function (A, B, peakval) {
-        A = Matrix.toMatrix(A);
-        B = Matrix.toMatrix(B);
-        Tools.checkSizeEquals(A.size(), B.size());
-        if (!Tools.isSet(peakval)) {
-            var tA = A.type(), tB = B.type();
-            var peakval1 = A.isfloat() ? 1 : Matrix.intmax(tA) - Matrix.intmin(tB);
-            var peakval2 = B.isfloat() ? 1 : Matrix.intmax(tB) - Matrix.intmin(tB);
-            peakval = Math.max(peakval1, peakval2);
-        } else {
-            peakval = 1;
-        }
-        var dRef = B.getData(), d2 = A.getData();
-        var i, ie, ssd = 0;
-        for (i = 0, ie = d2.length; i < ie; i++) {
-            var tmp = dRef[i] - d2[i];
-            ssd += tmp * tmp;
-        }
-        return Matrix.toMatrix(10 * Math.log10(peakval * peakval * ie / ssd));
     };
 
 })();

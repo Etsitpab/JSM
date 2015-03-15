@@ -246,7 +246,7 @@
         dim = dim || 1;
 
         var log = function (msg, psnr, time) {
-            if (psnr < 100) {
+            if (psnr < 200) {
                 console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
             } else {
                 console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
@@ -261,7 +261,7 @@
         out = Matrix.idwt(wt, name, dim);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 1D decomposotion/recomposition", psnr, time);
+        log("DWT 1D decomposition/recomposition", psnr, time);
 
 
         var SQN = Math.round(Math.pow(N * N * 3, 1 / 3)) + 1;
@@ -271,7 +271,7 @@
         out = Matrix.idwt(wt, name, 1);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 1D decomposotion/recomposition Odd signal", psnr, time);
+        log("DWT 1D decomposition/recomposition Odd signal", psnr, time);
 
         s = Matrix.ones(N, N, 3).cumsum(0)["-"](1);
         Tools.tic();
@@ -279,10 +279,10 @@
         out = Matrix.idwt2(wt, name);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([0, s.size(0) - 1], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 2D decomposotion/recomposition", psnr, time);
+        log("DWT 2D decomposition/recomposition", psnr, time);
 
-        Tools.tic();
         wt = Matrix.dwt(s, name, 0);
+        Tools.tic();
         var wt1 = Matrix.dwt(wt[0], name, 1);
         var wt2 = Matrix.dwt(wt[1], name, 1);
         var iwt1 = Matrix.idwt(wt1, name, 1);
@@ -290,7 +290,47 @@
         out = Matrix.idwt([iwt1, iwt2], name, 0);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([0, s.size(0) - 1], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 2D decomposotion/recomposition from DWT 1D", psnr, time);
+        log("DWT 2D decomposition/recomposition from DWT 1D", psnr, time);
+
+
+
+        var dim = 0, levels = 5;
+        name = "sym4";
+        s = Matrix.ones(N, N, 3).cumsum(dim);
+        Tools.tic();
+        dec = Matrix.wavedec(s, levels, name, dim);
+        rec = Matrix.waverec(dec, name, dim);
+        time = Tools.toc();
+        psnr = Matrix.psnr(s, rec).getDataScalar();
+        log("DWT 1D decomposition/recomposition on " + levels + " levels", psnr, time);
+
+        levels = 1;
+        s = Matrix.ones(17, 1).cumsum();
+        Tools.tic();
+        var dec = Matrix.wavedec(s, levels, name);
+        var rec = Matrix.waverec(dec, name);
+        time = Tools.toc();
+        psnr = Matrix.psnr(s, rec).getDataScalar();
+        log("DWT 1D decomposition/recomposition on " + levels + " levels", psnr, time);
+
+        var Nx = 11, Ny = 13;
+        levels = 5;
+        s = Matrix.ones(Ny, Nx, 1).cumsum(0).cumsum(1);
+        Tools.tic();
+        dec = Matrix.wavedec2(s, levels, name);
+        rec = Matrix.waverec2(dec, name);
+        time = Tools.toc();
+        psnr = Matrix.psnr(s, rec).getDataScalar();
+        log("DWT 2D decomposition/recomposition on " + levels + " levels", psnr, time);
+
+        levels = 10;
+        s = Matrix.ones(N, N, 1).cumsum(0).cumsum(1);
+        Tools.tic();
+        dec = Matrix.wavedec2(s, levels, name);
+        rec = Matrix.waverec2(dec, name);
+        time = Tools.toc();
+        psnr = Matrix.psnr(s, rec).getDataScalar();
+        log("DWT 2D decomposition/recomposition on " + levels + " levels", psnr, time);
     };
 
     Matrix._benchmarkFourier = function (N) {
