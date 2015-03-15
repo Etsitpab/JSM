@@ -246,7 +246,7 @@
         dim = dim || 1;
 
         var log = function (msg, psnr, time) {
-            if (psnr < 200) {
+            if (psnr < 150) {
                 console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
             } else {
                 console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
@@ -295,8 +295,7 @@
 
 
         var dim = 0, levels = 5;
-        name = "sym4";
-        s = Matrix.ones(N, N, 3).cumsum(dim);
+        s = Matrix.rand(N, N, 3).cumsum(dim);
         Tools.tic();
         dec = Matrix.wavedec(s, levels, name, dim);
         rec = Matrix.waverec(dec, name, dim);
@@ -343,7 +342,7 @@
         out = Matrix.ifft(fft);
         time = Tools.toc();
         l2 = s["-"](out)[".^"](2).abs().mean().getDataScalar();
-        console.log("FFT 1D decomposotion/recomposition", "L2:", l2, "Time:", time);
+        console.log("FFT 1D decomposition/recomposition", "L2:", l2, "Time:", time);
 
         s = Matrix.randi(9, N, N);
         Tools.tic();
@@ -351,7 +350,7 @@
         out = Matrix.ifft2(fft);
         time = Tools.toc();
         l2 = s["-"](out)[".^"](2).mean().getDataScalar();
-        console.log("FFT 2D decomposotion/recomposition", "L2:", l2, "Time:", time);
+        console.log("FFT 2D decomposition/recomposition", "L2:", l2, "Time:", time);
     };
 
     Matrix._benchmark = function () {
