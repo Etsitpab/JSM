@@ -62,6 +62,7 @@ To be able to read and write images you have to install npm canvas package. To t
 - libcairo2-dev
 - libgif-dev
 - libjpeg8-dev / libjpeg9-dev
+- libpango1.0-dev
 
 Also, do not forget to add the path to nodejs modules, it should look like that : 
     `export NODE_PATH="/usr/local/lib/node_modules"`
