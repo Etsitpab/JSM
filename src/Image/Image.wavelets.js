@@ -962,7 +962,7 @@
     };
 
     Matrix.dwtmaxlev = function (s, name) {
-        s = Matrix.toMatrix(s).get([0, 1]).min().getDataScalar();
+        s = Matrix.toMatrix(s).min().getDataScalar();
         var wav = new Wavelet(name);
         var dl = wav.filterL.length,
             dh = wav.filterH.length,
@@ -973,6 +973,81 @@
         return maxlev;
     };
 
+    var illNorm = function (A, alpha) {
+        var cm = A.mean();
+        A["*="](1 - alpha)["+="](cm[".*"](alpha));
+    };
+    var correctSubband = function (A, D, w) {
+        var ad = A.getData(), dd = D.getData();
+
+        var d0, a;
+        var newton = function (x, a) {
+            return x - (x - d0 - w * a / x) / (1 + w * a / (x * x));
+        }
+        console.assert(ad.length === dd.length, "subbands");
+        var T = D.max().getDataScalar() / 25;
+        for (var i = 0, ie = ad.length; i < ie; i++) {
+            
+            d0 = dd[i];
+            var sig = d0 > 0 ? 1 : 0;
+            d0 = d0 > 0 ? d0 : -d0;
+
+            if (d0 < T) {
+                continue;
+            }
+
+            a = ad[i];
+            
+            var d = d0, du = newton(d, a);
+            while (Math.abs(du - d) > 1e-3) {
+                d = du;
+                du = newton(d, a);
+            }
+           
+            dd[i] = sig ? du : -du;
+        }
+    };
+    
+    window.addEventListener("load", function() {
+
+        var names = [
+            '/home/mazin/Images/images_test/Lenna.png',
+            '/home/mazin/Images/images_test/J7/1.png',
+            '/home/mazin/Images/images_test/1332.png',
+            'P:/javascript/ipij/examples/images/cars_6.png',
+            'P:/javascript/ipij/examples/images/Lenna.png'
+        ];
+        Matrix.imread(names[1], function() {
+  	    Tools.tic();
+  	    createCanvas([300, 300], 'test1');
+  	    createCanvas([300, 300], 'test2');
+  	    createCanvas([300, 300], 'test3');
+            var im = this.im2double();
+
+            var alpha = 0.1, w = 0.5, name = 'sym8';
+            var maxlev = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
+            var wt = [Matrix.dwt2(im, name)];
+            for (var l = 1; l < maxlev; l++) {
+   	        wt[l] = Matrix.dwt2(wt[l - 1][0], name);
+            }
+
+            illNorm(wt[wt.length - 1][0], alpha);
+            for (var l = wt.length - 1; l > 0; l--) {
+                correctSubband(wt[l][0], wt[l][1], w);
+                correctSubband(wt[l][0], wt[l][2], w);
+                correctSubband(wt[l][0], wt[l][3], w);
+  	        wt[l - 1][0] = Matrix.idwt2(wt[l], name);
+            }
+  	    var out = Matrix.idwt2(wt[0], name);
+
+            im.imshow('test1', 1);
+	    out.imshow('test2', 1);
+	    out["-"](im).abs().imagesc('test3', 1);
+            out["-"](im).abs().mean().display("mean diff");
+  	    console.log("Time:", Tools.toc());
+        });
+    });
+    
     //window.addEventListener("load", function() {
     //    Matrix._benchmarkWavelets(25);
     //});
