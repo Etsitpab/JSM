@@ -26,7 +26,7 @@ The inspiration is the well known [Matlab][1] software though there are some dif
 The documentation can be consulted [here](http://etsitpab.github.io/JSM/). The code is documented using [jsduck](https://github.com/senchalabs/jsduck). Once it is installed just use the command `make doc`
 If you experience problem, be sure that you installed the ruby1.9-dev (or more recent) package and check this [page](https://github.com/senchalabs/jsduck/wiki/Installation).
 
-Here is the link to some demos that have been realized with this project, but be careful with large images, they might require large amount of memory and processing might take a lot of time !
+Here is the link to some demos that have been realized with this project, but *be careful with large images, they might require large amount of memory and processing might take a lot of time !*
 
 - [Image editor](http://etsitpab.github.io/JSM/JSM/examples/colorspaces/colorspaces.html) (Beta version)
 - [Estimation of illuminants from projections on the planckian locus](http://etsitpab.github.io/JSM/JSM/examples/ppl/ppl.html) (Beta version)
