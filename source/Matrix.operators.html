@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ *
+ * @author Baptiste Mazin     &lt;baptiste.mazin@telecom-paristech.fr&gt;
+ * @author Guillaume Tartavel &lt;guillaume.tartavel@telecom-paristech.fr&gt;
+ */
+
+<span id='Matrix'>/** @class Matrix */
+</span>
+(function (Matrix, Matrix_prototype) {
+    &#39;use strict&#39;;
+
+
+    //////////////////////////////////////////////////////////////////
+    //                    MATH OBJECT OPERATORS                     //
+    //////////////////////////////////////////////////////////////////
+
+
+<span id='Matrix-method-sqrt'>    /** Apply the square root function to values of Matrix.
+</span>     *
+     * @chainable
+     * @matlike
+     * @method sqrt
+     */
+    (function (Matrix_prototype) {
+        var sqrt_real = function (data) {
+            for (var i = 0, ie = data.length; i &lt; ie; i++) {
+                data[i] = Math.sqrt(data[i]);
+            }
+        };
+
+        var sqrt_cplx = function (datar, datai) {
+            for (var i = 0, ie = datar.length; i &lt; ie; i++) {
+                var a = datar[i], b = datai[i];
+                var m = Math.sqrt(a * a + b * b);
+                datar[i] = Math.sqrt((a + m) * 0.5);
+                datai[i] = b &lt; 0 ? -Math.sqrt((m - a) * 0.5) : Math.sqrt((m - a) * 0.5);
+            }
+        };
+
+        Matrix_prototype.sqrt = function () {
+            if (this.isreal()) {
+                sqrt_real(this.getData());
+            } else {
+                sqrt_cplx(this.getRealData(), this.getImagData());
+            }
+            return this;
+        };
+    })(Matrix_prototype);
+
+<span id='Matrix-method-cos'>    /** Apply the cosine function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.cos = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.cos(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-sin'>    /** Apply the sine function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.sin = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.sin(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-tan'>    /** Apply the tangent function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.tan = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.tan(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-exp'>    /** Apply the exponential function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function must be tested on complex numbers
+     * @matlike
+     * @method exp
+     */
+    (function (Matrix_prototype) {
+        var exp_real = function (data) {
+            for (var i = 0, ie = data.length; i &lt; ie; i++) {
+                data[i] = Math.exp(data[i]);
+            }
+        };
+        var exp_cplx = function (datar, datai) {
+            for (var i = 0, ie = datar.length; i &lt; ie; i++) {
+                var a = Math.exp(datar[i]), b = datai[i];
+                datar[i] = a * Math.cos(b);
+                datai[i] = a * Math.sin(b);
+            }
+        };
+        Matrix_prototype.exp = function () {
+            if (this.isreal()) {
+                exp_real(this.getData());
+            } else {
+                exp_cplx(this.getRealData(), this.getImagData());
+            }
+            return this;
+        };
+    })(Matrix_prototype);
+
+<span id='Matrix-method-log'>    /** Apply the natural logarithm function to the values of the Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.log = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.log(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-log10'>    /** Apply the base 10 logarithm to the values of the Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.log10 = function () {
+        var data = this.getData(), i, ie;
+        var log10 = Math.log(10);
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.log(data[i]) * log10;
+        }
+        return this;
+    };
+
+<span id='Matrix-method-log2'>    /** Apply the base 2 logarithm to the values of the Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.log2 = function () {
+        var data = this.getData(), i, ie;
+        var log2 = Math.log(2);
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.log(data[i]) * log2;
+        }
+        return this;
+    };
+
+<span id='Matrix-method-floor'>    /** Apply the floor function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.floor = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.floor(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-ceil'>    /** Apply the ceil function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.ceil = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.ceil(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-round'>    /** Apply the round function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.round = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.round(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-acos'>    /** Apply the arccosine function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.acos = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.acos(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-asin'>    /** Apply the arcsine function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.asin = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.asin(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-atan'>    /** Apply the arctan function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.atan = function () {
+        var data = this.getData(), i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = Math.acos(data[i]);
+        }
+        return this;
+    };
+
+<span id='Matrix-method-atan2'>    /** Apply the arctan2 function to values of Matrix.
+</span>     *
+     * @chainable
+     * @todo This function should work with complex
+     * @matlike
+     */
+    Matrix_prototype.atan2 = function (B) {
+        var A = this.getCopy();
+        if (!Tools.checkSizeEquals(A.size(), B.size(), Matrix.ignoreTrailingDims)) {
+            throw new Error(&quot;Matrix.atan2: Side of of elements must be equal.&quot;);
+        }
+        var dataA = A.getData(), dataB = B.getData();
+        var i, ie;
+        for (i = 0, ie = dataA.length; i &lt; ie; i++) {
+            dataA[i] = Math.atan2(dataA[i], dataB[i]);
+        }
+        return A;
+    };
+
+
+    //////////////////////////////////////////////////////////////////
+    //        Boolean Operators functions defining the matrix       //
+    //////////////////////////////////////////////////////////////////
+
+
+    var booleanOperators = function (op, A, B) {
+
+        if (!A.isreal() || (B instanceof Matrix &amp;&amp; !B.isreal())) {
+            throw new Error(&quot;Matrix.booleanOperators: This function doesn&#39;t &quot; +
+                            &quot;work with complex numbers.&quot;);
+        }
+
+        var id = A.getData(), ld = id.length;
+
+        var out, od, x;
+
+        if (typeof B === &#39;number&#39;) {
+            out = new Matrix(A.size(), &#39;boolean&#39;);
+            od = out.getData();
+            if (op === &#39;===&#39; || op === &#39;==&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] === B) ? 1 : 0;
+                }
+            } else if (op === &#39;!==&#39; || op === &#39;!=&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] !== B) ? 1 : 0;
+                }
+            } else if (op === &#39;&amp;&amp;&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &amp;&amp; B) ? 1 : 0;
+                }
+            } else if (op === &#39;||&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] || B) ? 1 : 0;
+                }
+            } else if (op === &#39;&lt;&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &lt; B) ? 1 : 0;
+                }
+            } else if (op === &#39;&lt;=&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &lt;= B) ? 1 : 0;
+                }
+            } else if (op === &#39;&gt;&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &gt; B) ? 1 : 0;
+                }
+            } else if (op === &#39;&gt;=&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &gt;= B) ? 1 : 0;
+                }
+            } else {
+                throw new Error(&#39;Matrix: Unknown operator \&#39;&#39; + op + &#39;\&#39;.&#39;);
+            }
+
+        } else if (B instanceof Matrix) {
+            var size = Tools.checkSizeEquals(A.size(), B.size(), Matrix.ignoreTrailingDims);
+            out = new Matrix(size, &#39;boolean&#39;);
+            od = out.getData();
+            var i2d = B.getData();
+            if (op === &#39;===&#39; || op === &#39;==&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] === i2d[x]) ? 1 : 0;
+                }
+            } else if (op === &#39;!==&#39; || op === &#39;!=&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] !== i2d[x]) ? 1 : 0;
+                }
+            } else if (op === &#39;&amp;&amp;&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &amp;&amp; i2d[x]) ? 1 : 0;
+                }
+            } else if (op === &#39;||&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] || i2d[x]) ? 1 : 0;
+                }
+            } else if (op === &#39;&lt;&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &lt; i2d[x]) ? 1 : 0;
+                }
+            } else if (op === &#39;&lt;=&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &lt;= i2d[x]) ? 1 : 0;
+                }
+            } else if (op === &#39;&gt;&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &gt;= i2d[x]) ? 1 : 0;
+                }
+            } else if (op === &#39;&gt;=&#39;) {
+                for (x = 0; x &lt; ld; x++) {
+                    od[x] = (id[x] &gt;= i2d[x]) ? 1 : 0;
+                }
+            } else {
+                throw new Error(&#39;Unknown operator \&#39;&#39; + op + &#39;\&#39;.&#39;);
+            }
+        } else {
+            throw new Error(&#39;Argument must be a Matrix or a number&#39;);
+        }
+
+        return out;
+    };
+
+<span id='Matrix-method-eq'>    /** Test equality between two arrays.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.eq = function (b) {
+        return booleanOperators(&#39;===&#39;, this, b);
+    };
+    Matrix_prototype[&#39;===&#39;] = Matrix_prototype.eq;
+
+<span id='Matrix-method-ne'>    /** Test inequality between two arrays.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.ne = function (b) {
+        return booleanOperators(&#39;!==&#39;, this, b);
+    };
+    Matrix_prototype[&#39;!==&#39;] = Matrix_prototype.ne;
+
+<span id='Matrix-method-gt'>    /** Greater than operator.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.gt = function (b) {
+        return booleanOperators(&#39;&gt;&#39;, this, b);
+    };
+    Matrix_prototype[&#39;&gt;&#39;] = Matrix_prototype.gt;
+
+<span id='Matrix-method-ge'>    /** Greater or equal operator.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.ge = function (b) {
+        return booleanOperators(&#39;&gt;=&#39;, this, b);
+    };
+    Matrix_prototype[&#39;&gt;=&#39;] = Matrix_prototype.ge;
+
+<span id='Matrix-method-lt'>    /** Lower than operator.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.lt = function (b) {
+        return booleanOperators(&#39;&lt;&#39;, this, b);
+    };
+    Matrix_prototype[&#39;&lt;&#39;] = Matrix_prototype.lt;
+
+<span id='Matrix-method-le'>    /** Lower or equal operator.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.le = function (b) {
+        return booleanOperators(&#39;&lt;=&#39;, this, b);
+    };
+    Matrix_prototype[&#39;&lt;=&#39;] = Matrix_prototype.le;
+
+<span id='Matrix-method-and'>    /** And operator.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.and = function (b) {
+        return booleanOperators(&#39;&amp;&amp;&#39;, this, b);
+    };
+    Matrix_prototype[&#39;&amp;&amp;&#39;] = Matrix_prototype.and;
+
+<span id='Matrix-method-or'>    /** Or operator.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.or = function (b) {
+        return booleanOperators(&#39;||&#39;, this, b);
+    };
+    Matrix_prototype[&#39;||&#39;] = Matrix_prototype.or;
+
+<span id='Matrix-method-neg'>    /** Return false if different of zero.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.neg = function () {
+        var out = this.getCopy();
+        var data = out.getData();
+        var i, ie;
+        for (i = 0, ie = data.length; i &lt; ie; i++) {
+            data[i] = !data[i] ? 1 : 0;
+        }
+        return out;
+    };
+
+
+    //////////////////////////////////////////////////////////////////
+    //                     Arithmetic Operators                     //
+    //////////////////////////////////////////////////////////////////
+
+    /* Function generating automatically the arithmetic operators 
+       functions 
+    */
+    var generateArithmeticOperators = function () {
+        var operators = {
+            &#39;+&#39;: {
+                &quot;name&quot;: &quot;plus&quot;,
+                &quot;real/real&quot;: {
+                    scalar: &quot;a[x] += b;&quot;,
+                    matrix: &quot;a[x] += b[x];&quot;
+                },
+                &quot;real/imag&quot;: {
+                    scalar: &quot;ar[x] += br;    ai[x] = bi;&quot;,
+                    matrix: &quot;ar[x] += br[x]; ai[x] = bi[x];&quot;
+                },
+                &quot;imag/real&quot;: {
+                    scalar: &quot;ar[x] += b;&quot;,
+                    matrix: &quot;ar[x] += b[x];&quot;
+                },
+                &quot;imag/imag&quot;: {
+                    scalar: &quot;ar[x] += br;    ai[x] += bi;&quot;,
+                    matrix: &quot;ar[x] += br[x]; ai[x] += bi[x];&quot;
+                },
+                AIsScalar: &quot;B.getCopy().plus(A);&quot;,
+                AIsMatrix: &quot;A.getCopy().plus(B);&quot;
+            },
+            &#39;-&#39;: {
+                &quot;name&quot;: &quot;minus&quot;,
+                &quot;real/real&quot;: {
+                    scalar: &quot;a[x] -= b;&quot;,
+                    matrix: &quot;a[x] -= b[x];&quot;
+                },
+                &quot;real/imag&quot;: {
+                    scalar: &quot;ar[x] -= br;    ai[x] = -bi;&quot;,
+                    matrix: &quot;ar[x] -= br[x]; ai[x] = -bi[x];&quot;
+                },
+                &quot;imag/real&quot;: {
+                    scalar: &quot;ar[x] -= b;&quot;,
+                    matrix: &quot;ar[x] -= b[x];&quot;
+                },
+                &quot;imag/imag&quot;: {
+                    scalar: &quot;ar[x] -= br;    ai[x] -= bi;&quot;,
+                    matrix: &quot;ar[x] -= br[x]; ai[x] -= bi[x];&quot;
+                },
+                AIsScalar: &quot;B.getCopy().plus(A.uminus());&quot;,
+                AIsMatrix: &quot;A.getCopy().minus(B);&quot;
+            },
+            &#39;.*&#39;: {
+                &quot;name&quot;: &quot;times&quot;,
+                &quot;real/real&quot;: {
+                    scalar: &quot;a[x] *= b;&quot;,
+                    matrix: &quot;a[x] *= b[x];&quot;
+                },
+                &quot;real/imag&quot;: {
+                    scalar: &quot;ai[x] = ar[x] * bi;    ar[x] *= br;&quot;,
+                    matrix: &quot;ai[x] = ar[x] * bi[x]; ar[x] *= br[x];&quot;
+                },
+                &quot;imag/real&quot;: {
+                    scalar: &quot;ar[x] *= b;    ai[x] *= b;&quot;,
+                    matrix: &quot;ar[x] *= b[x]; ai[x] *= b[x];&quot;
+                },
+                &quot;imag/imag&quot;: {
+                    scalar: &quot;var r = ar[x], i = ai[x];&quot;
+                        +   &quot;ar[x] = r * br - i * bi;&quot;
+                        +   &quot;ai[x] = r * bi + i * br;&quot;,
+                    matrix: &quot;var r1 = ar[x], i1 = ai[x], r2 = br[x], i2 = bi[x];&quot;
+                        +   &quot;var t = 1 / (r2 * r2 + i2 * i2);&quot;
+                        +   &quot;ar[x] = (r1 * r2 + i1 * i2) * t;&quot;
+                        +   &quot;ai[x] = (i1 * r2 - r1 * i2) * t;&quot;
+                },
+                AIsScalar: &quot;B.getCopy().times(A);&quot;,
+                AIsMatrix: &quot;A.getCopy().times(B);&quot;
+            },
+            &#39;./&#39;: {
+                &quot;name&quot;: &quot;rdivide&quot;,
+                &quot;real/real&quot;: {
+                    scalar: &quot;a[x] /= b;&quot;,
+                    matrix: &quot;a[x] /= b[x];&quot;
+                },
+                &quot;real/imag&quot;: {
+                    scalar_before: &quot;ai.set(ar);&quot;
+                        +          &quot;tmp = 1 / (br * br + bi * bi);&quot;
+                        +          &quot;br = br * tmp;&quot;
+                        +          &quot;bi = -bi * tmp;&quot;,
+                    scalar: &quot;ai[x] *= bi;           ar[x] *= br;&quot;,
+                    matrix: &quot;ai[x] = ar[x] * bi[x]; ar[x] *= br[x];&quot;
+                },
+                &quot;imag/real&quot;: {
+                    scalar_before: &quot;var b = 1 / b;&quot;,
+                    scalar: &quot;ar[x] *= b;    ai[x] *= b;&quot;,
+                    matrix: &quot;ar[x] /= b[x]; ai[x] /= b[x];&quot;
+                },
+                &quot;imag/imag&quot;: {
+                    scalar_before: &quot;var tmp = 1 / (br * br + bi * bi);&quot;
+                        +          &quot;br *= tmp;&quot;
+                        +          &quot;bi *= tmp;&quot;,
+                    scalar: &quot;var r = ar[x], i = ai[x];&quot;
+                        +   &quot;ar[x] = r * br + i * bi;&quot;
+                        +   &quot;ai[x] = i * bi - r * br;&quot;,
+                    matrix: &quot;var r1 = ar[x], i1 = ai[x], r2 = br[x], i2 = bi[x];&quot;
+                        +   &quot;var t = 1 / (r2 * r2 + i2 * i2);&quot;
+                        +   &quot;ar[x] = (r1 * r2 + i1 * i2) * t;&quot;
+                        +   &quot;ai[x] = (i1 * r2 - r1 * i2) * t;&quot;
+                },
+                AIsScalar: &quot;B.getCopy().rdivide(A);&quot;,
+                AIsMatrix: &quot;A.getCopy().ldivide(B);&quot;
+            },
+            &#39;.\\&#39;: {
+                &quot;name&quot;: &quot;ldivide&quot;,
+                &quot;real/real&quot;: {
+                    scalar: &quot;a[x] = b / a[x];&quot;,
+                    matrix: &quot;a[x] = b[x] / a[x];&quot;
+                },
+                &quot;real/imag&quot;: {
+                    scalar: &quot;ai[x] = bi / ar[x];    ar[x] = br / ar[x];&quot;,
+                    matrix: &quot;ai[x] = bi[x] / ar[x]; ar[x] = br[x] / ar[x];&quot;
+                },
+                &quot;imag/real&quot;: {
+                    scalar: &quot;var tmp = 1 / (ar[x] * ar[x] + ai[x] * ai[x]);&quot;
+                        +   &quot;ai[x] = bi * tmp; ar[x] = br * tmp;&quot;,
+                    matrix: &quot;var tmp = 1 / (ar[x] * ar[x] + ai[x] * ai[x]);&quot;
+                        +   &quot;ai[x] = bi[x] * tmp; ar[x] = br[x] * tmp;&quot;
+                },
+                &quot;imag/imag&quot;: {
+                    scalar: &quot;var r = br[x], i = bi[x];&quot;
+                        +   &quot;ar[x] = r * ar + i * ai;&quot;
+                        +   &quot;ai[x] = i * ai - r * ar;&quot;,
+                    matrix: &quot;var r1 = br[x], i1 = bi[x], r2 = ar[x], i2 = ai[x];&quot;
+                        +   &quot;var t = 1 / (r2 * r2 + i2 * i2);&quot;
+                        +   &quot;ar[x] = (r1 * r2 + i1 * i2) * t;&quot;
+                        +   &quot;ai[x] = (i1 * r2 - r1 * i2) * t;&quot;
+                },
+                AIsScalar: &quot;B.getCopy().ldivide(A);&quot;,
+                AIsMatrix: &quot;A.getCopy().rdivide(B);&quot;
+            },
+            &#39;.^&#39;: {
+                &quot;name&quot;: &quot;power&quot;,
+                &quot;real/real&quot;: {
+                    scalar_before: &quot;var pow = Math.pow;&quot;,
+                    matrix_before: &quot;var pow = Math.pow;&quot;,
+                    scalar: &quot;a[x] = pow(a[x], b);&quot;,
+                    matrix: &quot;a[x] = pow(a[x], b[x]);&quot;
+                },
+                &quot;real/imag&quot;: {
+                    scalar: &quot;throw new Error(&#39;Matrix.power: This function has not &quot;
+                        + &quot;been implemented yet for complex number.&#39;);&quot;,
+                    matrix: &quot;throw new Error(&#39;Matrix.power: This function has not &quot;
+                        + &quot;been implemented yet for complex number.&#39;);&quot;
+                },
+                &quot;imag/real&quot;: {
+                    scalar: &quot;throw new Error(&#39;Matrix.power: This function has not &quot;
+                        + &quot;been implemented yet for complex number.&#39;);&quot;,
+                    matrix: &quot;throw new Error(&#39;Matrix.power: This function has not &quot;
+                        + &quot;been implemented yet for complex number.&#39;);&quot;
+                },
+                &quot;imag/imag&quot;: {
+                    scalar: &quot;throw new Error(&#39;Matrix.power: This function has not &quot;
+                        + &quot;been implemented yet for complex number.&#39;);&quot;,
+                    matrix: &quot;throw new Error(&#39;Matrix.power: This function has not &quot;
+                        + &quot;been implemented yet for complex number.&#39;);&quot;
+                },
+                AIsScalar: &quot;B.isscalar() ? A.getCopy().power(B) : undefined;&quot;,
+                AIsMatrix: &quot;A.getCopy().power(B);&quot;
+            }
+        };
+
+        // Template function
+        var fct = (function (b) {
+            b = Matrix.toMatrix(b);
+            var x, n = this.numel();
+            var a = this, ar, ai, br, bi;
+            if (b.isscalar()) {               // SCALAR
+                if (a.isreal()) {             // REAL
+                    if (b.isreal()) {         // REAL / REAL
+                        a = a.getData();
+                        b = b.getDataScalar();
+                        &quot;real/real-scalar&quot;;
+                    } else {                  // REAL / IMAG
+                        a.toComplex();
+                        ar = a.getRealData();
+                        ai = a.getImagData();
+                        br = b.getRealData()[0];
+                        bi = b.getImagData()[0];
+                        &quot;real/imag-scalar&quot;;
+                    }
+                } else {                      // IMAG
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    if (b.isreal()) {         // IMAG / REAL
+                        b = b.getDataScalar();
+                        &quot;imag/real-scalar&quot;;
+                    } else {                  // IMAG / IMAG
+                        br = b.getRealData()[0];
+                        bi = b.getImagData()[0];
+                        &quot;imag/imag-scalar&quot;;
+                    }
+                }
+            } else {                          // MATRIX
+                Tools.checkSizeEquals(a.getSize(), b.getSize(), Matrix.ignoreTrailingDims);
+                if (a.isreal()) {             // MATRIX: REAL
+                    if (b.isreal()) {         // MATRIX: REAL / REAL
+                        a = a.getData();
+                        b = b.getData();
+                        &quot;real/real-matrix&quot;;
+                    } else {                  // MATRIX: REAL / IMAG
+                        a.toComplex();
+                        ar = a.getRealData();
+                        ai = a.getImagData();
+                        br = b.getRealData();
+                        bi = b.getImagData();
+                        &quot;real/imag-matrix&quot;;
+                    }
+                } else {                      // MATRIX: IMAG
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    if (b.isreal()) {         // MATRIX: IMAG / REAL
+                        b = b.getData();
+                        &quot;imag/real-matrix&quot;;
+                    } else {                  // MATRIX: IMAG / IMAG
+                        br = b.getRealData();
+                        bi = b.getImagData();
+                        &quot;imag/imag-matrix&quot;;
+                    }
+                }
+            }
+            return this;
+        }).toString();
+
+        var fct2 = (function (A, B) {
+            A = Matrix.toMatrix(A);
+            B = Matrix.toMatrix(B);
+
+            if (A.isscalar()) {
+                return &quot;AIsScalar&quot;;
+            } else {
+                return &quot;AIsMatrix&quot;;
+            }
+        }).toString();
+
+        var addLoop = function (str) {
+            return &quot;for (x = 0; x &lt; n; x++) {&quot; + str + &quot;}&quot;;
+        };
+
+        var replace = function (fun, op, c) {
+            var scalar = op[c].scalar_before ? op[c].scalar_before : &quot;&quot;;
+            var matrix = op[c].matrix_before ? op[c].matrix_before : &quot;&quot;;
+            scalar += addLoop(op[c].scalar);
+            matrix += addLoop(op[c].matrix);
+            fun = fun.replace(&quot;\&quot;&quot; + c + &quot;-matrix\&quot;;&quot;, matrix);
+            fun = fun.replace(&quot;\&quot;&quot; + c + &quot;-scalar\&quot;;&quot;, scalar);
+            return fun;
+        };
+
+        var o, op, fun;
+        for (o in operators) {
+            if (operators.hasOwnProperty(o)) {
+                op = operators[o];
+                fun = replace(fct, op, &quot;real/real&quot;);
+                fun = replace(fun, op, &quot;real/imag&quot;);
+                fun = replace(fun, op, &quot;imag/real&quot;);
+                fun = replace(fun, op, &quot;imag/imag&quot;);
+                eval(&quot;Matrix.prototype.&quot; + op.name + &quot; = &quot; + fun);
+
+                fun = fct2.replace(&quot;\&quot;AIsScalar\&quot;;&quot;, op.AIsScalar);
+                fun = fun.replace(&quot;\&quot;AIsMatrix\&quot;;&quot;, op.AIsMatrix);
+                eval(&quot;Matrix.&quot; + op.name + &quot; = &quot; + fun);
+            }
+        }
+    };
+
+<span id='Matrix-method-plus'>    /** Plus operator make an element wise addition.
+</span>     * This operation is done in place.
+     *
+     * __See also:__
+     *  {@link Matrix#plus},
+     *  {@link Matrix#minus},
+     *  {@link Matrix#times},
+     *  {@link Matrix#rdivide},
+     *  {@link Matrix#ldivide}.
+     *  {@link Matrix#ldivide}.
+     *
+     * @param {Number|Matrix} rightOp
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.plus = function (b) {
+        b = Matrix.toMatrix(b);
+        var x, n = this.numel();
+        var a = this, ar, ai, br, bi;
+        if (b.isscalar()) {               // SCALAR
+            if (a.isreal()) {             // REAL
+                if (b.isreal()) {         // REAL / REAL
+                    a = a.getData();
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] += b;
+                    }
+                } else {                  // REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] += br;
+                        ai[x] = bi;
+                    }
+                }
+            } else {                      // IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // IMAG / REAL
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] += b;
+                    }
+                } else {                  // IMAG / IMAG
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] += br;
+                        ai[x] += bi;
+                    }
+                }
+            }
+        } else {                          // MATRIX
+            Tools.checkSizeEquals(a.getSize(), b.getSize(), Matrix.ignoreTrailingDims);
+            if (a.isreal()) {             // MATRIX: REAL
+                if (b.isreal()) {         // MATRIX: REAL / REAL
+                    a = a.getData();
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] += b[x];
+                    }
+                } else {                  // MATRIX: REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] += br[x];
+                        ai[x] = bi[x];
+                    }
+                }
+            } else {                      // MATRIX: IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // MATRIX: IMAG / REAL
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] += b[x];
+                    }
+                } else {                  // MATRIX: IMAG / IMAG
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] += br[x];
+                        ai[x] += bi[x];
+                    }
+                }
+            }
+        }
+        return this;
+    };
+
+    Matrix_prototype[&#39;+=&#39;] = function (b) {
+        return this.plus(b);
+    };
+
+    Matrix_prototype[&#39;+&#39;] = function (b) {
+        return this.getCopy().plus(b);
+    };
+
+    Matrix.plus = function (A, B) {
+        return A[&#39;+&#39;](B);
+    };
+
+
+<span id='Matrix-method-minus'>    /** Minus operator make an element wise subtraction.
+</span>     *
+     * __Also see:__
+     * {@link Matrix#uminus},
+     * {@link Matrix#plus},
+     * {@link Matrix#times},
+     * {@link Matrix#rdivide},
+     * {@link Matrix#ldivide},
+     *
+     * @param {Number|Matrix} rightOp
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.minus = function (b) {
+        b = Matrix.toMatrix(b);
+        var x, n = this.numel();
+        var a = this, ar, ai, br, bi;
+        if (b.isscalar()) {               // SCALAR
+            if (a.isreal()) {             // REAL
+                if (b.isreal()) {         // REAL / REAL
+                    a = a.getData();
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] -= b;
+                    }
+                } else {                  // REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] -= br;
+                        ai[x] = -bi;
+                    }
+                }
+            } else {                      // IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // IMAG / REAL
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] -= b;
+                    }
+                } else {                  // IMAG / IMAG
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] -= br;
+                        ai[x] -= bi;
+                    }
+                }
+            }
+        } else {                          // MATRIX
+            Tools.checkSizeEquals(a.getSize(), b.getSize(), Matrix.ignoreTrailingDims);
+            if (a.isreal()) {             // MATRIX: REAL
+                if (b.isreal()) {         // MATRIX: REAL / REAL
+                    a = a.getData();
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] -= b[x];
+                    }
+                } else {                  // MATRIX: REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] -= br[x];
+                        ai[x] = -bi[x];
+                    }
+                }
+            } else {                      // MATRIX: IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // MATRIX: IMAG / REAL
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] -= b[x];
+                    }
+                } else {                  // MATRIX: IMAG / IMAG
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] -= br[x];
+                        ai[x] -= bi[x];
+                    }
+                }
+            }
+        }
+        return this;
+    };
+
+    Matrix_prototype[&#39;-=&#39;] = function (b) {
+        return this.minus(b);
+    };
+
+    Matrix_prototype[&#39;-&#39;] = function (b) {
+        return this.getCopy().minus(b);
+    };
+
+    Matrix.minus = function (A, B) {
+        return A[&#39;-&#39;](B);
+    };
+
+
+<span id='Matrix-method-uminus'>    /** Uminus operator take the opposite of each Matrix value.
+</span>     *
+     * @param {Number|Matrix} rightOp
+     *
+     * @chainable
+     * @todo take into account the complex case.
+     * @matlike
+     */
+    Matrix_prototype.uminus = function () {
+        var x, ld = this.numel();
+        if (this.isreal()) {
+            var a = this.getData();
+            for (x = 0; x &lt; ld; x++) {
+                a[x] = -a[x];
+            }
+        } else {
+            var ar = this.getRealData(), ai = this.getImagData();
+            for (x = 0; x &lt; ld; x++) {
+                ar[x] = -ar[x];
+                ai[x] = -ai[x];
+            }
+        }
+        return this;
+    };
+
+    Matrix.uminus = function (A) {
+        return A.getCopy().uminus();
+    };
+
+<span id='Matrix-method-times'>    /** Times operator make an element wise multiplication.
+</span>     *
+     * __Also see:__
+     * {@link Matrix#minus},
+     * {@link Matrix#plus},
+     * {@link Matrix#rdivide},
+     * {@link Matrix#ldivide}.
+     *
+     * @param {Number|Matrix} rightOp
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.times = function (b) {
+        b = Matrix.toMatrix(b);
+        var x, n = this.numel();
+        var a = this, ar, ai, br, bi;
+        if (b.isscalar()) {               // SCALAR
+            if (a.isreal()) {             // REAL
+                if (b.isreal()) {         // REAL / REAL
+                    a = a.getData();
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] *= b;
+                    }
+                } else {                  // REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        ai[x] = ar[x] * bi;
+                        ar[x] *= br;
+                    }
+                }
+            } else {                      // IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // IMAG / REAL
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] *= b;
+                        ai[x] *= b;
+                    }
+                } else {                  // IMAG / IMAG
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        var r = ar[x], i = ai[x];
+                        ar[x] = r * br - i * bi;
+                        ai[x] = r * bi + i * br;
+                    }
+                }
+            }
+        } else {                          // MATRIX
+            Tools.checkSizeEquals(a.getSize(), b.getSize(), Matrix.ignoreTrailingDims);
+            if (a.isreal()) {             // MATRIX: REAL
+                if (b.isreal()) {         // MATRIX: REAL / REAL
+                    a = a.getData();
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {a[x] *= b[x];}
+                } else {                  // MATRIX: REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        ai[x] = ar[x] * bi[x];
+                        ar[x] *= br[x];
+                    }
+                }
+            } else {                      // MATRIX: IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // MATRIX: IMAG / REAL
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] *= b[x];
+                        ai[x] *= b[x];
+                    }
+                } else {                  // MATRIX: IMAG / IMAG
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        var r1 = ar[x], i1 = ai[x], r2 = br[x], i2 = bi[x];
+                        var t = 1 / (r2 * r2 + i2 * i2);
+                        ar[x] = (r1 * r2 + i1 * i2) * t;
+                        ai[x] = (i1 * r2 - r1 * i2) * t;
+                    }
+                }
+            }
+        }
+        return this;
+    };
+
+    Matrix_prototype[&#39;*=&#39;] = function (b) {
+        return this.times(b);
+    };
+
+    Matrix_prototype[&#39;.*&#39;] = function (b) {
+        return this.getCopy().times(b);
+    };
+
+    Matrix.times = function (A, B) {
+        return A[&#39;.*&#39;](B);
+    };
+
+
+<span id='Matrix-method-rdivide'>    /** Rdivide operator make an element wise division,
+</span>     * The right term is the denominator.
+     *
+     * __Also see:__
+     * {@link Matrix#minus},
+     * {@link Matrix#plus},
+     * {@link Matrix#rdivide},
+     * {@link Matrix#ldivide}.
+     *
+     * @param {Number|Matrix} rightOp
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.rdivide = function (b) {
+        b = Matrix.toMatrix(b);
+        var x, n = this.numel(), tmp;
+        var a = this, ar, ai, br, bi;
+        if (b.isscalar()) {               // SCALAR
+            if (a.isreal()) {             // REAL
+                if (b.isreal()) {         // REAL / REAL
+                    a = a.getData();
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] /= b;
+                    }
+                } else {                  // REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    ai.set(ar);
+                    tmp = 1 / (br * br + bi * bi);
+                    br = br * tmp;
+                    bi = -bi * tmp;
+                    for (x = 0; x &lt; n; x++) {
+                        ai[x] *= bi;
+                        ar[x] *= br;
+                    }
+                }
+            } else {                      // IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // IMAG / REAL
+                    b = b.getDataScalar();
+                    b = 1 / b;
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] *= b;
+                        ai[x] *= b;
+                    }
+                } else {                  // IMAG / IMAG
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    tmp = 1 / (br * br + bi * bi);
+                    br *= tmp;
+                    bi *= tmp;
+                    for (x = 0; x &lt; n; x++) {
+                        var r = ar[x], i = ai[x];
+                        ar[x] = r * br + i * bi;
+                        ai[x] = i * bi - r * br;
+                    }
+                }
+            }
+        } else {                          // MATRIX
+            Tools.checkSizeEquals(a.getSize(), b.getSize(), Matrix.ignoreTrailingDims);
+            if (a.isreal()) {             // MATRIX: REAL
+                if (b.isreal()) {         // MATRIX: REAL / REAL
+                    a = a.getData();
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] /= b[x];
+                    }
+                } else {                  // MATRIX: REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        ai[x] = ar[x] * bi[x];
+                        ar[x] *= br[x];
+                    }
+                }
+            } else {                      // MATRIX: IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // MATRIX: IMAG / REAL
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        ar[x] /= b[x];
+                        ai[x] /= b[x];
+                    }
+                } else {                  // MATRIX: IMAG / IMAG
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        var r1 = ar[x], i1 = ai[x], r2 = br[x], i2 = bi[x];
+                        var t = 1 / (r2 * r2 + i2 * i2);
+                        ar[x] = (r1 * r2 + i1 * i2) * t;
+                        ai[x] = (i1 * r2 - r1 * i2) * t;
+                    }
+                }
+            }
+        }
+        return this;
+    };
+
+    Matrix_prototype[&#39;/=&#39;] = function (b) {
+        return this.rdivide(b);
+    };
+
+    Matrix_prototype[&#39;./&#39;] = function (b) {
+        return this.getCopy().rdivide(b);
+    };
+
+    Matrix.rdivide = function (A, B) {
+        return A[&#39;./&#39;](B);
+    };
+
+
+<span id='Matrix-method-ldivide'>    /** Ldivide operator make an element wise division,
+</span>     * The right term is the numerator.
+     *
+     * __Also see:__
+     * {@link Matrix#minus},
+     * {@link Matrix#plus},
+     * {@link Matrix#rdivide},
+     * {@link Matrix#ldivide}.
+     *
+     * @param {Number|Matrix} rightOp
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.ldivide = function (b) {
+        b = Matrix.toMatrix(b);
+        var x, n = this.numel(), tmp;
+        var a = this, ar, ai, br, bi;
+        if (b.isscalar()) {               // SCALAR
+            if (a.isreal()) {             // REAL
+                if (b.isreal()) {         // REAL / REAL
+                    a = a.getData();
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] = b / a[x];
+                    }
+                } else {                  // REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        ai[x] = bi / ar[x];
+                        ar[x] = br / ar[x];
+                    }
+                }
+            } else {                      // IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // IMAG / REAL
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        tmp = 1 / (ar[x] * ar[x] + ai[x] * ai[x]);
+                        ai[x] = bi * tmp;
+                        ar[x] = br * tmp;
+                    }
+                } else {                  // IMAG / IMAG
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        var r = br[x], i = bi[x];
+                        ar[x] = r * ar + i * ai;
+                        ai[x] = i * ai - r * ar;
+                    }
+                }
+            }
+        } else {                          // MATRIX
+            Tools.checkSizeEquals(a.getSize(), b.getSize(), Matrix.ignoreTrailingDims);
+            if (a.isreal()) {             // MATRIX: REAL
+                if (b.isreal()) {         // MATRIX: REAL / REAL
+                    a = a.getData();
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] = b[x] / a[x];
+                    }
+                } else {                  // MATRIX: REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        ai[x] = bi[x] / ar[x];
+                        ar[x] = br[x] / ar[x];
+                    }
+                }
+            } else {                      // MATRIX: IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // MATRIX: IMAG / REAL
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        tmp = 1 / (ar[x] * ar[x] + ai[x] * ai[x]);
+                        ai[x] = bi[x] * tmp;
+                        ar[x] = br[x] * tmp;
+                    }
+                } else {                  // MATRIX: IMAG / IMAG
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        var r1 = br[x], i1 = bi[x], r2 = ar[x], i2 = ai[x];
+                        var t = 1 / (r2 * r2 + i2 * i2);
+                        ar[x] = (r1 * r2 + i1 * i2) * t;
+                        ai[x] = (i1 * r2 - r1 * i2) * t;
+                    }
+                }
+            }
+        }
+        return this;
+    };
+
+    Matrix_prototype[&#39;\\=&#39;] = function (b) {
+        return this.ldivide(b);
+    };
+
+    Matrix_prototype[&#39;.\\&#39;] = function (b) {
+        return this.getCopy().ldivide(b);
+    };
+
+    Matrix.ldivide = function (A, B) {
+        return A[&#39;.\\&#39;](B);
+    };
+
+
+<span id='Matrix-method-power'>    /** Ldivide operator make an element wise power operation,
+</span>     *
+     * __Also see:__
+     * {@link Matrix#minus},
+     * {@link Matrix#plus},
+     * {@link Matrix#rdivide},
+     * {@link Matrix#ldivide}.
+     *
+     * @param {Number|Matrix} rightOp
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.power = function (b) {
+        b = Matrix.toMatrix(b);
+        var x, n = this.numel();
+        var a = this, ar, ai, br, bi, rb, tb;
+        var pow = Math.pow, sqrt = Math.sqrt, cos = Math.cos, sin = Math.sin, atan2 = Math.atan2;
+        if (b.isscalar()) {               // SCALAR
+            if (a.isreal()) {             // REAL
+                if (b.isreal()) {         // REAL / REAL
+                    a = a.getData();
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] = pow(a[x], b);
+                    }
+                } else {                  // REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        throw new Error(&#39;Matrix.power: This function has not been implemented yet for complex number.&#39;);
+                    }
+                }
+            } else {                      // IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // IMAG / REAL
+                    b = b.getDataScalar();
+                    for (x = 0; x &lt; n; x++) {
+                        rb = pow(sqrt(ar[x] * ar[x] + ai[x] * ai[x]), b);
+                        tb = b * atan2(ai[x], ar[x]);
+                        ar[x] = rb * cos(tb);
+                        ai[x] = rb * sin(tb);
+                    }
+                } else {                  // IMAG / IMAG
+                    br = b.getRealData()[0];
+                    bi = b.getImagData()[0];
+                    for (x = 0; x &lt; n; x++) {
+                        throw new Error(&#39;Matrix.power: This function has not been implemented yet for complex number.&#39;);
+                    }
+                }
+            }
+        } else {                          // MATRIX
+            Tools.checkSizeEquals(a.getSize(), b.getSize(), Matrix.ignoreTrailingDims);
+            if (a.isreal()) {             // MATRIX: REAL
+                if (b.isreal()) {         // MATRIX: REAL / REAL
+                    a = a.getData();
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        a[x] = pow(a[x], b[x]);
+                    }
+                } else {                  // MATRIX: REAL / IMAG
+                    a.toComplex();
+                    ar = a.getRealData();
+                    ai = a.getImagData();
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        throw new Error(&#39;Matrix.power: This function has not been implemented yet for complex number.&#39;);
+                    }
+                }
+            } else {                      // MATRIX: IMAG
+                ar = a.getRealData();
+                ai = a.getImagData();
+                if (b.isreal()) {         // MATRIX: IMAG / REAL
+                    b = b.getData();
+                    for (x = 0; x &lt; n; x++) {
+                        rb = pow(sqrt(ar[x] * ar[x] + ai[x] * ai[x]), b[x]);
+                        tb = b[x] * atan2(ai[x], ar[x]);
+                        ar[x] = rb * cos(tb);
+                        ai[x] = rb * sin(tb);
+                    }
+                } else {                  // MATRIX: IMAG / IMAG
+                    br = b.getRealData();
+                    bi = b.getImagData();
+                    for (x = 0; x &lt; n; x++) {
+                        throw new Error(&#39;Matrix.power: This function has not been implemented yet for complex number.&#39;);
+                    }
+                }
+            }
+        }
+        return this;
+    };
+
+    Matrix_prototype[&#39;.^&#39;] = function (b) {
+        return this.getCopy().power(b);
+    };
+
+    Matrix.power = function (A, B) {
+        return A[&#39;.^&#39;](B);
+    };
+
+
+    //////////////////////////////////////////////////////////////////
+    //                        Other operators                       //
+    //////////////////////////////////////////////////////////////////
+
+ 
+<span id='Matrix-method-arrayfun'>    /** Apply a function to values of Matrix.
+</span>     *
+     * @param {Function} f
+     *  Function to apply to Array elements.
+     *
+     * @chainable
+     * @todo This function should provide a way to deal with complex
+     * @matlike
+     * @method arrayfun
+     */
+    (function (Matrix_prototype) {
+        var apply_real = function(data, f) {
+            var i, ie;
+            for (i = 0, ie = data.length; i &lt; ie; i++) {
+                data[i] = f(data[i]);
+            }
+        };
+
+        Matrix_prototype.arrayfun = function (fct) {
+            if (!this.isreal()) {
+                throw new Error(&quot;Matrix.arrayfun: This function doesn&#39;t &quot; +
+                                &quot;work with complex numbers.&quot;);
+            }
+            if (typeof fct !== &#39;function&#39;) {
+                throw new Error(&#39;Matrix.arrayfun: Argument must be a function.&#39;);
+            }
+            apply_real(this.getData(), fct.bind(this));
+            return this;
+        };
+
+    })(Matrix_prototype);
+
+<span id='Matrix-method-transpose'>    /** Transpose operator transposed a 2D matrix.
+</span>     *
+     * @return {Matrix}
+     * @matlike
+     */
+    Matrix_prototype.transpose = function () {
+        if (!this.ismatrix()) {
+            throw new Error(&#39;Matrix.transpose: &#39; +
+                            &#39;Transposition is only defined for matrix.&#39;);
+        }
+        var v = this.getView().swapDimensions(0, 1);
+        return this.extractViewFrom(v);
+    };
+
+<span id='Matrix-method-ctranspose'>    /** Complex conjugate transposition operator.
+</span>     *
+     * @return {Matrix}
+     * @matlike
+     */
+    Matrix_prototype.ctranspose = function () {
+        return this.transpose().conj();
+    };
+
+<span id='Matrix-method-norm'>    /** Compute the p-norm of the Matrix
+</span>     * (the sum of all elements at power p).
+     *
+     * @param {Integer} power
+     *
+     * @return {Number} result
+     *
+     * @chainable
+     * @matlike
+     * @method norm
+     */
+    (function (Matrix_prototype) {
+
+        var l1 = function (xd, n) {
+            for (var i = 0, norm = 0.0; i &lt; n; i++) {
+                var tmp = xd[i];
+                norm += tmp &gt; 0 ? tmp : -tmp;
+            }
+            return norm;
+        };
+        var l2 = function (xd, n) {
+            for (var i = 0, norm = 0.0; i &lt; n; i++) {
+                var tmp = xd[i];
+                norm += tmp * tmp;
+            }
+            return norm;
+        };
+        var lp = function (xd, n, p) {
+            var pow = Math.pow, abs = Math.abs;
+            for (var i = 0, norm = 0.0; i &lt; n; i++) {
+                norm += pow(abs(xd[i]), p);
+            }
+            return norm;
+        };
+
+        Matrix_prototype.norm = function (p) {
+            if (p === undefined) {
+                p = 2;
+            } else if (!Tools.isNumber(p)) {
+                throw new Error(&#39;Matrix.norm: Argument p must be a number.&#39;);
+            }
+            var xd = this.getData(), n = xd.length;
+            var norm;
+            if (p === 1) {
+                norm = l1(xd, n);
+            } else if (p === 2) {
+                norm = l2(xd, n);
+            } else {
+                norm = lp(xd, n, p);
+            }
+            return Math.pow(norm, 1 / p);
+        };
+
+    })(Matrix_prototype);
+
+<span id='Matrix-method-triu'>    /** Return a the upper part of the Matrix.
+</span>     * The lower part is set to zero.
+     *
+     * @param {Integer} shift
+     *  Define diagonal separing the upper from
+     *  the lower part of the Matrix.
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.triu = function (shift) {
+        if (shift === undefined) {
+            shift = 0;
+        }
+        var view = this.getView();
+        var dn = view.getStep(1), m = view.getSize(0), n = view.getSize(1);
+
+        var k, _k, lk, elk;
+
+        if (this.isreal()) {
+            var ud = this.getData();
+            for (k = 0, _k = 0; k &lt; n; _k += dn, k++) {
+                for (lk = _k + k + 1 - shift, elk = _k + m; lk &lt; elk; lk++) {
+                    ud[lk] = 0;
+                }
+            }
+        } else {
+            var urd = this.getRealData(), uid = this.getImagData();
+            for (k = 0, _k = 0; k &lt; n; _k += dn, k++) {
+                for (lk = _k + k + 1 - shift, elk = _k + m; lk &lt; elk; lk++) {
+                    urd[lk] = 0;
+                    uid[lk] = 0;
+                }
+            }
+        }
+        return this;
+    };
+
+<span id='Matrix-method-tril'>    /** Return a the lower part of the Matrix.
+</span>     * The upper part is set to zero.
+     *
+     * See also:
+     *  {@link Matrix#tril},
+     *  {@link Matrix#diag}.
+     *
+     * @param {Integer} shift
+     *  Define diagonal separing the upper from
+     *  the lower part of the Matrix.
+     *
+     * @chainable
+     * @matlike
+     */
+    Matrix_prototype.tril = function (shift) {
+        var L = this.getCopy();
+        if (shift === undefined) {
+            shift = 0;
+        }
+        var view = L.getView();
+        var dn = view.getStep(1), m = view.getSize(0), n = view.getSize(1);
+
+        var k, _k, lk, elk, s;
+        s = Math.min(m, n);
+
+        if (this.isreal()) {
+            var ld = L.getData();
+            for (k = 0, _k = 0; k &lt; n; _k += dn, k++) {
+                for (lk = _k, elk = _k + k - shift; lk &lt; elk; lk++) {
+                    ld[lk] = 0;
+                }
+            }
+        } else {
+            var lrd = L.getRealData(), lid = L.getImagData();
+            for (k = 0, _k = 0; k &lt; n; _k += dn, k++) {
+                for (lk = _k, elk = _k + k - shift; lk &lt; elk; lk++) {
+                    lrd[lk] = 0;
+                    lid[lk] = 0;
+                }
+            }
+        }
+        return L;
+    };
+
+<span id='Matrix-method-diag'>    /** Return a vector containing the diagonal elements.
+</span>     *
+     * See also:
+     * {@link Matrix#triu},
+     * {@link Matrix#tril}.
+     *
+     * @param {Integer} shift
+     *  Define diagonal to be copied.
+     *
+     * @matlike
+     *
+     * @todo
+     * This function should return a Matrix if a vector is given as input.
+     */
+    Matrix_prototype.diag = function (shift) {
+        if (shift === undefined) {
+            shift = 0;
+        }
+        var view = this.getView();
+        var dm = view.getStep(0), m = view.getSize(0);
+        var dn = view.getStep(1), n = view.getSize(1);
+
+        var f, s;
+        if (shift &gt; 0) {
+            shift = Math.abs(shift);
+            f = dn;
+            s = Math.min(m, n - shift);
+        } else {
+            shift = Math.abs(shift);
+            f = dm;
+            s = Math.min(m - shift, n);
+        }
+        if (s &lt;= 0) {
+            throw new Error(&quot;Matrix.diag: Invalid diagonal requirement.&quot;);
+        }
+        var D = new Matrix([1, s], this.type(), !this.isreal());
+        var k, lk;
+
+        var step = dn + dm;
+        lk = shift * f;
+        if (this.isreal()) {
+            var ud = this.getData();
+            var dd = D.getData();
+            for (k = 0; k &lt; s; k++, lk += step) {
+                dd[k] = ud[lk];
+            }
+        } else {
+            var urd = this.getRealData(), uid = this.getImagData();
+            var drd = D.getRealData(), did = D.getImagData();
+            for (k = 0; k &lt; s; k++, lk += step) {
+                drd[k] = urd[lk];
+                did[k] = uid[lk];
+            }
+        }
+        return D;
+    };
+
+<span id='Matrix-method-bsxfun'>    /** Apply a function on two Matrix by extending the non-singleton 
+</span>     * dimensions.
+     *
+     * @param {Function|String} fun
+     *  Function to be applied. If string, it should be either:
+     *  - &quot;plus&quot;, &quot;minus&quot;, &quot;times&quot;, &quot;rdivide&quot;, &quot;ldivide&quot;, 
+     *  - &quot;min&quot;, &quot;max&quot;
+     *  - &quot;atan2&quot;, &quot;hypot&quot;
+     *  - &quot;eq&quot;, &quot;ne&quot;, &quot;lt&quot;, &quot;le&quot;, &quot;gt&quot;, &quot;ge&quot;, &quot;and&quot;, &quot;or&quot;
+     *
+     * @param {Matrix} A
+     *  First Matrix
+     *
+     * @param {Matrix} B
+     *  Second Matrix
+     *
+     * @matlike
+     */
+    Matrix.bsxfun = function (fun, a, b) {
+        a = Matrix.toMatrix(a);
+        b = Matrix.toMatrix(b);
+        if (!a.isreal() || !b.isreal()) {
+            throw new Error(&quot;Matrix.bsxfun: This function doesn&#39;t &quot; +
+                            &quot;work with complex numbers.&quot;);
+        }
+        
+        var aView = a.getView(), bView = b.getView();
+        
+        var i, ei = Math.max(aView.ndims(), bView.ndims());
+        for (i = 0; i &lt; ei; i++) {
+            var asize = a.getSize(i), bsize = b.getSize(i);
+            if (asize === 1 &amp;&amp; bsize &gt; 1) {
+                aView.selectIndicesDimension(i, new Uint8Array(bsize));
+            } else if (bsize === 1 &amp;&amp; asize &gt; 1) {
+                bView.selectIndicesDimension(i, new Uint8Array(asize));
+            } else if (bsize !== asize) {
+                throw new Error(&quot;Matrix.bsxfun: Incompatiblity on dimension: &quot; + i);
+            }
+        }
+        var out = Matrix.zeros(aView.getSize());
+        var od = out.getData(), ad = a.getData(), bd = b.getData();
+        var aiterator = aView.getIterator(0), biterator = bView.getIterator(0);
+        var ait = aiterator.iterator, ab = aiterator.begin, e = aiterator.isEnd;
+        var bit = biterator.iterator, bb = biterator.begin;
+        var io, ia, ib;
+
+        if (fun instanceof Function) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = fun(ad[ia], bd[ib]);
+            }
+        } else if (fun === &quot;plus&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] + bd[ib];
+            }
+        } else if (fun === &quot;minus&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] - bd[ib];
+            }
+        } else if (fun === &quot;times&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] * bd[ib];
+            }
+        } else if (fun === &quot;rdivide&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] / bd[ib];
+            }
+        } else if (fun === &quot;ldivide&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = bd[ib] / ad[ia];
+            }
+        } else if (fun === &quot;min&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = bd[ib] &gt; ad[ia] ? ad[ia] : bd[ib];
+            }
+        } else if (fun === &quot;power&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = Math.pow(ad[ia], bd[ib]);
+            }
+        } else if (fun === &quot;hypot&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = Math.sqrt(bd[ib] * bd[ib] + ad[ia] * ad[ia]);
+            }
+        } else if (fun === &quot;atan2&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = Math.atan2(ad[ia], bd[ib]);
+            }
+        } else if (fun === &quot;eq&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] === bd[ib] ? 1 : 0;
+            }
+        } else if (fun === &quot;ne&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] !== bd[ib] ? 1 : 0;
+            }
+        } else if (fun === &quot;lt&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] &lt; bd[ib] ? 1 : 0;
+            }
+        } else if (fun === &quot;le&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] &lt;= bd[ib] ? 1 : 0;
+            }
+        } else if (fun === &quot;gt&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] &gt; bd[ib] ? 1 : 0;
+            }
+        } else if (fun === &quot;ge&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] &gt;= bd[ib] ? 1 : 0;
+            }
+        } else if (fun === &quot;and&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] &amp;&amp; bd[ib] ? 1 : 0;
+            }
+        } else if (fun === &quot;or&quot;) {
+            for (ia = ab(), ib = bb(), io = 0; !e(); ia = ait(), ib = bit(), io++) {
+                od[io] = ad[ia] || bd[ib] ? 1 : 0;
+            }
+        } else {
+            throw new Error(&quot;Matrix.bsxfun: Wrong function argument.&quot;);
+        }
+        return out;
+    };
+
+})(Matrix, Matrix.prototype);
+
+
+
+
+
+</pre>
+</body>
+</html>
