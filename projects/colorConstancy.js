@@ -33,6 +33,7 @@ Matrix.prototype = Matrix.prototype || {};
 
     var dilatation33 = function (m) {
         var hh, ll, out, out2, v;
+
         hh = m.getSize(0);
         ll = m.getSize(1);
         out = Matrix.zeros(hh, ll, 3);
@@ -278,32 +279,6 @@ var correctImage = function (im, ill, illout) {
     return im;
 };
 
-/*
-var Plot = Plot || {};
-Plot.prototype = Plot.prototype || {};
-
-Plot.prototype.drawMode = function (h, s, m, c, op) {
-    "use strict";
-    var nBin = h.numel();
-    var hm = Matrix.zeros(1, nBin);
-
-    var a = Math.round(m.bins[0]), b = Math.round(m.bins[1]);
-    var sum;
-    if (b >= a) {
-
-        sum = h.get([], [a, b]).sum2() / (b - a + 1);
-        hm.set([], [a, b], sum);
-        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": op || 0.33});
-    } else {
-        sum = h.get([], [a, -1]).sum2();
-        sum += h.get([], [0, b]).sum2();
-        sum /= (nBin - a + b + 1);
-        hm.set([], [a, -1], sum);
-        hm.set([], [0, b], sum);
-        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": op || 0.33});
-    }
-};
-*/
 function bin2color(im, c) {
     "use strict";
     var R = im[".*"](c[0]), G = im[".*"](c[1]), B = im[".*"](c[2]);
