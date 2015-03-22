@@ -1,0 +1,46 @@
+[
+    /*{
+        "title": "Units tests",
+        "items": [
+            {
+                "name": "tests",
+                "title": "MatrixView Tests",
+                "description": "Check that everthing is right."
+            }
+        ]
+    },*/
+    {
+        "title": "Tutorials",
+        "items": [
+            {
+                "name": "getting_started",
+                "title": "The Matrix class introduction",
+                "description": "This introduction presents the basics of the Matrix class."
+            },
+            {
+                "name": "views",
+                "title": "The MatrixView class introduction",
+                "description": "This guide presents how to use the MatrixView and the iterators to manipulate datas."
+            },
+            {
+                "name": "functions",
+                "title": "An ordered presentation of functions",
+                "description": "This guide presents the mains functions ordered by categories."
+            }/*,
+            {
+                "name": "manipulation",
+                "title": "Presentation of the manipulation functions",
+                "description": "This guide introduces the many way to play with Matrix content."
+            },
+            {
+                "title": "Subgroup...",
+                "items": []
+            },
+            {
+                "name": "sandbox",
+                "title": "Sandbox",
+                "description": "Useful for quick testing."
+            }*/
+        ]
+    }
+]
