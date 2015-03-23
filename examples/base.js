@@ -6,9 +6,15 @@ var $ = function (id) {
     return document.getElementById(id);
 };
 
-var $S = function (id) {
+var $S = function (id, f, v) {
     'use strict';
-    return document.getElementById(id).style;
+    if (!f && !v) {
+        return document.getElementById(id).style;
+    }
+    if (v === undefined) {
+        return document.getElementById(id).style[f];
+    }
+    document.getElementById(id).style[f] = v;
 };
 
 var $V = function (id, v) {
@@ -121,6 +127,5 @@ var addOption = function (select, value, text) {
     var option = document.createElement('option');
     option.setAttribute('value', value);
     option.innerHTML = text;
-
     select = ($(select) || select).appendChild(option);
 };
