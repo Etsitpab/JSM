@@ -220,7 +220,7 @@ var estimateWhiteRef = function (x1, y1, x2, y2) {
 
 function plotIsoCCTLines(p, diagram, t, dist) {
     "use strict";
-    var i, color = "blue";
+    var i, color = "gray";
     var u1 = [], u2 = [], v1 = [], v2 = [];
     for (i = 0; i < t.length; i++) {
         var l = Matrix.CIE.getIsoCCTLine(t[i], dist, diagram);
@@ -358,7 +358,6 @@ function startUI() {
     setChromaticity(ill[0], ill[1], 'awChr');
     setChromaticity(ill[0], ill[1], 'ewChr');
 
-
     $("selectAction").addEventListener('change', selectAction);
     $("reset").addEventListener('click', reset);
     $("displayHelp").addEventListener('click', displayHelp);
@@ -377,13 +376,13 @@ function startUI() {
     $("applyPPL").addEventListener("click", applyPPL);
 
     document.body.onresize = resize;
-    var action = $V('selectAction');
     var imagePlot = $('imagePlot').getPlot();
     imagePlot.clear();
     imagePlot.selectarea = estimateWhiteRef;
+    $("selectAction").getElementsByTagName("option")[0].selected = "selected";
+
     $("histogram").getPlot().clear();
     setChromaticitydiagram();
-    $V('selectAction', 'wp');
     $("log").innerHTML = "";
     $("modesList").innerHTML = "";
     var ill = Matrix.CIE.getIlluminant('current', diagram);
@@ -462,6 +461,7 @@ var createPlots = function () {
     };
     p.setLegend();
 }
+
 window.onload = function () {
     "use strict";
     createPlots();
