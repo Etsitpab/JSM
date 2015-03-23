@@ -3514,7 +3514,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
         // Plot properties
         var pLProperties = {
             'id': 'Planckian locus',
-            'stroke': 'blue',
+            'stroke': 'black',
             'stroke-width': 1
         };
         var sLProperties = {
