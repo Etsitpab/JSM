@@ -1078,17 +1078,21 @@
             '/home/mazin/Images/images_test/cars_6.png',
             'F:/javascript/ipij/examples/images/cars_6.png',
             'F:/javascript/ipij/examples/images/Lenna.png',
-            '/home/mazin/Images/tecsec/dxomark2012_ila_ii50_iso400_et66-62_ISP2014H_0000.jpg'
+            '/home/mazin/Images/tecsec/dxomark2012_ila_ii50_iso400_et66-62_ISP2014H_0000.jpg',
+            '/home/mazin/Images/tecsec/damecanton2_50LuxBis_ag20-00_et60-00_ISP2014H_0000.jpg',
+            '/home/mazin/Images/tecsec/parking_2_ag8-0_dg2-5_et58-7_ISP2014H_0001.jpg'
         ];
-        Matrix.imread(names[10], function() {
+        Matrix.imread(names[12], function() {
             Tools.tic();
             createCanvas([300, 300], 'test1');
             createCanvas([300, 300], 'test2');
             createCanvas([300, 300], 'test3');
             var im = this.im2double();
+            im.imshow('test1', 0.25);
+            im = Matrix.imread('test1').im2double();
             console.log(im.size());
-            //im.applycform("sRGB to LinearRGB");
-            var alpha = -0.02, gamma = 1.0, w = 4e-3, name = 'sym8', K = 10;
+            im.applycform("sRGB to LinearRGB");
+            var alpha = -0.00, gamma = 1.0, w = 4e-3, name = 'sym8', K = 10;
             var out = Matrix.zeros(im.size());
             var maxlev = Matrix.dwtmaxlev([this.size(0), this.size(1)], name) - 1;
             for (var i = 0; i < 3; i++) {
@@ -1113,12 +1117,10 @@
                 if (channel.size(0) > im.size(0) || channel.size(1) > im.size(1)) {
                     channel = channel.get([0, im.size(0) - 1], [0, im.size(1) - 1]);
                 }
-                //var min = channel.min(), max = channel.max();
-                //channel = channel['-'](min)['./'](max['-'](min));
                 out.set([], [], i, channel);
             }
-            //out.applycform("LinearRGB to sRGB");
-            //im.applycform("LinearRGB to sRGB");
+            out.applycform("LinearRGB to sRGB");
+            im.applycform("LinearRGB to sRGB");
             var factor = 1.19;
             im.imshow('test1', factor);
             out.imshow('test2', factor);
