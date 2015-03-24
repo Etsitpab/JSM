@@ -984,10 +984,9 @@
     };
     var processCoeffs = function (D, K, gamma, w, A) {
         var C = D.get().abs(), T = D.max().getDataScalar();
-        T = Math.max(1.01, T / K);
-        
+        T = Math.max(10.0 / 255, T / K);
         var CPbool = C[">"](T);
-        if (CPbool.sum().getData() !== 0) {
+        if (CPbool.sum().getDataScalar() !== 0) {
             var CP = C.get(CPbool);
             var AP = A.get(CPbool);
             var sign = D.get(CPbool).sign();
@@ -1013,15 +1012,12 @@
         
         for (var n = 2; n <= maxIt; n++) {
             for (var i = 0, ei = x.length, norm = 0; i < ei; i++) {
-                var t = x[i], a = Math.abs(A[i]);
-                if (t === 0 || a === 0) {
-                    console.log(t, a);
-                    throw new Error();
-                }
+                var t = x[i], a = A[i];
+                a = a > 0 ? a : -a;
                 y = t - C[i] - w * gamma * Math.pow(a / t, gamma);
                 y_pr = 1 + w * gamma * gamma * Math.pow(a / t, 1 + gamma);
-                x[i] = t - y / y_pr;
                 norm += x[i] * x[i];
+                x[i] = t - y / y_pr;
                 Alt[n] += (x[i] - t) * (x[i] - t);
             }
             Alt[n] = Math.sqrt(Alt[n] / norm);
@@ -1075,42 +1071,38 @@
             '/home/mazin/Images/images_test/Lenna.png',
             '/home/mazin/Images/images_test/J7/1.png',
             '/home/mazin/Images/images_test/1332.png',
-            'P:/javascript/ipij/examples/images/cars_6.png',
-            'P:/javascript/ipij/examples/images/Lenna.png'
+            'F:/javascript/ipij/examples/images/cars_6.png',
+            'F:/javascript/ipij/examples/images/Lenna.png'
         ];
-        Matrix.imread(names[1], function() {
-  	    Tools.tic();
-  	    createCanvas([300, 300], 'test1');
-  	    createCanvas([300, 300], 'test2');
-  	    createCanvas([300, 300], 'test3');
-            var im = this.im2double();
+        Matrix.imread(names[3], function() {
+            Tools.tic();
+            createCanvas([300, 300], 'test1');
+            createCanvas([300, 300], 'test2');
+            createCanvas([300, 300], 'test3');
+            var im = this.im2double().get([0, 255], [0, 255]);//.colorConstancy("max_rgb").imcor;
 
-            var alpha = 0.1, w = 0.5, name = 'sym8';
+            var alpha = 0.2, gamma = 0.42, w = 16 / 255, name = 'bi97', K = 100;
+            var out = Matrix.zeros(im.size());
             var maxlev = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
-            var wt = [Matrix.dwt2(im, name)];
-            for (var l = 1; l < maxlev; l++) {
-   	        wt[l] = Matrix.dwt2(wt[l - 1][0], name);
+            for (var i = 0; i < 3; i++) {
+                var wt = [Matrix.dwt2(im.get([], [], i), name)];
+                for (var l = 1; l < maxlev; l++) {
+                    wt[l] = Matrix.dwt2(wt[l - 1][0], name);
+                }
+                illNorm(wt[wt.length - 1][0], alpha);
+                for (var l = wt.length - 1; l > 0; l--) {
+                    processCoeffs(wt[l][1], K, gamma, w, wt[l][0]);
+                    processCoeffs(wt[l][2], K, gamma, w, wt[l][0]);
+                    processCoeffs(wt[l][3], K, gamma, w, wt[l][0]);
+                    wt[l - 1][0] = Matrix.idwt2(wt[l], name);
+                }
+                out.set([], [], i, Matrix.idwt2(wt[0], name).get([0, out.size(0) - 1], [0, out.size(1) - 1]));
             }
-
-            illNorm(wt[wt.length - 1][0], alpha);
-            for (var l = wt.length - 1; l > 0; l--) {
-                // correctSubband(wt[l][0], wt[l][1], w);
-                // correctSubband(wt[l][0], wt[l][2], w);
-                // correctSubband(wt[l][0], wt[l][3], w);
-                wt[l][1] = processCoeffs(wt[l][1].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
-                wt[l][2] = processCoeffs(wt[l][2].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
-                wt[l][3] = processCoeffs(wt[l][3].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
-                //wt[l][2] = processCoeffs(wt[l][2].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
-                //wt[l][3] = processCoeffs(wt[l][3].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
-  	        wt[l - 1][0] = Matrix.idwt2(wt[l], name);
-            }
-  	    var out = Matrix.idwt2(wt[0], name);
-
-            im.imshow('test1', 1);
-	    out.imshow('test2', 1);
-	    out["-"](im).abs().imagesc('test3', 1);
+            im.imshow('test1', 2);
+            out.imshow('test2', 2);
+            out["-"](im).abs().imagesc('test3', 2);
             out["-"](im).abs().mean().display("mean diff");
-  	    console.log("Time:", Tools.toc());
+            console.log("Time:", Tools.toc());
         });
     });
     
