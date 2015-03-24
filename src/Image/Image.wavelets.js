@@ -982,26 +982,11 @@
         }
         return out;
     };
-    var processCoeffs = function (D, K, gamma, w, A) {
-        var C = D.get().abs(), T = D.max().getDataScalar();
-        T = Math.max(10.0 / 255, T / K);
-        var CPbool = C[">"](T);
-        if (CPbool.sum().getDataScalar() !== 0) {
-            var CP = C.get(CPbool);
-            var AP = A.get(CPbool);
-            var sign = D.get(CPbool).sign();
-            var x = newton(CP.getData(), w, gamma, AP.getData());
-            // console.log(x);
-            x = Matrix.toMatrix(x);
-            D.set(CPbool, x.abs()[".*"](sign));
-        }
-        return D;
-    };
 
-    var newton = function (C, w, gamma, A) {
+    var newton = function (C, A, w, gamma) {
         // Maximal number of iterations
         // Tolerance for the precision of Newton's method solution
-        var maxIt = 10, tol = 0.005;
+        var maxIt = 25, tol = 0.001;
         
         // It will be useful to know if the Newton method oscillates
         //var Alt = Matrix.ones(maxIt, 1)[".*"](Infinity);
@@ -1022,14 +1007,29 @@
             }
             Alt[n] = Math.sqrt(Alt[n] / norm);
             if (Alt[n] >= Alt[n - 1]) {
-                console.log('Oscillations in the Newton process.');
+                //console.log('Oscillations in the Newton process.');
             } else if (Alt[n] < tol) {
                 break;
             }
         }
         return x;
     };
-    
+    var processCoeffs = function (D, A, K, w, gamma) {
+        var C = D.get().abs(), T = D.max().getDataScalar();
+        T = Math.max(0.003, T / K);
+        //T = T / K;
+        var CPbool = C[">"](T);
+        if (CPbool.sum().getDataScalar() !== 0) {
+            var CP = C.get(CPbool);
+            var AP = A.get(CPbool);
+            var sign = D.get(CPbool).sign();
+            var x = newton(CP.getData(), AP.getData(), w, gamma);
+            x = Matrix.toMatrix(x);
+            D.set(CPbool, x.abs()[".*"](sign));
+        }
+        return D;
+    };
+
     var illNorm = function (A, alpha) {
         var cm = A.mean();
         A["*="](1 - alpha)["+="](cm[".*"](alpha));
@@ -1069,21 +1069,28 @@
 
         var names = [
             '/home/mazin/Images/images_test/Lenna.png',
+            '/home/mazin/Images/images_test/machbands.jpg',
+            '/home/mazin/Images/images_test/airfield.png',
+            '/home/mazin/Images/images_test/im2.png',
+            '/home/mazin/Images/images_test/bird.jpg',
             '/home/mazin/Images/images_test/J7/1.png',
             '/home/mazin/Images/images_test/1332.png',
+            '/home/mazin/Images/images_test/cars_6.png',
             'F:/javascript/ipij/examples/images/cars_6.png',
-            'F:/javascript/ipij/examples/images/Lenna.png'
+            'F:/javascript/ipij/examples/images/Lenna.png',
+            '/home/mazin/Images/tecsec/dxomark2012_ila_ii50_iso400_et66-62_ISP2014H_0000.jpg'
         ];
-        Matrix.imread(names[3], function() {
+        Matrix.imread(names[10], function() {
             Tools.tic();
             createCanvas([300, 300], 'test1');
             createCanvas([300, 300], 'test2');
             createCanvas([300, 300], 'test3');
-            var im = this.im2double().get([0, 255], [0, 255]);//.colorConstancy("max_rgb").imcor;
-
-            var alpha = 0.2, gamma = 0.42, w = 16 / 255, name = 'bi97', K = 100;
+            var im = this.im2double();
+            console.log(im.size());
+            //im.applycform("sRGB to LinearRGB");
+            var alpha = -0.02, gamma = 1.0, w = 4e-3, name = 'sym8', K = 10;
             var out = Matrix.zeros(im.size());
-            var maxlev = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
+            var maxlev = Matrix.dwtmaxlev([this.size(0), this.size(1)], name) - 1;
             for (var i = 0; i < 3; i++) {
                 var wt = [Matrix.dwt2(im.get([], [], i), name)];
                 for (var l = 1; l < maxlev; l++) {
@@ -1091,16 +1098,31 @@
                 }
                 illNorm(wt[wt.length - 1][0], alpha);
                 for (var l = wt.length - 1; l > 0; l--) {
-                    processCoeffs(wt[l][1], K, gamma, w, wt[l][0]);
-                    processCoeffs(wt[l][2], K, gamma, w, wt[l][0]);
-                    processCoeffs(wt[l][3], K, gamma, w, wt[l][0]);
+                    if (wt[l][0].size(0) > wt[l][1].size(0) || wt[l][0].size(1) > wt[l][1].size(1)) {
+                        wt[l][0] = wt[l][0].get([0, wt[l][1].size(0) - 1], [0, wt[l][1].size(1) - 1]);
+                    }
+                    processCoeffs(wt[l][1], wt[l][0], K, w, gamma);
+                    processCoeffs(wt[l][2], wt[l][0], K, w, gamma);
+                    processCoeffs(wt[l][3], wt[l][0], K, w, gamma);
                     wt[l - 1][0] = Matrix.idwt2(wt[l], name);
                 }
-                out.set([], [], i, Matrix.idwt2(wt[0], name).get([0, out.size(0) - 1], [0, out.size(1) - 1]));
+                if (wt[l][0].size(0) > wt[l][1].size(0) || wt[l][0].size(1) > wt[l][1].size(1)) {
+                    wt[l][0] = wt[l][0].get([0, wt[l][1].size(0) - 1], [0, wt[l][1].size(1) - 1]);
+                }
+                var channel = Matrix.idwt2(wt[0], name);
+                if (channel.size(0) > im.size(0) || channel.size(1) > im.size(1)) {
+                    channel = channel.get([0, im.size(0) - 1], [0, im.size(1) - 1]);
+                }
+                //var min = channel.min(), max = channel.max();
+                //channel = channel['-'](min)['./'](max['-'](min));
+                out.set([], [], i, channel);
             }
-            im.imshow('test1', 2);
-            out.imshow('test2', 2);
-            out["-"](im).abs().imagesc('test3', 2);
+            //out.applycform("LinearRGB to sRGB");
+            //im.applycform("LinearRGB to sRGB");
+            var factor = 1.19;
+            im.imshow('test1', factor);
+            out.imshow('test2', factor);
+            out["-"](im).abs()["+"](1).log().imagesc('test3', factor);
             out["-"](im).abs().mean().display("mean diff");
             console.log("Time:", Tools.toc());
         });
