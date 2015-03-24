@@ -973,6 +973,67 @@
         return maxlev;
     };
 
+    Matrix.prototype.sign = function () {
+        var d = this.getData();
+        var out = new Matrix(this.getSize());
+        var od = out.getData();
+        for (var i = 0, ie = d.length; i < ie; i++) {
+            od[i] = d[i] > 0 ? 1 : (d[i] < 0 ? -1 : 0);
+        }
+        return out;
+    };
+    var processCoeffs = function (D, K, gamma, w, A) {
+        var C = D.get().abs(), T = D.max().getDataScalar();
+        T = Math.max(1.01, T / K);
+        
+        var CPbool = C[">"](T);
+        if (CPbool.sum().getData() !== 0) {
+            var CP = C.get(CPbool);
+            var AP = A.get(CPbool);
+            var sign = D.get(CPbool).sign();
+            var x = newton(CP.getData(), w, gamma, AP.getData());
+            // console.log(x);
+            x = Matrix.toMatrix(x);
+            D.set(CPbool, x.abs()[".*"](sign));
+        }
+        return D;
+    };
+
+    var newton = function (C, w, gamma, A) {
+        // Maximal number of iterations
+        // Tolerance for the precision of Newton's method solution
+        var maxIt = 10, tol = 0.005;
+        
+        // It will be useful to know if the Newton method oscillates
+        //var Alt = Matrix.ones(maxIt, 1)[".*"](Infinity);
+        var Alt = new Float64Array(maxIt);
+        // First column=original wavelet coefficient
+        var x = new Float64Array(C);
+        var y, y_pr;
+        
+        for (var n = 2; n <= maxIt; n++) {
+            for (var i = 0, ei = x.length, norm = 0; i < ei; i++) {
+                var t = x[i], a = Math.abs(A[i]);
+                if (t === 0 || a === 0) {
+                    console.log(t, a);
+                    throw new Error();
+                }
+                y = t - C[i] - w * gamma * Math.pow(a / t, gamma);
+                y_pr = 1 + w * gamma * gamma * Math.pow(a / t, 1 + gamma);
+                x[i] = t - y / y_pr;
+                norm += x[i] * x[i];
+                Alt[n] += (x[i] - t) * (x[i] - t);
+            }
+            Alt[n] = Math.sqrt(Alt[n] / norm);
+            if (Alt[n] >= Alt[n - 1]) {
+                console.log('Oscillations in the Newton process.');
+            } else if (Alt[n] < tol) {
+                break;
+            }
+        }
+        return x;
+    };
+    
     var illNorm = function (A, alpha) {
         var cm = A.mean();
         A["*="](1 - alpha)["+="](cm[".*"](alpha));
@@ -1033,9 +1094,14 @@
 
             illNorm(wt[wt.length - 1][0], alpha);
             for (var l = wt.length - 1; l > 0; l--) {
-                correctSubband(wt[l][0], wt[l][1], w);
-                correctSubband(wt[l][0], wt[l][2], w);
-                correctSubband(wt[l][0], wt[l][3], w);
+                // correctSubband(wt[l][0], wt[l][1], w);
+                // correctSubband(wt[l][0], wt[l][2], w);
+                // correctSubband(wt[l][0], wt[l][3], w);
+                wt[l][1] = processCoeffs(wt[l][1].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
+                wt[l][2] = processCoeffs(wt[l][2].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
+                wt[l][3] = processCoeffs(wt[l][3].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
+                //wt[l][2] = processCoeffs(wt[l][2].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
+                //wt[l][3] = processCoeffs(wt[l][3].get().reshape(), 10, 0.5, 16, wt[l][0].get().reshape()).reshape(wt[l][0].size());
   	        wt[l - 1][0] = Matrix.idwt2(wt[l], name);
             }
   	    var out = Matrix.idwt2(wt[0], name);
