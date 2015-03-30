@@ -51,7 +51,6 @@ p {
     box-shadow: 0 8px 24px rgba(100, 100, 100, 0.5);
     padding: 20px;
     margin: auto;
-    /* margin-top: 30px;*/
     display: absolute;
     width: calc(100% - 100px);
     height: calc(100% - 70px);

@@ -129,3 +129,43 @@ var addOption = function (select, value, text) {
     option.innerHTML = text;
     select = ($(select) || select).appendChild(option);
 };
+
+var createFieldset = function (title, properties) {
+    "use strict";
+    var fs = document.createElement("fieldset");
+    var legend = document.createElement("legend");
+    var properties = [
+        "Rotation",
+        {id: "rotation", range: [0, 1, 3]},
+        "x1, x2",
+        {id: "x1", range: [0, 1e-3, 1, 0]},
+        {id: "x2", range: [0, 1e-3, 1, 1]},
+        "y1, y2",
+        {id: "y1", range: [0, 1e-3, 1, 0]},
+        {id: "y2", range: [0, 1e-3, 1, 1]},
+        "",
+        {id: "applyCrop", button: "Apply"},
+        {id: "resetCrop", button: "Reset"},
+    ];
+    var properties = [
+        "Channels",
+        {
+            id: "channels_contrast",
+            select: ["[]", "ALL", "[0]", "RED", "[1]", "GREEN","[2]", "BLUE"]
+        },
+        "Gamma",
+        {id: "gamma", range: [0.2, 0.01, 4, 1]},
+        "Brightness",
+        {id: "brightness", range: [0, 0.01, 1, 0.5]},
+        "Contrast",
+        {id: "contrast", range: [0, 0.01, 1, 0.5]},
+        "Equalization",
+        {
+            id: "histeq_contrast",
+            select: ["no", "NO", "uniform", "UNIFORM"]
+        },
+        "",
+        {id: "applyContrast", button: "Apply"},
+        {id: "resetContrast", button: "Reset"},
+    ];
+};
