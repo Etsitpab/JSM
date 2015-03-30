@@ -52,6 +52,7 @@ Matrix.prototype = Matrix.prototype || {};
         return out.cat(2, out, out);
     };
 
+
     Matrix.prototype.colorConstancy = function (algorithm, mask) {
         if (algorithm === undefined) {
             algorithm = 'grey_edge';
@@ -96,8 +97,9 @@ Matrix.prototype = Matrix.prototype || {};
         mask_im = mask_im || Matrix.zeros(im.getSize(0), im.getSize(1), 1);
         mask_im = mask_im['+'](im.max(2)[">="](1));
         mask_im = dilatation33(mask_im);
-
         mask_im = mask_im['==='](0);
+        // mask_im = mask_im.imdilate([[1, 1, 1],[1, 1, 1], [1, 1, 1]]);
+        
         if (diff_order === 0 && sigma !== 0) {
             im = im.gaussian(sigma);
         }
@@ -113,7 +115,10 @@ Matrix.prototype = Matrix.prototype || {};
         var d = im['.*'](mask_im).reshape([size[0] * size[1], size[2]]);
         if (minkNorm !== -1) {
             d = (minkNorm === 1) ? d : d['.^'](minkNorm);
-            ill = d.sum(0)['.^'](1 / minkNorm);
+            ill = d.sum(0);
+            if (minkNorm !== 1) {
+                ill = ill['.^'](1 / minkNorm);
+            }
         } else {
             ill = d.max(0);
         }
