@@ -123,7 +123,7 @@
         testcsmatrix(m1, m2);
     };
 
-    Matrix._benchmarkSolveur = function (sz) {
+    Matrix._benchmarkSolver = function (sz) {
 
         sz = sz || 300;
         var tic = Tools.tic, toc = Tools.toc;
