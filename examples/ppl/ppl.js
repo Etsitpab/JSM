@@ -5,7 +5,7 @@ var diagram = "xyY";
 var addScatter = false;
 var imgOrig;
 var imgCurrent;
-var MAX_SIZE = 1200;
+var MAX_SIZE = 800;
 
 
 var colorsName = [
@@ -254,7 +254,6 @@ var computeEstimations = function (img) {
     return estimations;
 };
 var plotPPL = function (ppl) {
-    setChromaticitydiagram();
     var p = {
         k: $F("k"),
         delta: $F("delta"),
@@ -276,9 +275,7 @@ var plotPPL = function (ppl) {
         h.drawMode(ppl.histogramWeighted, ppl.scale, m, c);
     }
 };
-
 var estimations;
-
 var applyPPL = function (event) {
     'use strict';
 
@@ -391,9 +388,6 @@ function startUI() {
     var ill = Matrix.CIE.getIlluminant('current', diagram);
     setChromaticity(ill[0], ill[1], 'awChr');
     setChromaticity(ill[0], ill[1], 'ewChr');
-
-    //hideFieldset();
-    displayHelp();
 }
 
 var resize = function () {
@@ -417,7 +411,7 @@ var setChromaticitydiagram = function () {
 };
 
 var createPlots = function () {
-    // Image Plot
+        // Image Plot
     var width = 500;
     var height = 400;
     var plotProperties = {
@@ -491,6 +485,8 @@ window.onload = function () {
 
     };
     $("loadFile").addEventListener("change", read, false);
+
+    hideFieldset();
 
 };
 
