@@ -29,7 +29,7 @@ If you experience problem, be sure that you installed the ruby1.9-dev (or more r
 Here is the link to some demos that have been realized with this project: 
 
 - [Image editor](http://etsitpab.github.io/JSM/examples/colorspaces/colorspaces.html) (Beta version)
-- [Estimation of illuminants from projections on the planckian locus](http://etsitpab.github.io/JSM/examples/ppl/ppl.html) (Beta version)
+- [Estimation of illuminants from projections on the planckian locus and other color constancy algorithms](http://etsitpab.github.io/JSM/examples/ppl/ppl.html) (Beta version)
 - [Plot editor](http://etsitpab.github.io/JSM/examples/plot/plot-editor.html) (Beta version)
 - [Game of life](http://etsitpab.github.io/JSM/examples/gameoflife/gameoflife.html) (Beta version)
 - [Keypoint detector](http://etsitpab.github.io/JSM/examples/keypoints/keypoints.html) (Beta version)
