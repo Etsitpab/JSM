@@ -86,6 +86,69 @@ function hideFieldset() {
     }
 }
 
+var initInputs = function () {
+    var inputs = document.getElementsByTagName('input');
+    var focus = function () {
+        this.focus();
+    };
+    for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].type == 'range') {
+            inputs[i].addEventListener('click', focus);
+        }
+    }
+};
+
+var initFileUpload = function (id, callback) {
+    var read = function (evt) {
+        // Only call the handler if 1 or more files was dropped.
+        if (this.files.length) {
+            var i;
+            for (i = 0; i < this.files.length; i++) {
+                readFile(this.files[i], callback, "url");
+            }
+        }
+    };
+    $(id).addEventListener("change", read, false);
+};
+
+var limitImageSize = function (image, MAX_SIZE) {
+    var maxSize = Math.max(image.size(0), image.size(1));
+    if (maxSize > MAX_SIZE) {
+        console.warn("Image size > %d, image resized.", MAX_SIZE);
+        var canvas = document.createElement("canvas");
+        image.imshow(canvas, MAX_SIZE / maxSize);
+        image = Matrix.imread(canvas).im2double();
+    }
+    return image;
+}
+
+var superCanvas = function (id, onclick, onmousewheel) {
+    var canvas = $(id);
+    var click = function (e) {
+        var coord = getPosition(canvas, e);
+        if (onclick instanceof Function) {
+            onclick.bind(this)(coord, e);
+        }
+    };
+    var onMouseWheel = function (event) {
+        event.stopPropagation();
+        event.preventDefault();
+        var coord = getPosition(canvas, event);
+        var direction = 0;
+        if (event.hasOwnProperty('wheelDelta')) {
+            direction = -event.wheelDelta / 120.0;
+        } else {
+            direction = event.detail / 3.0;
+        }
+        if (onmousewheel instanceof Function) {
+            onmousewheel.bind(this)(direction * 0.01, coord, event);
+        }
+    };
+    canvas.addEventListener("click", click);
+    canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
+    canvas.addEventListener('mousewheel', onMouseWheel, false);
+};
+
 var readFile = function (file, callback, type) {
     'use strict';
     // Deal with arguments

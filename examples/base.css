@@ -34,6 +34,16 @@ input[type=text]  {
     text-align:right;
 }
 
+input[type=text].val {
+    width: 27%;
+    vertical-align: middle;
+}
+input[type=range].val {
+    width: 70%;
+    vertical-align: middle;
+    margin-right: 0px;
+}
+
 p { 
     margin-top: 5px;
     margin-bottom: 0px;

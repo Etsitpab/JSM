@@ -877,7 +877,8 @@ window.onload = function () {
         colorspace,
         geometric,
         morphology,
-        sharpening
+        sharpening,
+        undoRedo
     ];
 
     var i;
@@ -887,93 +888,46 @@ window.onload = function () {
         }
     }
 
-    undoRedo();
-
-    var inputs = document.getElementsByTagName('input');
-    var focus = function () {
-        this.focus();
-    };
-    for (i = 0; i < inputs.length; i++) {
-        if (inputs[i].type == 'range') {
-            inputs[i].addEventListener('click', focus);
-        }
-    }
-
-    var read = function (evt) {
-
-        var callback = function (evt) {
-            var onread = function () {
-                stack = [];
-                stackIt = 0;
-                if ($V("workImage") === "visible") {
-                    var outputCanvas = $("outputImage"), div = $("image");
-                    var canvasXSize = div.offsetWidth, canvasYSize = div.offsetHeight;
-                    outputCanvas.width = canvasXSize;
-                    outputCanvas.height = canvasYSize;
-                    outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
-                    this.imshow(outputCanvas, "fit");
-                    image = Matrix.imread(outputCanvas).im2double();
-                } else {
-                    image = this.im2double()
-                }
-                stack[0] = {image: image};
-                mask = undefined;
-                updateOutput(image);
-                var legends = document.getElementsByTagName("legend");
-                var evObj = document.createEvent('Events');
-                evObj.initEvent("click", true, false);
-                legends[1].dispatchEvent(evObj);
-            };
-            var im = new Image();
-            im.src = this;
-            im.onload = function() {
-                im.height = 50;
-                im.style.marginRight = "3px";
-                $("images").appendChild(im);
+    var callback = function (evt) {
+        var onread = function () {
+            stack = [];
+            stackIt = 0;
+            if ($V("workImage") === "visible") {
+                var outputCanvas = $("outputImage"), div = $("image");
+                var canvasXSize = div.offsetWidth, canvasYSize = div.offsetHeight;
+                outputCanvas.width = canvasXSize;
+                outputCanvas.height = canvasYSize;
+                outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
+                this.imshow(outputCanvas, "fit");
+                image = Matrix.imread(outputCanvas).im2double();
+            } else {
+                image = this.im2double()
             }
-            im.onclick = function () {
-                Matrix.imread(im.src, onread);
-            }
+            stack[0] = {image: image};
+            mask = undefined;
+            updateOutput(image);
+            var legends = document.getElementsByTagName("legend");
+            var evObj = document.createEvent('Events');
+            evObj.initEvent("click", true, false);
+            legends[1].dispatchEvent(evObj);
         };
-
-        // Only call the handler if 1 or more files was dropped.
-        if (this.files.length) {
-            var i;
-            for (i = 0; i < this.files.length; i++) {
-                readFile(this.files[i], callback, "url");
-            }
+        var im = new Image();
+        im.src = this;
+        im.onload = function() {
+            im.height = 50;
+            im.style.marginRight = "3px";
+            $("images").appendChild(im);
+        }
+        im.onclick = function () {
+            Matrix.imread(im.src, onread);
         }
     };
 
-    $("loadFile").addEventListener("change", read, false);
-    document.body.onresize = updateOutput;
+    initFileUpload('loadFile', callback);
+    superCanvas("outputImage", onclick, onmousewheel);
     hideFieldset();
+    initInputs();
     initProcess();
-
-    var canvas = $("outputImage");
-    var click = function (e) {
-        var coord = getPosition(canvas, e);
-        if (onclick instanceof Function) {
-            onclick.bind(this)(coord, e);
-        }
-    };
-    canvas.addEventListener("click", click);
-
-    var onMouseWheel = function (event) {
-        event.stopPropagation();
-        event.preventDefault();
-        var coord = getPosition(canvas, event);
-        var direction = 0;
-        if (event.hasOwnProperty('wheelDelta')) {
-            direction = -event.wheelDelta / 120.0;
-        } else {
-            direction = event.detail / 3.0;
-        }
-        if (onmousewheel instanceof Function) {
-            onmousewheel.bind(this)(direction * 0.01, coord, event);
-        }
-    };
-    canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
-    canvas.addEventListener('mousewheel', onMouseWheel, false);
+    document.body.onresize = updateOutput;
 };
 
