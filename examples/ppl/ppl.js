@@ -5,7 +5,7 @@ var diagram = "xyY";
 var addScatter = false;
 var imgOrig;
 var imgCurrent;
-var MAX_SIZE = 800;
+var MAX_SIZE = 1200;
 
 
 var colorsName = [
@@ -162,13 +162,7 @@ function plotScatter(x1, y1, x2, y2) {
 function callback(image) {
     'use strict';
 
-    var maxSize = Math.max(image.size(0), image.size(1));
-    if (maxSize > MAX_SIZE) {
-        console.warn("Image size > %d, image resized.", MAX_SIZE);
-        var canvas = document.createElement("canvas");
-        image.imshow(canvas, MAX_SIZE / maxSize);
-        image = Matrix.imread(canvas).im2double();
-    }
+    image = limitImageSize(image, MAX_SIZE);
     imgOrig = image.im2double();
     imgCurrent = image.im2double();
 
@@ -253,6 +247,7 @@ var computeEstimations = function (img) {
     };
     return estimations;
 };
+
 var plotPPL = function (ppl) {
     var p = {
         k: $F("k"),
@@ -293,7 +288,7 @@ var applyPPL = function (event) {
     log("-------");
     $("modesList").innerHTML = "";
     for (var i = 1; i < estimations.ppl.modes.length; i++) {
-        addOption("modesList", "PP" + i, "PPL mode 1 (" + c + ")");
+        addOption("modesList", "PP" + i, "PPL mode 1 (" + colorsName[i - 1] + ")");
         log("PPL mode "+ i + ":", angularError(getWhiteRefRGB(), estimations.ppl.modes[i].RGB).toFixed(2) + '&deg');
     }
     addOption("modesList", "GW", "Grey-World");
@@ -331,14 +326,6 @@ var applyPPL = function (event) {
     log("Grey-Edge:", angularError(getWhiteRefRGB(), estimations.ge.get().getData()).toFixed(2) + '&deg');
 };
 
-var displayHelp = function () {
-    "use strict";
-    if ($S("help", "display") === "block") {
-        $S("help", "display", "none");
-    } else {
-        $S("help", "display", "block");
-    }
-};
 
 function startUI() {
     'use strict';
@@ -360,20 +347,9 @@ function startUI() {
 
     $("selectAction").addEventListener('change', selectAction);
     $("reset").addEventListener('click', reset);
-    $("displayHelp").addEventListener('click', displayHelp);
-    $("closeHelp").addEventListener('click', displayHelp);
-
-    var inputs = document.getElementsByTagName('input');
-    var focus = function () {
-        this.focus();
-    };
-    var i;
-    for (i = 0; i < inputs.length; i++) {
-        if (inputs[i].type == 'range') {
-            inputs[i].addEventListener('click', focus);
-        }
-    }
     $("applyPPL").addEventListener("click", applyPPL);
+    initInputs();
+    initHelp();
 
     document.body.onresize = resize;
     var imagePlot = $('imagePlot').getPlot();
@@ -388,6 +364,18 @@ function startUI() {
     var ill = Matrix.CIE.getIlluminant('current', diagram);
     setChromaticity(ill[0], ill[1], 'awChr');
     setChromaticity(ill[0], ill[1], 'ewChr');
+
+    var onChange = function () {
+        $V("kVal", $F("k"));
+        $V("deltaVal", $F("delta"));
+        $V("binsVal", $F("bins"));
+        $V("thresholdVal", $F("threshold"));
+    };
+    onChange();
+    $("k").addEventListener('change', onChange);
+    $("delta").addEventListener('change', onChange);
+    $("bins").addEventListener('change', onChange);
+    $("threshold").addEventListener('change', onChange);
 }
 
 var resize = function () {
@@ -465,29 +453,12 @@ var createPlots = function () {
 window.onload = function () {
     "use strict";
     createPlots();
-
     startUI();
-
-    var read = function (evt) {
-
-        var callback2 = function (evt) {
-            Matrix.imread(this, callback);
-            startUI();
-        };
-
-        // Only call the handler if 1 or more files was dropped.
-        if (this.files.length) {
-            var i;
-            for (i = 0; i < this.files.length; i++) {
-                readFile(this.files[i], callback2, "url");
-            }
-        }
-
-    };
-    $("loadFile").addEventListener("change", read, false);
-
-    hideFieldset();
-
+    initFileUpload("loadFile",function (evt) {
+        Matrix.imread(this, callback);
+        startUI();
+    });
+    //hideFieldset();
 };
 
 Plot.prototype.drawMode = function (h, s, m, c) {

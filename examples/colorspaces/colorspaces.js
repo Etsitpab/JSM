@@ -5,19 +5,6 @@ var stack, stackIt, image, mask, modules;
 
 var onclick, onmousewheel;
 
-var getPosition = function (e, event) {
-    'use strict';
-    var left = 0, top = 0;
-    while (e.offsetParent !== undefined && e.offsetParent !== null) {
-        left += e.offsetLeft + (e.clientLeft !== null ? e.clientLeft : 0);
-        top += e.offsetTop + (e.clientTop !== null ? e.clientTop : 0);
-        e = e.offsetParent;
-    }
-    left = -left + event.pageX;
-    top = -top + event.pageY;
-    return [left, top];
-};
-
 function exportImage() {
     "use strict";
     var output = stack[stackIt].image;
@@ -27,7 +14,6 @@ function exportImage() {
         var max = output.max();
         output = output["-"](min)["./"](max - min);
     }
-
     output.toImage(function () {
         open(this.src, '_blank');
     });
@@ -546,6 +532,79 @@ var colorTemp = function () {
     $("outputCCT").addEventListener("change", onChange);
 };
 
+var colEn = function () {
+    'use strict';
+    
+    var stretchLuminance = function (im) {
+        var l = im.mean(2), lm = l.min(), lM = l.max();
+        var ls = l["-"](lm)["./"](lM["-"](lm));
+        var ld = l.getData(), lsd = ls.getData(), od = im.getData();
+        var e = ld.length;
+        for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
+            var cst = lsd[r] / ld[r];
+            od[r] *= cst;
+            od[g] *= cst;
+            od[b] *= cst;
+        }
+    };
+    var stretchColorChannels = function (im) {
+        for (var c = 0; c < 3; c++) {
+            var channel = im.get([], [], c);
+            var min = channel.min(), max = channel.max();
+            channel["-="](min)["/="](max["-"](min));
+            im.set([], [], c, channel);
+        }
+    };
+    
+    var getParameters = function () {
+        return {
+            K: $F("K"),
+            gamma: $F("gamma"),
+            alpha: $F("alpha"),
+            w: $F("w") / 255,
+            wav: $V("wavelet")
+        };
+    };
+    
+    colEn.reset = function () {
+        Tools.tic();
+        $F("K", 10);
+        $F("gamma", 1.0);
+        $F("alpha", 0.1);
+        $F("w", 1.0);
+        $("wavelet").getElementsByTagName("option")[0].selected = "selected";
+        onChange();
+    };
+
+    colEn.fun = function (img, p) {
+        var out = img.colorEnhancement(p.gamma, p.w, p.K, p.wav, p.alpha);
+        // if ($V('stretchDyn') === "lum") {
+        //     stretchLuminance(out);
+        // } else if ($V('stretchDyn') === "color") {
+        //     stretchColorChannels(out);
+        // }
+        updateOutput(out);
+        return out;
+    };
+
+    var onApply = function () {
+        apply("colEn", getParameters());
+    };
+    var onChange = function () {
+        $V("KVal", $F("K"));
+        $V("gammaVal", $F("gamma"));
+        $V("alphaVal", $F("alpha"));
+        $V("wVal", $F("w"));
+    };
+    onChange();
+    $("K").addEventListener("change", onChange, false);
+    $("w").addEventListener("change", onChange, false);
+    $("alpha").addEventListener("change", onChange, false);
+    $("gamma").addEventListener("change", onChange, false);
+    $("applyColEn").addEventListener("click", onApply, false);
+    $("resetColEn").addEventListener("click", colEn.reset, false);
+};
+
 var noise = function () {
     "use strict";
 
@@ -870,6 +929,7 @@ window.onload = function () {
         hueSaturation,
         colorTemp,
         colorBalance,
+        colEn,
         noise,
         filter,
         thresholding,

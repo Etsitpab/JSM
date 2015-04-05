@@ -1,41 +1,64 @@
 /*global console, document, Matrix, Colorspaces, CIE, open */
 /*jshint indent: 4, unused: true, white: true */
 
-var IMAGE, MAX_SIZE = 1200;
+var IMAGE_ORIG, IMAGE_PROCESSED, DIFF, MAX_SIZE = 1200;
 
-function updateOutput(image) {
+var stretchLuminance = function (im) {
+    "use strict"
+    var l = im.mean(2), lm = l.min(), lM = l.max();
+    var ls = l["-"](lm)["./"](lM["-"](lm));
+    var ld = l.getData(), lsd = ls.getData(), od = im.getData();
+    var e = ld.length;
+    for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
+        var cst = lsd[r] / ld[r];
+        od[r] *= cst;
+        od[g] *= cst;
+        od[b] *= cst;
+    }
+};
+
+var stretchColorChannels = function (im) {
     "use strict";
-    var outputCanvas = $("outputImage");
+    for (var c = 0; c < 3; c++) {
+        var channel = im.get([], [], c);
+        var min = channel.min(), max = channel.max();
+        channel["-="](min)["/="](max["-"](min));
+        im.set([], [], c, channel);
+    }
+};
+
+function updateOutput() {
+    "use strict";
+    var image;
+    if ($V("view") === "proc") {
+        image = IMAGE_PROCESSED;
+        if ($V('stretchDyn') === "lum") {
+            image = image.get();
+            stretchLuminance(image);
+        } else if ($V('stretchDyn') === "color") {
+            image = image.get();
+            stretchColorChannels(image);
+        }
+    } else if ($V("view") === "orig") {
+        image = IMAGE_ORIG;
+    } else if ($V("view") === "diff") {
+        DIFF = IMAGE_PROCESSED["-"](IMAGE_ORIG).abs();
+        var min = DIFF.min(), max = DIFF.max();
+        image = DIFF["-="](min)["/="](max["-"](min));
+    }
+    
+    var canvas = $("outputImage");
     var div = $("image");
     var canvasXSize = div.offsetWidth;
     var canvasYSize = div.offsetHeight;
-    outputCanvas.width = canvasXSize;
-    outputCanvas.height = canvasYSize;
-    image.imshow(outputCanvas, "fit");
-    outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
+    canvas.width = canvasXSize;
+    canvas.height = canvasYSize;
+    image.imshow(canvas, "fit");
+    canvas.style.marginTop = (div.offsetHeight - canvas.height) / 2;
 }
 
 var colEn = function () {
-    var stretchLuminance = function (im) {
-        var l = im.mean(2), lm = l.min(), lM = l.max();
-        var ls = l["-"](lm)["./"](lM["-"](lm));
-        var ld = l.getData(), lsd = ls.getData(), od = im.getData();
-        var e = ld.length;
-        for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
-            var cst = lsd[r] / ld[r];
-            od[r] *= cst;
-            od[g] *= cst;
-            od[b] *= cst;
-        }
-    };
-    var stretchColorChannels = function (im) {
-        for (var c = 0; c < 3; c++) {
-            var channel = im.get([], [], c);
-            var min = channel.min(), max = channel.max();
-            channel["-="](min)["/="](max["-"](min));
-            im.set([], [], c, channel);
-        }
-    };
+    "use strict";
     
     var getParameters = function () {
         return {
@@ -59,19 +82,15 @@ var colEn = function () {
 
     colEn.fun = function (img, p) {
         var out = img.colorEnhancement(p.gamma, p.w, p.K, p.wav, p.alpha);
-        if ($V('stretchDyn') === "lum") {
-            stretchLuminance(out);
-        } else if ($V('stretchDyn') === "color") {
-            stretchColorChannels(out);
-        }
-        updateOutput(out);
+
         return out;
     };
 
     var onApply = function () {
-        // apply("colEn", getParameters());
-        colEn.fun(IMAGE, getParameters());
-        //colEn.reset();
+        IMAGE_PROCESSED = colEn.fun(IMAGE_ORIG, getParameters());
+        $("view").getElementsByTagName("option")[0].selected = "selected";
+        $("view").focus();
+        updateOutput();
     };
     var onChange = function () {
         $V("KVal", $F("K"));
@@ -92,20 +111,21 @@ window.onload = function () {
     "use strict";
     var callback = function (evt) {
         var onread = function () {
-            IMAGE = limitImageSize(this.im2double(), MAX_SIZE);
-            updateOutput(IMAGE);
+            IMAGE_ORIG = limitImageSize(this.im2double(), MAX_SIZE);
+            IMAGE_PROCESSED = IMAGE_ORIG;
+            $("view").getElementsByTagName("option")[1].selected = "selected";
+            updateOutput();
         };
         Matrix.imread(this, onread);
     };
     initFileUpload("loadFile", callback);
     initInputs();
+    initHelp();
     colEn();
 
-    var resetImage = function () {
-        updateOutput(IMAGE);
-    };
-    $("resetImage").addEventListener("click", resetImage, false);
-    
+    $("view").addEventListener("change", updateOutput, false);
+    $('stretchDyn').addEventListener("change", updateOutput, false);
+    document.body.onresize = updateOutput;
     //hideFieldset();
 };
 

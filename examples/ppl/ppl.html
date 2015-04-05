@@ -16,6 +16,7 @@
     <script type="text/javascript" src="../base.js"> </script>          
     <script type="text/javascript" src="ppl.js"> </script>          
 
+    <title>Illuminant Estimation with Projections on Planckian Locus</title>
 </head>
 
   <body>
@@ -43,14 +44,21 @@
           
           <fieldset id="PPL">
             <legend> PPL parameters </legend>
-            <label> k </label>
-            <input type="range" id="k" min="0" step="1" max="10" value="3"></input>
-            <label> Delta </label>
-            <input type="range" id="delta" min="0.0025" step="0.0025" max="0.05" value="0.01"></input>
-            <label> Bins </label>
-            <input type="range" id="bins" min="25" step="25" max="500" value="50"></input>
+            <label class="val"> k </label>
+            <input type="range" id="k" class="val" min="0" step="1" max="10" value="3"></input>
+            <input type="text" id="kVal" class="val" value="" readonly>
+            <br>
+            <label class="val"> &delta; </label>
+            <input type="range" id="delta" class="val" min="0.0025" step="0.0025" max="0.05" value="0.01"></input>
+            <input type="text" id="deltaVal" class="val" value="" readonly>
+
+            <label class="val"> Bins </label>
+            <input type="range" id="bins" class="val" min="25" step="25" max="500" value="50"></input>
+            <input type="text" id="binsVal" class="val" value="" readonly>
+
             <label> Intensity threshold </label>
-            <input type="range" id="threshold" min="0" step="0.01" max="1" value="0.97"></input>
+            <input type="range" id="threshold" class="val" min="0" step="0.01" max="1" value="0.97"></input>
+            <input type="text" id="thresholdVal" class="val" value="" readonly>
           </fieldset>
 
           <fieldset id="view">

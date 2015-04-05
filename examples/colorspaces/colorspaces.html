@@ -10,11 +10,12 @@
     <script src="../Disk.js"></script>
     <script src="colorspaces.js"></script> 
     <script src="../../min/CIE.min.js"></script>
+    <script src="../../min/colorEnhancement.min.js"></script>
     <script src="../../min/drawHistogram.min.js"></script>
 
     <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
     <link rel="stylesheet" type="text/css" href="colorspaces.css" media="screen" />
-    <title></title>
+    <title>Simple Image Editor</title>
   </head>
 
   <body>
@@ -94,7 +95,33 @@
             <input type="button" value="Apply" id="applyContrast">
             <input type="button" value="Reset" id="resetContrast"/>
           </fieldset>
-
+          
+          <fieldset>
+            <legend>Color enhancement</legend>
+            <label class="val"> &alpha;  </label>
+            <input type="range" id="alpha" class="val" min="0" step="0.05" max="1" value="0.1"/>
+            <input type="text" id="alphaVal" class="val" value="" readonly>
+            <label class="val"> w </label>
+            <input type="range" id="w" class="val" min="0" step="0.5" max="5" value="1.0"/>
+            <input type="text" id="wVal" class="val" value="" readonly>
+            <label class="val"> K </label>
+            <input type="range" id="K" class="val" min="1" step="1" max="100" value="10"/>
+            <input type="text" id="KVal" class="val" value="" readonly>
+            <label class="val"> &gamma; </label>
+            <input type="range" id="gamma" class="val" min="0.1" step="0.1" max="1.5" value="1.0"/>
+            <input type="text" id="gammaVal" class="val" value="" readonly>
+            <label class="val"> Wavelet: </label>
+            <select id="wavelet">
+              <option value="sym4"> SYM4 </option>
+              <option value="sym8"> SYM8 </option>
+              <option value="haar"> HAAR </option>
+              <option value="bi97"> BI97 </option>
+            </select>
+            <hr></hr>
+            <input type="button" value="Apply" id="applyColEn">
+            <input type="button" value="Reset" id="resetColEn"/>
+          </fieldset>
+          
           <fieldset>
             <legend>Color Balance</legend>
             <label>Yellow / Blue</label>
@@ -194,9 +221,6 @@
             <input type="button" value="Apply" id="applyColorspace"/>
             <input type="button" value="Reset" id="resetColorspace"/>
           </fieldset>
-          <hr></hr>
-
-
           
         </div>
         <div id="image">

@@ -14,6 +14,11 @@ input, select, fieldset, file {
     border: 1px solid #e6e6e6;
 }
 
+fieldset {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
 input[type=button]:hover {
     background-color: silver;
 }
@@ -34,14 +39,19 @@ input[type=text]  {
     text-align:right;
 }
 
-input[type=text].val {
-    width: 27%;
+label.val {
+    width: 20%;
+    display: inline-block;
     vertical-align: middle;
 }
 input[type=range].val {
-    width: 70%;
+    width: 49%;
     vertical-align: middle;
     margin-right: 0px;
+}
+input[type=text].val {
+    width: 25%;
+    vertical-align: middle;
 }
 
 p { 

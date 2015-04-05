@@ -24,29 +24,39 @@
       <div id="interface">
         
         <div id="ui">
-          <label> Stretch dynamic: </label>
-          <select id="stretchDyn">
-            <option value="false"> No </option>
-            <option value="lum"> Luminance only </option>
-            <option value="color"> Each channel </option>
-          </select>
-          <input type="button" value="Reset image" id="resetImage"/>
-
+          <input type="button" id="displayHelp" value="Help"/>
+          <hr></hr>
+          <fieldset>
+            <legend>Options</legend>
+            <label> Stretch dynamic: </label>
+            <select id="stretchDyn">
+              <option value="false"> No </option>
+              <option value="lum"> Luminance only </option>
+              <option value="color"> Each channel </option>
+            </select>
+            <label> View: </label>
+            <select id="view">
+              <option value="proc"> Image processed </option>
+              <option value="orig"> Image original </option>
+              <option value="diff"> Differences </option>
+            </select>
+          </fieldset>
+            
           <fieldset>
             <legend>Color enhancement</legend>
-            <label> &alpha;  </label>
+            <label class="val"> &alpha;  </label>
             <input type="range" id="alpha" class="val" min="0" step="0.05" max="1" value="0.1"/>
             <input type="text" id="alphaVal" class="val" value="" readonly>
-            <label> w </label>
+            <label class="val"> w </label>
             <input type="range" id="w" class="val" min="0" step="0.5" max="5" value="1.0"/>
             <input type="text" id="wVal" class="val" value="" readonly>
-            <label> K </label>
+            <label class="val"> K </label>
             <input type="range" id="K" class="val" min="1" step="1" max="100" value="10"/>
             <input type="text" id="KVal" class="val" value="" readonly>
-            <label> &gamma; </label>
+            <label class="val"> &gamma; </label>
             <input type="range" id="gamma" class="val" min="0.1" step="0.1" max="1.5" value="1.0"/>
             <input type="text" id="gammaVal" class="val" value="" readonly>
-            <label> Wavelet: </label>
+            <label class="val"> Wavelet: </label>
             <select id="wavelet">
               <option value="sym4"> SYM4 </option>
               <option value="sym8"> SYM8 </option>
@@ -55,13 +65,58 @@
             </select>
             <hr></hr>
             <input type="button" value="Apply" id="applyColEn">
-            <input type="button" value="Reset" id="resetColEn"/>
+            <input type="button" value="Default parameters" id="resetColEn"/>
           </fieldset>
         </div>
         <div id="image">
           <canvas id="outputImage"></canvas>
         </div>
       </div>
+
+    </div>
+    <div id="help">
+      <h2>How to use this demo</h2>
+      <p>
+        This demo implements the algorithm introduced in the paper
+        <a href="http://www.researchgate.net/profile/Edoardo_Provenzi/publication/259397505_A_Wavelet_Perspective_on_Variational_Perceptually-Inspired_Color_Enhancement_Int_J_Comput_Vis/links/0c96052b6f4432c5fa000000.pdf">A Wavelet Perspective on Variational Perceptually-Inspired Color Enhancement</a>
+        published in 2014 by <a href="https://scholar.google.com/citations?user=tULpeL4AAAAJ&hl=en">E Provenzi</a> and V Caselles.
+        This algorithm performs color and contrast enhancement in the wavelet domain and this demo allows you to test it on your own images. Note that image larger than 1200x1200 are resized to avoid too long computations and/or mermory consumption.
+      <p>
+      <h3>Instructions</h3>
+      <ul>
+        <li>
+          First upload an image using the file selector in the top left part of this page.
+        </li>
+        <li>
+          The in the color enhancement section, you may set your parameters and then click on Apply to see the algorithm effect on the uploaded picture.
+        </li>
+        <li>
+          By using the View selector, you will be able to switch between the original image, the processed image or see differences between these images.
+        </li>
+      </ul>
+      The Stretch dynamic selector allows to expand the image dynamic after algorithm processing.
+      The stretching can be done either on the luminance channel or oon each RGB channel independently.
+      <h3>Parameters</h3>
+      The best way to understand then is with any doubt to read the paper, but i provide some hint to build intuition on their effects.
+      <ul>
+        <li>
+          <strong>&alpha;:</strong> For each channel, it controls the dispersion arround the average value.
+          Set to zero, this parameter has no effect, while set to 1 the image will be washed out. 
+        </li>
+        <li>
+          <strong>w:</strong> It controls the contrast enhancement the bigger the value the greater the effect.
+        </li>
+        <li>
+          <strong>K:</strong> It controls the magnitude of details enhanced. Small values (1) will only enhance the strongest edges while
+          greater values will also enhance small details, noise included.
+        </li>
+        <li>
+          <strong>&gamma;:</strong> This parameter is not described in the article, it implements a gamma functionnal for the &phi; variable used in the article.
+        </li>
+      </ul>
+
+      <h3></h3>
+      <input type="button" id="closeHelp" value="Close"/>
 
     </div>
 

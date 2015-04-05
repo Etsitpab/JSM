@@ -123,7 +123,21 @@ var limitImageSize = function (image, MAX_SIZE) {
 }
 
 var superCanvas = function (id, onclick, onmousewheel) {
+    'use strict';
     var canvas = $(id);
+
+    var getPosition = function (e, event) {
+        var left = 0, top = 0;
+        while (e.offsetParent !== undefined && e.offsetParent !== null) {
+            left += e.offsetLeft + (e.clientLeft !== null ? e.clientLeft : 0);
+            top += e.offsetTop + (e.clientTop !== null ? e.clientTop : 0);
+            e = e.offsetParent;
+        }
+        left = -left + event.pageX;
+        top = -top + event.pageY;
+        return [left, top];
+    };
+  
     var click = function (e) {
         var coord = getPosition(canvas, e);
         if (onclick instanceof Function) {
@@ -205,6 +219,19 @@ navigator.sayswho = (function(){
     return M.join(' ').toLowerCase();
 })();
 
+var initHelp = function () {
+    "use strict";
+    var displayHelp = function () {
+        if ($S("help", "display") === "block") {
+            $S("help", "display", "none");
+        } else {
+            $S("help", "display", "block");
+        }
+    };
+    $("displayHelp").addEventListener('click', displayHelp);
+    $("closeHelp").addEventListener('click', displayHelp);
+};
+
 var addOption = function (select, value, text) {
     'use strict';
     var option = document.createElement('option');
@@ -252,3 +279,4 @@ var createFieldset = function (title, properties) {
         {id: "resetContrast", button: "Reset"},
     ];
 };
+
