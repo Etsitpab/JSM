@@ -7592,6 +7592,7 @@ if (typeof window === 'undefined') {
      * The upper part is set to zero.
      *
      * See also:
+
      *  {@link Matrix#tril},
      *  {@link Matrix#diag}.
      *
@@ -7809,6 +7810,21 @@ if (typeof window === 'undefined') {
             }
         } else {
             throw new Error("Matrix.bsxfun: Wrong function argument.");
+        }
+        return out;
+    };
+
+    /** Return a Matrix containg of the same where values are 
+     * either -1, 0, 1 depending on the sign of the elements.
+     *
+     * @matlike
+     */
+    Matrix.prototype.sign = function () {
+        var d = this.getData();
+        var out = new Matrix(this.getSize());
+        var od = out.getData();
+        for (var i = 0, ie = d.length; i < ie; i++) {
+            od[i] = d[i] > 0 ? 1 : (d[i] < 0 ? -1 : 0);
         }
         return out;
     };

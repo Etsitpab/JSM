@@ -2290,15 +2290,15 @@
         filterND(im, im, vI, fL, fH, 'cr', 2, bL, bH, vB);
 
         // V filtering from buffer to data
-        var dLL = zeros(hh, hw, c), dHL = zeros(hh, hw, c),
-            dLH = zeros(hh, hw, c), dHH = zeros(hh, hw, c);
+        var dA = zeros(hh, hw, c), dV = zeros(hh, hw, c),
+            dH = zeros(hh, hw, c), dD = zeros(hh, hw, c);
 
-        var v = dLL.getView().swapDimensions(0, 1);
+        var v = dA.getView().swapDimensions(0, 1);
 
         vB.swapDimensions(0, 1);
-        filterND(bL, bL, vB, fL, fH, 'cr', 2, dLL, dLH, v);
-        filterND(bH, bH, vB, fL, fH, 'cr', 2, dHL, dHH, v);
-        return [dLL, dHL, dLH, dHH];
+        filterND(bL, bL, vB, fL, fH, 'cr', 2, dA, dH, v);
+        filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
+        return [dA, dH, dV, dD];
     };
     var idwt2 = function (bands, name) {
         var wav = new Wavelet(name);
@@ -2312,9 +2312,9 @@
 
         B.select([], [0, 2, -1]);
         dL.set([0, 2, -1], bands[0]);
-        dH.set([0, 2, -1], bands[1]);
+        dH.set([0, 2, -1], bands[2]);
         filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B);
-        dL.set([0, 2, -1], [], bands[2]);
+        dL.set([0, 2, -1], [], bands[1]);
         dH.set([0, 2, -1], [], bands[3]);
         filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B);
         B.restore().swapDimensions(0, 1);
@@ -2587,85 +2587,54 @@
         return maxlev;
     };
 
-    var illNorm = function (A, alpha) {
-        var cm = A.mean();
-        A["*="](1 - alpha)["+="](cm[".*"](alpha));
-    };
-    var correctSubband = function (A, D, w) {
-        var ad = A.getData(), dd = D.getData();
-
-        var d0, a;
-        var newton = function (x, a) {
-            return x - (x - d0 - w * a / x) / (1 + w * a / (x * x));
+    Matrix.appcoef2 = function (lc, name, j) {
+        var J = lc[1].size(0) - 2;
+        while (J > j + 1) {
+            lc = Matrix.upwlev2(lc, name);
+            J = lc[1].size(0) - 2;
         }
-        console.assert(ad.length === dd.length, "subbands");
-        var T = D.max().getDataScalar() / 25;
-        for (var i = 0, ie = ad.length; i < ie; i++) {
-            
-            d0 = dd[i];
-            var sig = d0 > 0 ? 1 : 0;
-            d0 = d0 > 0 ? d0 : -d0;
-
-            if (d0 < T) {
-                continue;
-            }
-
-            a = ad[i];
-            
-            var d = d0, du = newton(d, a);
-            while (Math.abs(du - d) > 1e-3) {
-                d = du;
-                du = newton(d, a);
-            }
-           
-            dd[i] = sig ? du : -du;
-        }
+        var sizes = lc[1].get([1, -1]).prod(1).getData();
+        var outSize = sizes[0];
+        var data = lc[0].getData();
+        var size = lc[1].get(0).getData();
+        data = new data.constructor(data.subarray(0, sizes[0]));
+        return new Matrix(size, data);
     };
-    
-    window.addEventListener("load", function() {
 
-        var names = [
-            '/home/mazin/Images/images_test/Lenna.png',
-            '/home/mazin/Images/images_test/J7/1.png',
-            '/home/mazin/Images/images_test/1332.png',
-            'P:/javascript/ipij/examples/images/cars_6.png',
-            'P:/javascript/ipij/examples/images/Lenna.png'
-        ];
-        Matrix.imread(names[1], function() {
-  	    Tools.tic();
-  	    createCanvas([300, 300], 'test1');
-  	    createCanvas([300, 300], 'test2');
-  	    createCanvas([300, 300], 'test3');
-            var im = this.im2double();
-
-            var alpha = 0.1, w = 0.5, name = 'sym8';
-            var maxlev = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
-            var wt = [Matrix.dwt2(im, name)];
-            for (var l = 1; l < maxlev; l++) {
-   	        wt[l] = Matrix.dwt2(wt[l - 1][0], name);
+    Matrix.detcoef2 = function (type, lc, j) {
+        var sizes = lc[1].get([1, -1]).prod(1).getData();
+        var J = lc[1].size(0) - 2;
+        var outSize = sizes[0], cSize = [0, outSize];
+        var n;
+        for (n = 0; n < J; n++) {
+            for (var b = 0; b < 3; b++) {
+                outSize += sizes[n];
+                cSize.push(outSize)
             }
+        }
+        var data = lc[0].getData();
+        var scale = J - (j + 1);
+        var size = lc[1].get([scale + 1], []).getData();
+        var band = 1 + scale * 3; 
+        if (type === 'h') {
+            var start = cSize[band], end = cSize[band + 1];
+        } else if (type === 'v') {
+            var start = cSize[band + 1], end = cSize[band + 2];
+        } else if (type === 'd') {
+            var start = cSize[band + 2], end = cSize[band + 3];
+        } else if (type === 'all') {
+            return [
+                Matrix.detcoef2('h', lc, j),
+                Matrix.detcoef2('v', lc, j),
+                Matrix.detcoef2('d', lc, j)
+            ];
+        }
+        data = new data.constructor(data.subarray(start, end));
+        return new Matrix(size, data);
+    };
 
-            illNorm(wt[wt.length - 1][0], alpha);
-            for (var l = wt.length - 1; l > 0; l--) {
-                correctSubband(wt[l][0], wt[l][1], w);
-                correctSubband(wt[l][0], wt[l][2], w);
-                correctSubband(wt[l][0], wt[l][3], w);
-  	        wt[l - 1][0] = Matrix.idwt2(wt[l], name);
-            }
-  	    var out = Matrix.idwt2(wt[0], name);
+    Matrix.wrcoef2 = function (type, lc, name, n) {};
 
-            im.imshow('test1', 1);
-	    out.imshow('test2', 1);
-	    out["-"](im).abs().imagesc('test3', 1);
-            out["-"](im).abs().mean().display("mean diff");
-  	    console.log("Time:", Tools.toc());
-        });
-    });
-    
-    //window.addEventListener("load", function() {
-    //    Matrix._benchmarkWavelets(25);
-    //});
-    
 })();
 /*
  * This program is free software: you can redistribute it and/or modify
