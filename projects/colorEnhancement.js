@@ -18,117 +18,59 @@
 
 (function () {
     'use strict';
-    var newton = function (C, A, w, gamma) {
-        // Maximal number of iterations
-        // Tolerance for the precision of Newton's method solution
-        var maxIt = 25, tol = 0.001;
-        
-        // It will be useful to know if the Newton method oscillates
-        //var Alt = Matrix.ones(maxIt, 1)[".*"](Infinity);
-        var Alt = new Float64Array(maxIt);
-        // First column=original wavelet coefficient
-        var x = new Float64Array(C);
-        var y, y_pr;
-        
-        for (var n = 2; n <= maxIt; n++) {
-            for (var i = 0, ei = x.length, norm = 0; i < ei; i++) {
-                var t = x[i], a = A[i];
-                a = a > 0 ? a : -a;
-                y = t - C[i] - w * gamma * Math.pow(a / t, gamma);
-                y_pr = 1 + w * gamma * gamma * Math.pow(a / t, 1 + gamma);
-                norm += x[i] * x[i];
-                x[i] = t - y / y_pr;
-                Alt[n] += (x[i] - t) * (x[i] - t);
-            }
-            Alt[n] = Math.sqrt(Alt[n] / norm);
-            if (Alt[n] >= Alt[n - 1]) {
-                //console.log('Oscillations in the Newton process.');
-            } else if (Alt[n] < tol) {
-                break;
+
+    var processCoeffs = function (D, A, K, w, gamma) {
+        var max = D[0] > 0 ? D[0] : -D[0];
+        for (var i = 1, ei = D.length; i < ei; i++) {
+            var v = D[i] > 0 ? D[i] : -D[i];
+            if (v > max) {
+                max = v;
             }
         }
-        return x;
-    };
-    var processCoeffs = function (D, A, K, w, gamma) {
-        var C = D.get().abs(), T = D.max().getDataScalar();
-        T = Math.max(0.003, T / K);
-        //T = T / K;
-        var CPbool = C[">"](T);
-        if (CPbool.sum().getDataScalar() !== 0) {
-            var CP = C.get(CPbool);
-            var AP = A.get(CPbool);
-            var sign = D.get(CPbool).sign();
-            var x = newton(CP.getData(), AP.getData(), w, gamma);
-            x = Matrix.toMatrix(x);
-            D.set(CPbool, x.abs()[".*"](sign));
+        var T = Math.max(1.01 / 255, max / K);
+        var y, yp, pow = Math.pow;
+        var c = 1 / (pow(255, gamma - 1));
+        for (var i = 0; i < ei; i++) {
+            var sign = D[i] > 0 ? 1 : -1, d0 = sign === 1 ? D[i] : -D[i];
+            if (d0 <= T) {
+                continue;
+            }
+            var a = A[i] > 0 ? A[i] : -A[i], d = d0;
+            for (var n = 0; n < 5; n++) {
+                y = d - d0 - w * gamma * pow(a / d, gamma);
+                yp = 1 + w * gamma * gamma * a / pow(d, 1 + gamma) * c;
+                d = d - y / yp;
+            }
+            D[i] = d * sign;
         }
         return D;
     };
 
-    var illNorm = function (A, alpha) {
-        var cm = A.mean();
-        A["*="](1 - alpha)["+="](cm[".*"](alpha));
-    };
-    var correctSubband = function (A, D, w) {
-        var ad = A.getData(), dd = D.getData();
-
-        var d0, a;
-        var newton = function (x, a) {
-            return x - (x - d0 - w * a / x) / (1 + w * a / (x * x));
-        }
-        console.assert(ad.length === dd.length, "subbands");
-        var T = D.max().getDataScalar() / 25;
-        for (var i = 0, ie = ad.length; i < ie; i++) {
-            
-            d0 = dd[i];
-            var sig = d0 > 0 ? 1 : 0;
-            d0 = d0 > 0 ? d0 : -d0;
-
-            if (d0 < T) {
-                continue;
-            }
-
-            a = ad[i];
-            
-            var d = d0, du = newton(d, a);
-            while (Math.abs(du - d) > 1e-3) {
-                d = du;
-                du = newton(d, a);
-            }
-            
-            dd[i] = sig ? du : -du;
-        }
-    };
-
     Matrix.prototype.colorEnhancement = function(gamma, w, K, name, alpha) {
-        var alpha = alpha || 0.01, gamma = gamma || 1.0, w = w || 4e-3, name = name || 'sym8', K = K || 10;
-        var im = this.im2double().applycform("sRGB to LinearRGB");
+        var alpha = alpha || 0.1, gamma = gamma || 1.0,
+            w = w || 0.5 / 255, name = name || 'sym4', K = K || 10;
+        var im = this.im2double()
         var out = Matrix.zeros(im.size());
-        var maxlev = Matrix.dwtmaxlev([this.size(0), this.size(1)], name) - 1;
-        for (var i = 0; i < 3; i++) {
-            var wt = [Matrix.dwt2(im.get([], [], i), name)];
-            for (var l = 1; l < maxlev; l++) {
-                wt[l] = Matrix.dwt2(wt[l - 1][0], name);
+        var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
+        for (var c = 0; c < im.size(2); c++) {
+            var channel = im.get([], [], c);
+            var wt = Matrix.wavedec2(channel, J, name);
+            var A = Matrix.appcoef2(wt, name, J - 1);
+            A = A[".*"](1 - alpha)["+"](A.mean()[".*"](alpha));
+            var sb = wt[1].value([0, 0]) * wt[1].value([0, 1]);
+            wt[0].set([0, sb - 1], A.reshape());
+            for (var j = J - 1; j >= 0; j--) { 
+                var d = wt[0].getData();
+                sb = wt[1].value([0, 0]) * wt[1].value([0, 1]);
+                A = d.subarray(0, sb);
+                processCoeffs(d.subarray(2 * sb, 3 * sb), A, K, w, gamma);
+                processCoeffs(d.subarray(sb, 2 * sb), A, K, w, gamma);
+                processCoeffs(d.subarray(3 * sb, 4 * sb), A, K, w, gamma);
+                wt = Matrix.upwlev2(wt, name);
             }
-            illNorm(wt[wt.length - 1][0], alpha);
-            for (var l = wt.length - 1; l > 0; l--) {
-                if (wt[l][0].size(0) > wt[l][1].size(0) || wt[l][0].size(1) > wt[l][1].size(1)) {
-                    wt[l][0] = wt[l][0].get([0, wt[l][1].size(0) - 1], [0, wt[l][1].size(1) - 1]);
-                }
-                processCoeffs(wt[l][1], wt[l][0], K, w, gamma);
-                processCoeffs(wt[l][2], wt[l][0], K, w, gamma);
-                processCoeffs(wt[l][3], wt[l][0], K, w, gamma);
-                wt[l - 1][0] = Matrix.idwt2(wt[l], name);
-            }
-            if (wt[l][0].size(0) > wt[l][1].size(0) || wt[l][0].size(1) > wt[l][1].size(1)) {
-                wt[l][0] = wt[l][0].get([0, wt[l][1].size(0) - 1], [0, wt[l][1].size(1) - 1]);
-            }
-            var channel = Matrix.idwt2(wt[0], name);
-            if (channel.size(0) > im.size(0) || channel.size(1) > im.size(1)) {
-                channel = channel.get([0, im.size(0) - 1], [0, im.size(1) - 1]);
-            }
-            out.set([], [], i, channel);
+            var channel = wt[0].reshape(wt[1].get(0).getData());
+            out.set([], [], c, channel);
         }
-        return out.applycform("LinearRGB to sRGB");;
+        return out;
     };
 })();
