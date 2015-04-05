@@ -676,15 +676,15 @@
         filterND(im, im, vI, fL, fH, 'cr', 2, bL, bH, vB);
 
         // V filtering from buffer to data
-        var dLL = zeros(hh, hw, c), dHL = zeros(hh, hw, c),
-            dLH = zeros(hh, hw, c), dHH = zeros(hh, hw, c);
+        var dA = zeros(hh, hw, c), dV = zeros(hh, hw, c),
+            dH = zeros(hh, hw, c), dD = zeros(hh, hw, c);
 
-        var v = dLL.getView().swapDimensions(0, 1);
+        var v = dA.getView().swapDimensions(0, 1);
 
         vB.swapDimensions(0, 1);
-        filterND(bL, bL, vB, fL, fH, 'cr', 2, dLL, dLH, v);
-        filterND(bH, bH, vB, fL, fH, 'cr', 2, dHL, dHH, v);
-        return [dLL, dHL, dLH, dHH];
+        filterND(bL, bL, vB, fL, fH, 'cr', 2, dA, dH, v);
+        filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
+        return [dA, dH, dV, dD];
     };
     var idwt2 = function (bands, name) {
         var wav = new Wavelet(name);
@@ -698,9 +698,9 @@
 
         B.select([], [0, 2, -1]);
         dL.set([0, 2, -1], bands[0]);
-        dH.set([0, 2, -1], bands[1]);
+        dH.set([0, 2, -1], bands[2]);
         filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B);
-        dL.set([0, 2, -1], [], bands[2]);
+        dL.set([0, 2, -1], [], bands[1]);
         dH.set([0, 2, -1], [], bands[3]);
         filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B);
         B.restore().swapDimensions(0, 1);
@@ -973,9 +973,52 @@
         return maxlev;
     };
 
-    Matrix.appcoef2 = function (type, lc, n) {};
+    Matrix.appcoef2 = function (lc, name, j) {
+        var J = lc[1].size(0) - 2;
+        while (J > j + 1) {
+            lc = Matrix.upwlev2(lc, name);
+            J = lc[1].size(0) - 2;
+        }
+        var sizes = lc[1].get([1, -1]).prod(1).getData();
+        var outSize = sizes[0];
+        var data = lc[0].getData();
+        var size = lc[1].get(0).getData();
+        data = new data.constructor(data.subarray(0, sizes[0]));
+        return new Matrix(size, data);
+    };
 
-    Matrix.detcoef2 = function (type, lc, n) {};
+    Matrix.detcoef2 = function (type, lc, j) {
+        var sizes = lc[1].get([1, -1]).prod(1).getData();
+        var J = lc[1].size(0) - 2;
+        var outSize = sizes[0], cSize = [0, outSize];
+        var n;
+        for (n = 0; n < J; n++) {
+            for (var b = 0; b < 3; b++) {
+                outSize += sizes[n];
+                cSize.push(outSize)
+            }
+        }
+        var data = lc[0].getData();
+        var scale = J - (j + 1);
+        var size = lc[1].get([scale + 1], []).getData();
+        var band = 1 + scale * 3; 
+        if (type === 'h') {
+            var start = cSize[band], end = cSize[band + 1];
+        } else if (type === 'v') {
+            var start = cSize[band + 1], end = cSize[band + 2];
+        } else if (type === 'd') {
+            var start = cSize[band + 2], end = cSize[band + 3];
+        } else if (type === 'all') {
+            return [
+                Matrix.detcoef2('h', lc, j),
+                Matrix.detcoef2('v', lc, j),
+                Matrix.detcoef2('d', lc, j)
+            ];
+        }
+        data = new data.constructor(data.subarray(start, end));
+        return new Matrix(size, data);
+    };
 
     Matrix.wrcoef2 = function (type, lc, name, n) {};
+
 })();
