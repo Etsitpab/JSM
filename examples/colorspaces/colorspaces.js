@@ -43,22 +43,7 @@ function updateOutput(image) {
     image.imshow(outputCanvas, "fit");
     outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
 
-    // Histograms
-    if (image.size(2) === 3) {
-        var red_hist = image.get([], [], 0).imhist();
-        var green_hist = image.get([], [], 1).imhist();
-        var blue_hist = image.get([], [], 2).imhist();
-        var grey_hist = image.rgb2gray().imhist();//blue_hist.min(green_hist);
-        var M = Math.max(red_hist.max().getDataScalar(), green_hist.max().getDataScalar(),
-                         blue_hist.max().getDataScalar(), grey_hist.max().getDataScalar());
-        $("histogram").drawHistogram(red_hist.getData(), M, "", undefined, 'red');
-        $("histogram").drawHistogram(green_hist.getData(), M, "", undefined, 'green', false);
-        $("histogram").drawHistogram(blue_hist.getData(), M, "", undefined, 'blue', false);
-        $("histogram").drawHistogram(grey_hist.getData(), M, "", undefined, 'grey', false);
-    } else {
-        var hist = image.imhist();
-        $("histogram").drawHistogram(hist.getData(), hist.max().getData(), "", undefined, 'grey');
-    }
+    drawImageHistogram("histogram", image);
 }
 
 

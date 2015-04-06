@@ -349,7 +349,8 @@ function startUI() {
     $("reset").addEventListener('click', reset);
     $("applyPPL").addEventListener("click", applyPPL);
     initInputs();
-    initHelp();
+    var displayHelp = initHelp();
+    displayHelp();
 
     document.body.onresize = resize;
     var imagePlot = $('imagePlot').getPlot();

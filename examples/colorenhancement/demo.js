@@ -55,6 +55,7 @@ function updateOutput() {
     canvas.height = canvasYSize;
     image.imshow(canvas, "fit");
     canvas.style.marginTop = (div.offsetHeight - canvas.height) / 2;
+    drawImageHistogram("histogram", image);
 }
 
 var colEn = function () {
@@ -77,17 +78,20 @@ var colEn = function () {
         $F("alpha", 0.1);
         $F("w", 1.0);
         $("wavelet").getElementsByTagName("option")[0].selected = "selected";
+        $F("Gamma", 1.0);
+        $("stretchDyn").getElementsByTagName("option")[0].selected = "selected";
         onChange();
     };
 
     colEn.fun = function (img, p) {
-        var out = img.colorEnhancement(p.gamma, p.w, p.K, p.wav, p.alpha);
-
-        return out;
+        return img.colorEnhancement(p.gamma, p.w, p.K, p.wav, p.alpha);
     };
 
     var onApply = function () {
-        IMAGE_PROCESSED = colEn.fun(IMAGE_ORIG, getParameters());
+        Tools.tic();
+        var img = Matrix.power(IMAGE_ORIG, $F("Gamma"));
+        IMAGE_PROCESSED = colEn.fun(img, getParameters()).power(1 / $F("Gamma"));
+        console.log("Time elapsed:", Tools.toc(), "(ms)");
         $("view").getElementsByTagName("option")[0].selected = "selected";
         $("view").focus();
         updateOutput();
@@ -95,6 +99,7 @@ var colEn = function () {
     var onChange = function () {
         $V("KVal", $F("K"));
         $V("gammaVal", $F("gamma"));
+        $V("GammaVal", $F("Gamma"));
         $V("alphaVal", $F("alpha"));
         $V("wVal", $F("w"));
     };
@@ -103,6 +108,7 @@ var colEn = function () {
     $("w").addEventListener("change", onChange, false);
     $("alpha").addEventListener("change", onChange, false);
     $("gamma").addEventListener("change", onChange, false);
+    $("Gamma").addEventListener("change", onChange, false);
     $("applyColEn").addEventListener("click", onApply, false);
     $("resetColEn").addEventListener("click", colEn.reset, false);
 };
@@ -114,15 +120,18 @@ window.onload = function () {
             IMAGE_ORIG = limitImageSize(this.im2double(), MAX_SIZE);
             IMAGE_PROCESSED = IMAGE_ORIG;
             $("view").getElementsByTagName("option")[1].selected = "selected";
+            $("applyColEn").focus();
             updateOutput();
         };
         Matrix.imread(this, onread);
     };
     initFileUpload("loadFile", callback);
     initInputs();
-    initHelp();
+    var displayHelp = initHelp();
+    displayHelp();
     colEn();
 
+    $("loadFile").focus();
     $("view").addEventListener("change", updateOutput, false);
     $('stretchDyn').addEventListener("change", updateOutput, false);
     document.body.onresize = updateOutput;

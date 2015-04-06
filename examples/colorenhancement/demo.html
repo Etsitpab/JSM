@@ -10,21 +10,24 @@
     <script src="demo.js"></script> 
     <script src="../../min/CIE.min.js"></script>
     <script src="../../min/colorEnhancement.min.js"></script>
+    <script src="../../min/drawHistogram.min.js"></script>
     <script src="../base.js"></script>
     
     <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
-    <title>Color Enhancement in the wavelet domain</title>
+    <title>Color Enhancement in the Wavelet Domain</title>
   </head>
 
   <body>
 
     <div id="demo">
-      <h1>Color Enhancement in the wavelet domain</h1>
+      <h1>Color Enhancement in the Wavelet Domain</h1>
       <input type="file" id="loadFile"/>
       <div id="interface">
         
         <div id="ui">
           <input type="button" id="displayHelp" value="Help"/>
+          <hr></hr>
+          <canvas id="histogram" style="width:100%"></canvas>
           <hr></hr>
           <fieldset>
             <legend>Options</legend>
@@ -40,8 +43,12 @@
               <option value="orig"> Image original </option>
               <option value="diff"> Differences </option>
             </select>
+            <label class="val"> &Gamma; </label>
+            <input type="range" id="Gamma" class="val" min="0.1" step="0.1" max="1.5" value="1.0"/>
+            <input type="text" id="GammaVal" class="val" value="" readonly>
           </fieldset>
-            
+          <hr></hr>
+
           <fieldset>
             <legend>Color enhancement</legend>
             <label class="val"> &alpha;  </label>
@@ -80,7 +87,8 @@
         This demo implements the algorithm introduced in the paper
         <a href="http://www.researchgate.net/profile/Edoardo_Provenzi/publication/259397505_A_Wavelet_Perspective_on_Variational_Perceptually-Inspired_Color_Enhancement_Int_J_Comput_Vis/links/0c96052b6f4432c5fa000000.pdf">A Wavelet Perspective on Variational Perceptually-Inspired Color Enhancement</a>
         published in 2014 by <a href="https://scholar.google.com/citations?user=tULpeL4AAAAJ&hl=en">E Provenzi</a> and V Caselles.
-        This algorithm performs color and contrast enhancement in the wavelet domain and this demo allows you to test it on your own images. Note that image larger than 1200x1200 are resized to avoid too long computations and/or mermory consumption.
+        This algorithm performs color and contrast enhancement in the wavelet domain and this demo allows you to test it on your own images.
+        Note that image larger than 1200x1200 are resized to avoid too long computation time and/or mermory consumption.
       <p>
       <h3>Instructions</h3>
       <ul>
@@ -89,9 +97,11 @@
         </li>
         <li>
           The in the color enhancement section, you may set your parameters and then click on Apply to see the algorithm effect on the uploaded picture.
+          The computation may take several seconds.
         </li>
         <li>
-          By using the View selector, you will be able to switch between the original image, the processed image or see differences between these images.
+          Once the image is processed, it will be displayed and you can use the arrow keys to navigate between the original image,
+          the processed image or see differences between these images. These different pictures are also available with the View selector.
         </li>
       </ul>
       The Stretch dynamic selector allows to expand the image dynamic after algorithm processing.
@@ -112,6 +122,11 @@
         </li>
         <li>
           <strong>&gamma;:</strong> This parameter is not described in the article, it implements a gamma functionnal for the &phi; variable used in the article.
+        </li>
+        <li>
+          <strong>&Gamma;:</strong> This parameter is also not described in the article, it allows for  applying a global gamma correction
+          on the input image before processing. This gamma correction is reverted after processing on the output data.
+          Generally values arround 0.5 provide very nice results.
         </li>
       </ul>
 
