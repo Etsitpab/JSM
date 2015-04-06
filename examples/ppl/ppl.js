@@ -349,8 +349,6 @@ function startUI() {
     $("reset").addEventListener('click', reset);
     $("applyPPL").addEventListener("click", applyPPL);
     initInputs();
-    var displayHelp = initHelp();
-    displayHelp();
 
     document.body.onresize = resize;
     var imagePlot = $('imagePlot').getPlot();
@@ -455,6 +453,8 @@ window.onload = function () {
     "use strict";
     createPlots();
     startUI();
+    var displayHelp = initHelp();
+    displayHelp();
     initFileUpload("loadFile",function (evt) {
         Matrix.imread(this, callback);
         startUI();

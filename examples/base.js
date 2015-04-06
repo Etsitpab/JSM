@@ -224,8 +224,12 @@ var initHelp = function () {
     var displayHelp = function () {
         if ($S("help", "display") === "block") {
             $S("help", "display", "none");
+            if ($("loadFile")) {
+                $("loadFile").focus();
+            }
         } else {
             $S("help", "display", "block");
+            $("closeHelp").focus();
         }
     };
     $("displayHelp").addEventListener('click', displayHelp);

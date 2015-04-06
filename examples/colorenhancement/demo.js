@@ -131,7 +131,6 @@ window.onload = function () {
     displayHelp();
     colEn();
 
-    $("loadFile").focus();
     $("view").addEventListener("change", updateOutput, false);
     $('stretchDyn').addEventListener("change", updateOutput, false);
     document.body.onresize = updateOutput;
