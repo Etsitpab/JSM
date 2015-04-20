@@ -279,8 +279,8 @@
         times = Matrix.fromArray(times);
         times.mean().display("mean");
         times.variance().display("variance");
-        times.min()[0].display("min");
-        times.max()[0].display("max");
+        times.min().display("min");
+        times.max().display("max");
         return times;
     };
 
