@@ -93,6 +93,8 @@ var readFile = function (file, callback, type) {
     switch (type) {
     case 'image/jpeg':
     case 'image/png':
+    case 'video/mp4':
+    case 'video/ogg':
     case 'dataurl':
     case 'url':
         type = 'url';

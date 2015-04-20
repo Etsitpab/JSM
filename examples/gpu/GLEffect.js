@@ -82,7 +82,7 @@ GLEffect.prototype.importGLImage = function (image) {
     canvas.height = image.height;
 
     return texture;  // TODO: bind 'null' texture, and rebind it when run
-}
+};
 
 /** Apply the effect. */
 GLEffect.prototype.run = function () {

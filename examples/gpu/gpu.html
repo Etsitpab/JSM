@@ -6,6 +6,7 @@
     <script type="text/javascript" src="../../modules/Image.js"></script>
 
     <script type="text/javascript" src="../base.js"></script>
+    <script type="text/javascript" src="formatting.js"></script>
     <script type="text/javascript" src="GLEffect.js"></script>
     <script type="text/javascript" src="gpu.js"></script>
 
@@ -16,9 +17,11 @@
 
     <div id="content">
       <input type="file" id="inputFile" /><br />
-      <canvas id="inputCanvas" width="1" height="1"></canvas>
+      <video id="inputVideo" width="1" height="1" controls="controls" src=""></video><br />
+      <canvas id="inputCanvas" width="1" height="1"></canvas><br />
       <canvas id="outputCanvas" width="1" height="1"></canvas><br />
-      <textarea cols="60" rows="15" id="shaderCode"></textarea><br />
+      <input type="text" id="outputFPS" size="20" value="No image / video"/><br />
+      <textarea cols="60" rows="12" id="shaderCode"></textarea><br />
       <input type="button" value="Run" onclick="applyEffect()" />
     </div>
 
