@@ -1083,9 +1083,9 @@
         ctx2.drawImage(c1, 0, 0);
         return Matrix.imread(c2).convertImage(this.type());
     };
-    /** Compute the histogram of an grey-level image.
+    /** Compute the histogram of a grey-level image.
      *
-     * @param {Matrix} bins
+     * @param {Matrix} [bins=256]
      * number of bins used for the histogram.
      *
      * @return {Matrix}
