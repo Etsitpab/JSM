@@ -29,6 +29,9 @@ var stretchColorChannels = function (im) {
 
 function updateOutput() {
     "use strict";
+    if (!IMAGE_ORIG) {
+        return;
+    }
     var image;
     if ($V("view") === "proc") {
         image = IMAGE_PROCESSED;
