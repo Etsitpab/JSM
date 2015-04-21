@@ -10,7 +10,7 @@ var stretchLuminance = function (im) {
     var ld = l.getData(), lsd = ls.getData(), od = im.getData();
     var e = ld.length;
     for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
-        var cst = lsd[r] / ld[r];
+        var cst = ld[r] <= 0 ? 0 : lsd[r] / ld[r];
         od[r] *= cst;
         od[g] *= cst;
         od[b] *= cst;
@@ -67,24 +67,35 @@ var colEn = function () {
             gamma: $F("gamma"),
             alpha: $F("alpha"),
             w: $F("w") / 255,
-            wav: $V("wavelet")
+            wav: $V("wavelet"),
+            colorspace: $V("colorspace"),
+            averageValue: $V("averageValue")
         };
     };
     
     colEn.reset = function () {
         Tools.tic();
-        $F("K", 10);
-        $F("gamma", 1.0);
+        $F("K", 20);
+        $F("gamma", 0.5);
         $F("alpha", 0.1);
-        $F("w", 1.0);
+        $F("w", 15.0);
+        $("wavelet").getElementsByTagName("option")[0].selected = "selected";
         $("wavelet").getElementsByTagName("option")[0].selected = "selected";
         $F("Gamma", 1.0);
         $("stretchDyn").getElementsByTagName("option")[0].selected = "selected";
+        $("colorspace").getElementsByTagName("option")[0].selected = "selected";
         onChange();
     };
 
     colEn.fun = function (img, p) {
-        return img.colorEnhancement(p.gamma, p.w, p.K, p.wav, p.alpha);
+        if (p.colorspace !== "RGB") {
+            img = Matrix.applycform(img, "RGB to " + p.colorspace);
+        }
+        img = img.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
+        if (p.colorspace !== "RGB") {
+            img = img.applycform(p.colorspace + " to RGB");
+        }
+        return img;
     };
 
     var onApply = function () {
@@ -113,19 +124,37 @@ var colEn = function () {
     $("resetColEn").addEventListener("click", colEn.reset, false);
 };
 
+
+
 window.onload = function () {
     "use strict";
-    var callback = function (evt) {
-        var onread = function () {
-            IMAGE_ORIG = limitImageSize(this.im2double(), MAX_SIZE);
-            IMAGE_PROCESSED = IMAGE_ORIG;
-            $("view").getElementsByTagName("option")[1].selected = "selected";
-            $("applyColEn").focus();
-            updateOutput();
-        };
-        Matrix.imread(this, onread);
+    var onread = function () {
+        IMAGE_ORIG = limitImageSize(this.im2double(), MAX_SIZE);
+        IMAGE_PROCESSED = IMAGE_ORIG;
+        $("view").getElementsByTagName("option")[1].selected = "selected";
+        $("applyColEn").focus();
+        updateOutput();
     };
-    initFileUpload("loadFile", callback);
+    var addImage = function (src) {
+        var im = new Image();
+        im.src = this;
+        im.onload = function() {
+            im.height = 50;
+            im.style.marginRight = "3px";
+            $("images").appendChild(im);
+        }
+        im.onclick = function () {
+            Matrix.imread(im.src, onread);
+        }
+    };
+
+    var pinImage = function () {
+        IMAGE_PROCESSED.toImage(function () {
+            addImage.bind(this.src)();
+        });
+    };
+    
+    initFileUpload("loadFile", addImage);
     initInputs();
     var displayHelp = initHelp();
     displayHelp();
@@ -133,6 +162,7 @@ window.onload = function () {
 
     $("view").addEventListener("change", updateOutput, false);
     $('stretchDyn').addEventListener("change", updateOutput, false);
+    $('pinImage').addEventListener("click", pinImage, false);
     document.body.onresize = updateOutput;
     //hideFieldset();
 };

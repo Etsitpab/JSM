@@ -170,6 +170,7 @@ var crop = function () {
         $F("y1", 0);
         $F("y2", 1);
         $F("rotation", 0);
+        updateParameters();
         updateOutput();
     };
 
@@ -182,6 +183,15 @@ var crop = function () {
             rotation: $F("rotation")
         };
     };
+    var updateParameters = function () {
+        var r = Math.round;
+        $V("x1Val", r($F("x1") * 100) + "%");
+        $V("x2Val", r($F("x2") * 100) + "%");
+        $V("y1Val", r($F("x1") * 100) + "%");
+        $V("y2Val", r($F("y2") * 100) + "%");
+        $V("rotationVal", $I("rotation") * 90 + "°");
+    };
+    updateParameters();
     crop.fun = function (img, p) {
         img = img.rot90(p.rotation);
         var x = img.getSize(1) - 1, y = img.getSize(0) - 1;
@@ -192,6 +202,7 @@ var crop = function () {
     };
 
     var onChange = function () {
+        updateParameters();
         change("crop", getParameters());
     };
     var onApply = function () {
@@ -210,14 +221,6 @@ var crop = function () {
 
 var contrast = function () {
     "use strict";
-    contrast.reset = function () {
-        $("channels_contrast").getElementsByTagName("option")[0].selected = "selected";
-        $("histeq_contrast").getElementsByTagName("option")[0].selected = "selected";
-        $F("gamma", 1);
-        $F("brightness", 0.5);
-        $F("contrast", 0.5);
-        updateOutput();
-    };
 
     var getParameters = function () {
         return {
@@ -227,6 +230,23 @@ var contrast = function () {
             contrast: $F("contrast"),
             channel: JSON.parse($("channels_contrast").value)
         };
+    };
+    var updateParameters = function () {
+        var r = Math.round;
+        $V("gammaVal", $F("gamma"));
+        $V("brightnessVal", $F("brightness") - 0.5);
+        $V("contrastVal", $F("contrast") - 0.5);
+    };
+    updateParameters();
+
+    contrast.reset = function () {
+        $("channels_contrast").getElementsByTagName("option")[0].selected = "selected";
+        $("histeq_contrast").getElementsByTagName("option")[0].selected = "selected";
+        $F("gamma", 1);
+        $F("brightness", 0.5);
+        $F("contrast", 0.5);
+        updateParameters();
+        updateOutput();
     };
     contrast.fun = function (img, p) {
         var im = img;
@@ -245,20 +265,20 @@ var contrast = function () {
         if (p.channel.length !== 0) {
             im = Matrix.set(img, [], [], p.channel, im);
         }
-        console.log(p.histeq);
         if (p.histeq === "uniform") {
             im = im.histeq(1023);
         }
         return im;
     };
+    
     var onChange = function () {
+        updateParameters();
         change("contrast", getParameters());
     };
     var onApply = function () {
         apply("contrast", getParameters());
         contrast.reset();
     };
-
 
     $("resetContrast").addEventListener("click", contrast.reset);
     $("applyContrast").addEventListener("click", onApply);
@@ -267,6 +287,75 @@ var contrast = function () {
     $("contrast").addEventListener("change", onChange);
     $("brightness").addEventListener("change", onChange);
     $("gamma").addEventListener("change", onChange);
+};
+
+var colEn = function () {
+    'use strict';
+    
+    var stretchLuminance = function (im) {
+        var l = im.mean(2), lm = l.min(), lM = l.max();
+        var ls = l["-"](lm)["./"](lM["-"](lm));
+        var ld = l.getData(), lsd = ls.getData(), od = im.getData();
+        var e = ld.length;
+        for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
+            var cst = lsd[r] / ld[r];
+            od[r] *= cst;
+            od[g] *= cst;
+            od[b] *= cst;
+        }
+    };
+    var stretchColorChannels = function (im) {
+        for (var c = 0; c < 3; c++) {
+            var channel = im.get([], [], c);
+            var min = channel.min(), max = channel.max();
+            channel["-="](min)["/="](max["-"](min));
+            im.set([], [], c, channel);
+        }
+    };
+    
+    var getParameters = function () {
+        return {
+            K: $F("K"),
+            gamma: $F("ceGamma"),
+            alpha: $F("alpha"),
+            w: $F("w") / 255,
+            wav: $V("wavelet")
+        };
+    };
+    
+    colEn.reset = function () {
+        Tools.tic();
+        $F("K", 20);
+        $F("ceGamma", 0.5);
+        $F("alpha", 0.0);
+        $F("w", 15);
+        $("wavelet").getElementsByTagName("option")[0].selected = "selected";
+        onChange();
+    };
+
+    colEn.fun = function (img, p) {
+        console.log(p.gamma, p.w, p.K, p.wav, p.alpha);
+        var out = img.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, 'image');
+        updateOutput(out);
+        return out;
+    };
+
+    var onApply = function () {
+        apply("colEn", getParameters());
+    };
+    var onChange = function () {
+        $V("KVal", $F("K"));
+        $V("ceGammaVal", $F("ceGamma"));
+        $V("alphaVal", $F("alpha"));
+        $V("wVal", $F("w"));
+    };
+    onChange();
+    $("K").addEventListener("change", onChange, false);
+    $("w").addEventListener("change", onChange, false);
+    $("alpha").addEventListener("change", onChange, false);
+    $("ceGamma").addEventListener("change", onChange, false);
+    $("applyColEn").addEventListener("click", onApply, false);
+    $("resetColEn").addEventListener("click", colEn.reset, false);
 };
 
 var thresholding = function () {
@@ -481,17 +570,23 @@ var hueSaturation = function () {
 var colorTemp = function () {
     "use strict";
 
-    colorTemp.reset = function () {
-        $F("inputCCT", 150);
-        $F("outputCCT", 150);
-        updateOutput();
-    };
-
     var getParameters = function () {
         return {
             tIn: $F("inputCCT"),
             tOut: $F("outputCCT")
         };
+    };
+    var updateParameters = function () {
+        $V("inputCCTVal", Math.round(1e6 / $F("inputCCT")));
+        $V("outputCCTVal", Math.round(1e6 / $F("outputCCT")));
+    };
+    updateParameters();
+
+    colorTemp.reset = function () {
+        $F("inputCCT", 153);
+        $F("outputCCT", 153);
+        updateParameters();
+        updateOutput();
     };
     colorTemp.fun = function (img, p) {
         if (p.tIn !== p.tOut) {
@@ -504,6 +599,7 @@ var colorTemp = function () {
         return img;
     };
     var onChange = function () {
+        updateParameters();
         change("colorTemp", getParameters());
     };
     var onApply = function () {
@@ -515,79 +611,6 @@ var colorTemp = function () {
     $("resetCCT").addEventListener("click", colorTemp.reset);
     $("inputCCT").addEventListener("change", onChange);
     $("outputCCT").addEventListener("change", onChange);
-};
-
-var colEn = function () {
-    'use strict';
-    
-    var stretchLuminance = function (im) {
-        var l = im.mean(2), lm = l.min(), lM = l.max();
-        var ls = l["-"](lm)["./"](lM["-"](lm));
-        var ld = l.getData(), lsd = ls.getData(), od = im.getData();
-        var e = ld.length;
-        for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
-            var cst = lsd[r] / ld[r];
-            od[r] *= cst;
-            od[g] *= cst;
-            od[b] *= cst;
-        }
-    };
-    var stretchColorChannels = function (im) {
-        for (var c = 0; c < 3; c++) {
-            var channel = im.get([], [], c);
-            var min = channel.min(), max = channel.max();
-            channel["-="](min)["/="](max["-"](min));
-            im.set([], [], c, channel);
-        }
-    };
-    
-    var getParameters = function () {
-        return {
-            K: $F("K"),
-            gamma: $F("gamma"),
-            alpha: $F("alpha"),
-            w: $F("w") / 255,
-            wav: $V("wavelet")
-        };
-    };
-    
-    colEn.reset = function () {
-        Tools.tic();
-        $F("K", 10);
-        $F("gamma", 1.0);
-        $F("alpha", 0.1);
-        $F("w", 1.0);
-        $("wavelet").getElementsByTagName("option")[0].selected = "selected";
-        onChange();
-    };
-
-    colEn.fun = function (img, p) {
-        var out = img.colorEnhancement(p.gamma, p.w, p.K, p.wav, p.alpha);
-        // if ($V('stretchDyn') === "lum") {
-        //     stretchLuminance(out);
-        // } else if ($V('stretchDyn') === "color") {
-        //     stretchColorChannels(out);
-        // }
-        updateOutput(out);
-        return out;
-    };
-
-    var onApply = function () {
-        apply("colEn", getParameters());
-    };
-    var onChange = function () {
-        $V("KVal", $F("K"));
-        $V("gammaVal", $F("gamma"));
-        $V("alphaVal", $F("alpha"));
-        $V("wVal", $F("w"));
-    };
-    onChange();
-    $("K").addEventListener("change", onChange, false);
-    $("w").addEventListener("change", onChange, false);
-    $("alpha").addEventListener("change", onChange, false);
-    $("gamma").addEventListener("change", onChange, false);
-    $("applyColEn").addEventListener("click", onApply, false);
-    $("resetColEn").addEventListener("click", colEn.reset, false);
 };
 
 var noise = function () {
@@ -634,30 +657,37 @@ var noise = function () {
 var filter = function () {
     "use strict";
 
+    var getParameters = function () {
+       return {
+           filter: $V("filter"), 
+           filter2: $V("filter2"),
+           bilateral_sigmaS: $F("bilateral_sigmaS"),
+           bilateral_sigmaR: $F("bilateral_sigmaR")
+       };
+    };
+    var updateParameters = function () {
+        $V("sigmaSVal", $F("bilateral_sigmaS") * 10);
+        var sigmaR = 1 / (101 - $F("bilateral_sigmaR") * 100);
+        $V("sigmaRVal", sigmaR.toFixed(3));
+    };
+    updateParameters();
+
     filter.reset = function () {
-        $F("gaussian", 0);
-        $F("bilateral_sigma_s", 0);
-        $F("bilateral_sigma_i", 0);
+        $F("bilateral_sigmaS", 0);
+        $F("bilateral_sigmaR", 1);
         $("filter").getElementsByTagName("option")[0].selected = "selected";
         $("filter2").getElementsByTagName("option")[0].selected = "selected";
+        updateParameters();
         updateOutput();
     };
 
-    var getParameters = function () {
-       return {
-           gaussian: $F("gaussian"),
-           filter: $V("filter"), 
-           filter2: $V("filter2"),
-           bilateral_sigma_s: $F("bilateral_sigma_s"),
-           bilateral_sigma_i: $F("bilateral_sigma_i")
-       };
-    };
     filter.fun = function (img, p) {
-        if (p.gaussian > 0) {
-            img = img.fastBlur(p.gaussian * 50);
-        }
-        if (p.bilateral_sigma_s > 0 && p.bilateral_sigma_i > 0) {
-            img = img.imbilateral(p.bilateral_sigma_s * 10, 1 / (101 - p.bilateral_sigma_i * 100), 1.5);
+        if (p.bilateral_sigmaS > 0) {
+            if (p.bilateral_sigmaR === 1) {
+                img = img.fastBlur(p.bilateral_sigmaS * 10);
+            } else {
+                img = img.imbilateral(p.bilateral_sigmaS * 10, 1 / (101 - p.bilateral_sigmaR * 100), 1.5);
+            }
         }
         if (p.filter !== "none") {
             img = img.imfilter(Matrix.fspecial(p.filter));
@@ -668,6 +698,7 @@ var filter = function () {
         return img;
     };
     var onChange = function () {
+        updateParameters();
         change("filter", getParameters());
     };
     var onApply = function () {
@@ -677,9 +708,8 @@ var filter = function () {
 
     $("applyFilter").addEventListener("click", onApply);
     $("resetFilter").addEventListener("click", filter.reset);
-    $("gaussian").addEventListener("change", onChange);
-    $("bilateral_sigma_s").addEventListener("change", onChange);
-    $("bilateral_sigma_i").addEventListener("change", onChange);
+    $("bilateral_sigmaS").addEventListener("change", onChange);
+    $("bilateral_sigmaR").addEventListener("change", onChange);
     $("filter2").addEventListener("change", onChange);
     $("filter").addEventListener("change", onChange);
 };

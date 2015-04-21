@@ -27,7 +27,7 @@ input[type=button], [type=file], select {
     background-color: #e6e6e6;
 }
 
-input[type=button], [type=text], [type=range], [type=file], label , select {
+input[type=button], [type=text], [type=range], [type=file], label, select {
     color: black;
     display: inline-block; 
     width: 100%;
@@ -39,20 +39,48 @@ input[type=text]  {
     text-align:right;
 }
 
+.parameter {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+}
+
+.parameter > div {
+    flex: 1 0;
+}
+.parameter > input[type=range] {
+    flex: 1;
+}
+.parameter > input[type=button] {
+    flex: 1;
+    margin: 1px;
+}
+
 label.val {
-    width: 20%;
+    width: 20px;
     display: inline-block;
     vertical-align: middle;
 }
 input[type=range].val {
-    width: 49%;
+    width: calc(70% - 6px - 20px);
     vertical-align: middle;
     margin-right: 0px;
 }
 input[type=text].val {
-    width: 25%;
+    width: 30%;
     vertical-align: middle;
 }
+
+input[type=range].val2 {
+    width: calc(70% - 3px);
+    vertical-align: middle;
+    margin-right: 0px;
+}
+input[type=text].val2 {
+    width: 30%;
+    vertical-align: middle;
+}
+
 
 p { 
     margin-top: 5px;

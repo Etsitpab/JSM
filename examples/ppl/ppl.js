@@ -218,7 +218,7 @@ function plotIsoCCTLines(p, diagram, t, dist) {
     var u1 = [], u2 = [], v1 = [], v2 = [];
     for (i = 0; i < t.length; i++) {
         var l = Matrix.CIE.getIsoCCTLine(t[i], dist, diagram);
-        p.addPath(l.x, l.y, {"class": "CCT", stroke: color, "stroke-width": 0.5});
+        p.addPath(l.x, l.y, {"id": "CCT" + i, stroke: color, "stroke-width": 0.5});
         u1.push(l.x[0]);
         u2.unshift(l.x[1]);
         v1.push(l.y[0]);
@@ -227,8 +227,18 @@ function plotIsoCCTLines(p, diagram, t, dist) {
     var u = u1.concat(u2), v = v1.concat(v2);
     u.push(u[0]);
     v.push(v[0]);
-    p.addPath(u, v, {stroke: color, "stroke-width": 0.5});
+    p.addPath(u, v, {"id": "CCT", stroke: color, "stroke-width": 0.5});
 }
+function removeIsoCCTLines(p) {
+    var p = $('chromaticityDiagram').getPlot();
+    var ids = p.getCurvesIds();
+    
+    for (var i in ids) {
+        if (ids[i].substr(0, 3) === "CCT") {
+            p.remove(ids[i]);
+        }
+    }
+};
 
 var computeEstimations = function (img) {
     'use strict';

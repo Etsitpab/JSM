@@ -57,14 +57,21 @@
 
           <fieldset>
             <legend>Crop</legend>
-            <label> Rotation: </label>
-            <input type="range" id="rotation" min="0" step="1" max="3" value="0"/>
-            <label> x1, x2: </label>
-            <input type="range" id="x1" min="0" step="0.001" max="1" value="0"/>
-            <input type="range" id="x2" min="0" step="0.001" max="1" value="1"/>
-            <label> y2, y2: </label>
-            <input type="range" id="y1" min="0" step="0.001" max="1" value="0"/>
-            <input type="range" id="y2" min="0" step="0.001" max="1" value="1"/>
+            <label> Rotation </label>
+            <input type="range" id="rotation" class="val2" min="0" step="1" max="3" value="0"/>
+            <input type="text" id="rotationVal" class="val2" value="" readonly>
+            <label class="val"> x<sub>1</sub> </label>
+            <input type="range" id="x1" class="val" min="0" step="0.001" max="1" value="0"/>
+            <input type="text" id="x1Val" class="val" value="" readonly>
+            <label class="val"> x<sub>2</sub> </label>
+            <input type="range" id="x2" class="val" min="0" step="0.001" max="1" value="1"/>
+            <input type="text" id="x2Val" class="val" value="" readonly>
+            <label class="val"> y<sub>1</sub> </label>
+            <input type="range" id="y1" class="val" min="0" step="0.001" max="1" value="0"/>
+            <input type="text" id="y1Val" class="val" value="" readonly>
+            <label class="val"> y<sub>2</sub> </label>
+            <input type="range" id="y2" class="val" min="0" step="0.001" max="1" value="1"/>
+            <input type="text" id="y2Val" class="val" value="" readonly>
             <hr></hr>
             <input type="button" value="Apply" id="applyCrop">
             <input type="button" value="Reset" id="resetCrop"/>
@@ -72,21 +79,24 @@
           
           <fieldset>
             <legend>Contrast</legend>
-            <label> Channels: </label>
-            <select id="channels_contrast">
+            <label class="val" style="width:40%;"> Channels </label>
+            <select id="channels_contrast" style="width:56%;">
               <option value="[]"> ALL </option>
               <option value="[0]"> RED </option>
               <option value="[1]"> GREEN </option>
               <option value="[2]"> BLUE </option>
             </select>
 
-            <label> Gamma: </label>
-            <input type="range" id="gamma" min="0.2" step="0.01" max="4" value="1"/>
-            <label> Brightness: </label>
-            <input type="range" id="brightness" min="0" step="0.01" max="1" value="0.5"/>
-            <label> Contrast: </label>
-            <input type="range" id="contrast" min="0" step="0.01" max="1" value="0.5"/>
-            <label> Equalization: </label>
+            <label class="val"> &gamma; </label>
+            <input type="range" id="gamma" class="val" min="0.2" step="0.01" max="4" value="1"/>
+            <input type="text" id="gammaVal" class="val" value="" readonly>
+            <label> Brightness </label>
+            <input type="range" id="brightness" class="val2" min="0" step="0.01" max="1" value="0.5"/>
+            <input type="text" id="brightnessVal" class="val2" value="" readonly>
+            <label > Contrast </label>
+            <input type="range" id="contrast" class="val2" min="0" step="0.01" max="1" value="0.5"/>
+            <input type="text" id="contrastVal" class="val2" value="" readonly>
+            <label> Equalization </label>
             <select id="histeq_contrast">
               <option value="no"> NO </option>
               <option value="uniform"> UNIFORM </option>
@@ -97,21 +107,21 @@
           </fieldset>
           
           <fieldset>
-            <legend>Color enhancement</legend>
+            <legend>Contrast enhancement</legend>
             <label class="val"> &alpha;  </label>
-            <input type="range" id="alpha" class="val" min="0" step="0.05" max="1" value="0.1"/>
+            <input type="range" id="alpha" class="val" min="0" step="0.05" max="1" value="0.0"/>
             <input type="text" id="alphaVal" class="val" value="" readonly>
             <label class="val"> w </label>
-            <input type="range" id="w" class="val" min="0" step="0.5" max="5" value="1.0"/>
+            <input type="range" id="w" class="val" min="0" step="0.5" max="30" value="15"/>
             <input type="text" id="wVal" class="val" value="" readonly>
             <label class="val"> K </label>
-            <input type="range" id="K" class="val" min="1" step="1" max="100" value="10"/>
+            <input type="range" id="K" class="val" min="1" step="1" max="100" value="20"/>
             <input type="text" id="KVal" class="val" value="" readonly>
             <label class="val"> &gamma; </label>
-            <input type="range" id="gamma" class="val" min="0.1" step="0.1" max="1.5" value="1.0"/>
-            <input type="text" id="gammaVal" class="val" value="" readonly>
-            <label class="val"> Wavelet: </label>
-            <select id="wavelet">
+            <input type="range" id="ceGamma" class="val" min="0.1" step="0.1" max="1.5" value="0.5"/>
+            <input type="text" id="ceGammaVal" class="val" value="" readonly>
+            <label class="val" style="width:35%;"> Wavelet </label>
+            <select id="wavelet" style="width:62%;">
               <option value="sym4"> SYM4 </option>
               <option value="sym8"> SYM8 </option>
               <option value="haar"> HAAR </option>
@@ -151,10 +161,12 @@
           
           <fieldset>
             <legend>Color Temperature</legend>
-            <label> Input CCT: </label>
-            <input type="range" id="inputCCT" min="100" step="2" max="200" value="150"/>
-            <label> Output CCT: </label>
-            <input type="range" id="outputCCT" min="100" step="2" max="200" value="150"/>
+            <label class="val"> T<sub>in</sub> </label>
+            <input type="range" id="inputCCT" class="val" min="100" step="1" max="350" value="153"/>
+            <input type="text" id="inputCCTVal" class="val" value="" readonly>
+            <label class="val"> T<sub>out</sub> </label>
+            <input type="range" id="outputCCT" class="val" min="100" step="1" max="350" value="153"/>
+            <input type="text" id="outputCCTVal" class="val" value="" readonly>
             <hr></hr>
             <input type="button" value="Apply" id="applyCCT">
             <input type="button" value="Reset" id="resetCCT"/>
@@ -199,20 +211,20 @@
               <option value="Lch"> CIE Lch </option>	
             </select>
 
-            <label> Channels: </label>
-            <select id="channels">
+            <label class="val" style="width:50%;"> Channels </label>
+            <select id="channels" class="val" style="width:47%;">
               <option value="[]"> ALL </option>
-              <option value="[0]"> 0 </option>
-              <option value="[1]"> 1 </option>
-	      <option value="[2]"> 2 </option>	
+              <option value="[0]"> RED </option>
+              <option value="[1]"> GREEN </option>
+	      <option value="[2]"> BLUE </option>	
             </select>
-            <label> Stretch dynamic: </label>
-            <select id="stretch">
+            <label class="val" style="width:50%;"> Stretch dynamic </label>
+            <select id="stretch" class="val" style="width:47%;">
               <option value="NO">  NO </option>
               <option value="YES"> YES </option>
             </select>
-            <label> Colormap: </label>
-            <select id="colormap">
+            <label class="val" style="width:50%;"> Colormap </label>
+            <select id="colormap" class="val" style="width:47%;">
               <option value="GRAY"> GRAY </option>
               <option value="JET"> JET </option>
               <option value="HUE"> HUE </option>
@@ -267,11 +279,11 @@
 
           <fieldset>
             <legend>Geometrical transformation</legend>
-            <label> Rotation: </label>
+            <label> Rotation </label>
             <input type="range" id="fullRotation" min="0" step="0.01" max="1" value="0"/>
-            <label> Tilt: </label>
+            <label> Tilt </label>
             <input type="range" id="tilt" min="0" step="0.01" max="1" value="0"/>
-            <label> Scale: </label>
+            <label> Scale </label>
             <input type="range" id="scale" min="0" step="0.01" max="1" value="0.5"/>
             <hr></hr>
             <input type="button" value="Apply" id="applyGeometric">
@@ -280,9 +292,9 @@
 
           <fieldset>
             <legend>Sharpening</legend>
-            <label> Gradient: </label>
+            <label> Gradient </label>
             <input type="range" id="gradSharp" min="0" step="0.01" max="1" value="0"/>
-            <label> Proportion: </label>
+            <label> Proportion </label>
             <input type="range" id="propSharp" min="0" step="0.01" max="1" value="0"/>
             <hr></hr>
             <input type="button" value="Apply" id="applySharp">
@@ -292,10 +304,13 @@
           <fieldset>
             <legend>Filtering</legend>
             <label>Gaussian</label>
-            <input type="range" id="gaussian" min="0" step="0.01" max="1" value="0"/>
+            <label class="val"> &sigma;<sub>s</sub> </label>
+            <input type="range" class="val"id="bilateral_sigmaS" min="0" step="0.05" max="1" value="0"/>
+            <input type="text" id="sigmaSVal" class="val" value="" readonly>
             <label>Bilateral</label>
-            <input type="range" id="bilateral_sigma_s" min="0" step="0.05" max="1" value="0"/>
-            <input type="range" id="bilateral_sigma_i" min="0" step="0.05" max="1" value="0"/>
+            <label class="val"> &sigma;<sub>r</sub> </label>
+            <input type="range" class="val"id="bilateral_sigmaR" min="0" step="0.05" max="1" value="1"/>
+            <input type="text" id="sigmaRVal" class="val" value="" readonly>
             <label>Predefined</label>
             <select id="filter">
               <option value="none"> NONE </option>
