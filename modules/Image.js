@@ -1083,9 +1083,9 @@
         ctx2.drawImage(c1, 0, 0);
         return Matrix.imread(c2).convertImage(this.type());
     };
-    /** Compute the histogram of an grey-level image.
+    /** Compute the histogram of a grey-level image.
      *
-     * @param {Matrix} bins
+     * @param {Matrix} [bins=256]
      * number of bins used for the histogram.
      *
      * @return {Matrix}
@@ -2273,6 +2273,7 @@
         filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
         return out;
     };
+
     var dwt2 = function (im, name) {
         var wav = new Wavelet(name);
         var fL = wav.filterL, fH = wav.filterH;
@@ -2335,6 +2336,7 @@
      *  Dimension on which perform th dwt.
      * @return {Array}
      *  Array containing approximation coefficients and details.
+     * @matlike
      */
     Matrix.dwt = function (im, name, dim) {
         dim = dim || 0;
@@ -2353,6 +2355,7 @@
      *  Dimension on which perform th idwt.
      * @return {Matrix}
      *  Matrix with the reconstructed signal.
+     * @matlike
      */
     Matrix.idwt = function (bands, name, dim) {
         dim = dim || 0;
@@ -2370,6 +2373,7 @@
      *  Wavelet name.
      * @return {Array}
      *  Array containing approximation coefficients and details.
+     * @matlike
      */
     Matrix.dwt2 = function (im, name) {
         return dwt2(im, name);
@@ -2385,11 +2389,31 @@
      *  Wavelet name.
      * @return {Matrix}
      *  Matrix with the reconstructed signal.
+     * @matlike
      */
     Matrix.idwt2 = function (bands, name) {
         return idwt2(bands, name);
     };
 
+    /** Perform a DWT (Discrete Wavelet Transform)
+     * on each vector presents on a given Matrix dimension.
+     *
+     * __See also :__
+     * {@link Matrix#waverec},
+     * {@link Matrix#dwt}.
+     *
+     * @param {Matrix} signal
+     * @param {Number} n
+     *  Number of level of the decomposition.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} [dimension=0] 
+     *  Dimension on which the transformation is performed.
+     * @return {Array}
+     *  Array of two elements, one contains the coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @matlike
+     */
     Matrix.wavedec = function (s, n, name, dim) {
         dim = dim || 0;
         var sd = new Uint16Array(n + 2), outSize = 0;
@@ -2422,7 +2446,24 @@
         wt[0].extractViewTo(outView, matOut);
         return [matOut, new Matrix([sd.length], sd)];
     };
-
+    /** Reconstruct the signal from a DWT (Discrete Wavelet Transform)
+     * on many of a column vector.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec},
+     * {@link Matrix#idwt}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds concontains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} [dimension=0] 
+     *  Dimension on which the transformation has been performed.
+     * @return {Matrix}
+     *  The reconstructed signal.
+     * @matlike
+     */
     Matrix.waverec = function (lc, name, dim) {
         dim = dim || 0;
         var sd = lc[1].getData();
@@ -2452,6 +2493,22 @@
         return dL;
     };
 
+    /** Perform a 2D DWT (Discrete Wavelet Transform)
+     *
+     * __See also :__
+     * {@link Matrix#waverec2},
+     * {@link Matrix#dwt2}.
+     *
+     * @param {Matrix} signal
+     * @param {Number} n
+     *  Number of level of the decomposition.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array of two elements, one contains the coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @matlike
+     */
     Matrix.wavedec2 = function (s, n, name) {
         var sdx = new Array(n + 2);
         var sdy = new Array(n + 2);
@@ -2492,7 +2549,21 @@
         out.subarray(cSize[0], cSize[1]).set(wt[0].getData());
         return [new Matrix([outSize], out), Matrix.toMatrix([sdy, sdx, sdc])];
     };
-
+    /** Reconstruct the signal from a 2D DWT (Discrete Wavelet Transform).
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  The reconstructed signal.
+     * @matlike
+     */
     Matrix.waverec2 = function (lc, name) {
         var sdy = lc[1].get([], 0).getData();
         var sdx = lc[1].get([], 1).getData();
@@ -2529,7 +2600,25 @@
         }
         return A;
     };
-
+    /** Reconstruct the signal from a 2D DWT (Discrete Wavelet Transform)
+     * at the coarsest level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array of three elements, one contains the coefficients 
+     *  the second contains the sizes of each subbands, and the third 
+     *  contains the approximation coefficients at the scale j-1.
+     * @matlike
+     */
     Matrix.upwlev2 = function (lc, name) {
         var sdy = lc[1].get([], 0).getData();
         var sdx = lc[1].get([], 1).getData();
@@ -2575,18 +2664,28 @@
         return [new Matrix([out.length], out), sizes, Am];
     };
 
-    Matrix.dwtmaxlev = function (s, name) {
-        s = Matrix.toMatrix(s).min().getDataScalar();
-        var wav = new Wavelet(name);
-        var dl = wav.filterL.length,
-            dh = wav.filterH.length,
-            rl = wav.invFilterL.length,
-            rh = wav.invFilterH.length;
-        var w = Math.max(dl, dh, rl, rh);
-        var maxlev = Math.floor(Math.log(s / (w - 1)) / Math.log(2));
-        return maxlev;
-    };
-
+    /** Returns the coefficients corresponding to the approximation subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#detcoef2},
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} level
+     *  Wavelet name.
+     * @return {Matrix}
+     *  If the level corresponds to the last level of decomposition, 
+     *  the coefficients returned will be a view on the coefficient
+     *  provided. Therefore, a modification on one will affect both.
+     * @matlike
+     */
     Matrix.appcoef2 = function (lc, name, j) {
         var J = lc[1].size(0) - 2;
         while (J > j + 1) {
@@ -2597,10 +2696,29 @@
         var outSize = sizes[0];
         var data = lc[0].getData();
         var size = lc[1].get(0).getData();
-        data = new data.constructor(data.subarray(0, sizes[0]));
-        return new Matrix(size, data);
+        return new Matrix(size, data.subarray(0, sizes[0]));
     };
-
+    /** Returns the coefficients corresponding to a detail subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#appcoef2}.
+     *
+     * @param {String} type
+     *  Can be either 'h', 'v' or 'd'.'
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {Number} level
+     *  The level of the subband.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
+     * @matlike
+     */
     Matrix.detcoef2 = function (type, lc, j) {
         var sizes = lc[1].get([1, -1]).prod(1).getData();
         var J = lc[1].size(0) - 2;
@@ -2629,10 +2747,39 @@
                 Matrix.detcoef2('d', lc, j)
             ];
         }
-        data = new data.constructor(data.subarray(start, end));
-        return new Matrix(size, data);
+        return new Matrix(size, data.subarray(start, end));
     };
 
+    /** Returns the maximum level of the decomposition according 
+     * to a mother wavelet name.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Matrix} sizes
+     *  Matrix containing the size(s) of the signal to decompose.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Number}
+     * @matlike
+     */
+    Matrix.dwtmaxlev = function (s, name) {
+        s = Matrix.toMatrix(s).min().getDataScalar();
+        var wav = new Wavelet(name);
+        var dl = wav.filterL.length,
+            dh = wav.filterH.length,
+            rl = wav.invFilterL.length,
+            rh = wav.invFilterH.length;
+        var w = Math.max(dl, dh, rl, rh);
+        var maxlev = Math.floor(Math.log(s / (w - 1)) / Math.log(2));
+        return maxlev;
+    };
+
+    /** Reconstruct a signal from a given subband. 
+     * To be implemented.
+     */
     Matrix.wrcoef2 = function (type, lc, name, n) {};
 
 })();
