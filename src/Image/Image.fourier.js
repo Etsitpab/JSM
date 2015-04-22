@@ -286,6 +286,21 @@
         return Y.transpose();
     };
 
+    // var a = Matrix.ones(5).cumsum(0).cumsum(1).display(); af = a.fft2().display(); af.fftshift().display()
+    Matrix.prototype.fftshift = function (X) {
+        var out = Matrix.zeros(this.size());
+        if (this.ndims() === 2) {
+            var h = this.getSize(0), w = this.getSize(1);
+            var ySel0 = [0, Math.floor(h / 2)], ySel1 = [Math.ceil(h / 2), h - 1];
+            var xSel0 = [0, Math.floor(w / 2)], xSel1 = [Math.ceil(w / 2), w - 1];
+            out.set(ySel0, xSel0, this.get(ySel0, xSel0).get([-1, 0], [-1, 0]).conj());
+            out.set(ySel0, xSel1, this.get(ySel0, xSel1).get([-1, 0], [-1, 0]).conj());
+            out.set(ySel1, xSel0, this.get(ySel1, xSel0).get([-1, 0], [-1, 0]).conj());
+            out.set(ySel1, xSel1, this.get(ySel1, xSel1).get([-1, 0], [-1, 0]).conj());
+        }
+        return out;            
+    };
+
     /** Compute the inverse FFT of a vector.
      *
      * __See also :__
