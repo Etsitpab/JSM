@@ -224,7 +224,7 @@
         if (X.isreal()) {
             X.toComplex();
         }
-        // Ouptut matrix
+        // Output matrix
         var Y = new Matrix(X.getSize(), Float64Array, true);
         var Xr = X.getRealData(), Xi = X.getImagData();
         var Yr = Y.getRealData(), Yi = Y.getImagData();
@@ -287,9 +287,9 @@
     };
 
     // var a = Matrix.ones(5).cumsum(0).cumsum(1).display(); af = a.fft2().display(); af.fftshift().display()
-    Matrix.prototype.fftshift = function (X) {
+    Matrix.prototype.fftshift = function (X, dim) {
         var out = Matrix.zeros(this.size());
-        if (this.ndims() === 2) {
+        if (this.ndims() === 2 || this.ndims() === 3) {
             var h = this.getSize(0), w = this.getSize(1);
             var ySel0 = [0, Math.floor(h / 2)], ySel1 = [Math.ceil(h / 2), h - 1];
             var xSel0 = [0, Math.floor(w / 2)], xSel1 = [Math.ceil(w / 2), w - 1];
