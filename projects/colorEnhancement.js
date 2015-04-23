@@ -46,7 +46,7 @@
         }
         return D;
     };
-    
+
     Matrix.prototype.colorEnhancementTest = function (gamma, w, K, name, alpha, average) {
         // Default parameters
         alpha = (alpha === undefined) ? 0.1 : alpha;
@@ -70,13 +70,13 @@
             wt[c] = Matrix.wavedec2(im.get([], [], c), J, name);
             var A = Matrix.appcoef2(wt[c], name, J - 1);
             mean[c] = A.mean().getDataScalar();
-            min[c] = A.min().getDataScalar();
-            max[c] = A.max().getDataScalar();
+            // min[c] = A.min().getDataScalar();
+            // max[c] = A.max().getDataScalar();
         }
         var imMean = (mean[0] + mean[1] + mean[2]) / 3;
-        var imMin = Math.min(min[0], min[1], min[2]);
-        var imMax = Math.max(max[0], max[1], max[2]);
-    
+        // var imMin = Math.min(min[0], min[1], min[2]);
+        // var imMax = Math.max(max[0], max[1], max[2]);
+   
         for (var c = 0; c < nChannel; c++) {
             var A = Matrix.appcoef2(wt[c], name, J - 1);
             if (average === "image") {
@@ -86,7 +86,7 @@
             } else if (average === "half") {
                 norm = wNorm * 0.5; 
             }
-            A["-="](imMin)["*="](wNorm / (imMax - imMin));
+            // A["-="](imMin)["*="](wNorm / (imMax - imMin));
             A["*="](1 - alpha)["+="](norm * alpha);
         }
 
