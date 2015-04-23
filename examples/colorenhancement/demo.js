@@ -2,6 +2,7 @@
 /*jshint indent: 4, unused: true, white: true */
 
 var IMAGE_ORIG, IMAGE_PROCESSED, DIFF, MAX_SIZE = 1200;
+var STRETCH = false;
 
 var stretchLuminance = function (im) {
     "use strict"
@@ -103,7 +104,11 @@ var colEn = function () {
 
     var onApply = function () {
         Tools.tic();
-        var img = Matrix.power(IMAGE_ORIG, $F("Gamma"));
+        var img = IMAGE_ORIG.get();
+        if (STRETCH) {
+            stretchColorChannels(img);
+        }
+        img.power($F("Gamma"));
         IMAGE_PROCESSED = colEn.fun(img, getParameters()).power(1 / $F("Gamma"));
         console.log("Time elapsed:", Tools.toc(), "(ms)");
         $("view").getElementsByTagName("option")[0].selected = "selected";
