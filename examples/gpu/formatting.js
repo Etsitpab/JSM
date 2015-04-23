@@ -1,26 +1,28 @@
 /*jslint vars: true, nomen: true, browser: true, plusplus: true */
+/*jshint strict: true */
 /*exported formatSourceCode */
-
-'use strict';
 
 
 // Split a text into an array of lines
-var textToLines = function (str) {
+function textToLines(str) {
+    'use strict';
     str += '\n';
     var lines = str.split(/[ \t\r]*\n/);
     lines.pop();
     return lines;
-};
+}
 
 // Remove trailing empty lines
-var removeTrailingLines = function (lines) {
+function removeTrailingLines(lines) {
+    'use strict';
     while (lines.length && lines[lines.length - 1] === '') {
         lines.pop();
     }
-};
+}
 
 // Re-indent the lines (remove extra leading spaces)
-var reindent = function (lines) {
+function reindent(lines) {
+    'use strict';
     var k, n, match;
     var indent = 9999;
     for (k = 0; k < lines.length; k++) {
@@ -38,10 +40,11 @@ var reindent = function (lines) {
     for (k = 0; k < lines.length; k++) {
         lines[k] = lines[k].substring(indent);
     }
-};
+}
 
 // Format source code by removing extra spaces
-var formatSourceCode = function (str) {
+function formatSourceCode(str) {
+    'use strict';
     var lines = textToLines(str);
 
     removeTrailingLines(lines);
@@ -51,4 +54,4 @@ var formatSourceCode = function (str) {
 
     reindent(lines);
     return lines.join('\n');
-};
+}

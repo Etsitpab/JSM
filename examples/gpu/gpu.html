@@ -16,13 +16,39 @@
   <body onload="init()">
 
     <div id="content">
-      <input type="file" id="inputFile" /><br />
-      <video id="inputVideo" width="1" height="1" controls="controls" src=""></video><br />
-      <canvas id="inputCanvas" width="1" height="1"></canvas><br />
-      <canvas id="outputCanvas" width="1" height="1"></canvas><br />
-      <input type="text" id="outputFPS" size="20" value="No image / video"/><br />
-      <textarea cols="60" rows="12" id="shaderCode"></textarea><br />
-      <input type="button" value="Run" onclick="applyEffect()" />
+
+      <fieldset>
+        <legend>Input Image/Video</legend>
+        <input type="file" id="inputFile" title="Load an image or a video..."/><br/>
+        <video id="inputVideo" width="1" height="1" controls="controls" src=""></video>
+        <canvas id="inputCanvas" width="1" height="1"></canvas>
+      </fieldset>
+      <fieldset>
+        <legend>Filters</legend>
+        <table>
+          <tr>
+            <td style="vertical-align: top; padding: 5px">
+              <select id="filterList" size="5" onchange="viewFilter(true)" title="List of active filter (click to edit)">
+                <option>Loading...</option>
+              </select><br/>
+              <input type="button" value="New..." onclick="appendNewFilter()" title="Add a new filter">
+            </td>
+            <td id="filterDetails" style="display: none; padding-left: 20px">
+              <label>Name: <input type="text" id="shaderName" title="Name of the filter"/></label>
+              <input type="checkbox" id="shaderDisplay" title="Display the result of this filter"/>
+              <input type="button" value="Compile" onclick="compileFilter()" style="font-weight: bold" title="Recompile the filter to apply any changes"/>
+              <input type="button" value="Close" onclick="viewFilter(false)" title="Close the filter's details without saving"/>
+              <input type="button" value="Delete" onclick="deleteFilter()" title="Delete this filter"/><br/>
+              <textarea cols="60" rows="12" id="shaderCode"></textarea>
+            </td>
+          </tr>
+        </table>
+      </fieldset>
+      <fieldset>
+        <legend>Output</legend>
+        <input type="text" id="outputStatus" size="20" readonly="readonly" title="Filtering time"/><br/>
+        <div id="outputArea"></div>
+      </fieldset>
     </div>
 
   </body>

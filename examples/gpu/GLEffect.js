@@ -5,16 +5,16 @@
 /** @class GLEffect */
 
 /** Create a new GLEffect to be run on the GPU.
- * @param {HTMLCanvasElement} [canvas]
- *  The canvas to display the result.
  * @param {String} [shaderCode]
  *  The shader code.
+ * @param {HTMLCanvasElement} [canvas]
+ *  The canvas to display the result.
  * @return {GLEffect|null}
  *  The created GLEffect, or null if not supported.
  * @throw {Error}
  *  If the compilation fails.
  */
-function GLEffect(canvas, shaderCode) {
+function GLEffect(shaderCode, canvas) {
     'use strict';
     this.canvas = canvas || window.document.createElement('canvas');
     this.context = this._createContext();
@@ -69,14 +69,18 @@ GLEffect.prototype.importGLImage = function (image) {
     var canvas = this.getCanvas();
     var ctx = this.getContext();
     var texture = ctx.createTexture();
+    var noFlip = (image instanceof HTMLCanvasElement || image instanceof WebGLTexture);
 
     ctx.bindTexture(ctx.TEXTURE_2D, texture);
     ctx.pixelStorei(ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, ctx.RGBA, ctx.UNSIGNED_BYTE, image);
-    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);
+    if (!noFlip) {
+        ctx.pixelStorei(ctx.UNPACK_FLIP_Y_WEBGL, true);
+    }
+    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);  // zoom parameter
     ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.NEAREST);
-    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);
+    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);  // border effect
     ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
+    ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, ctx.RGBA, ctx.UNSIGNED_BYTE, image);  // load
 
     canvas.width = image.width;
     canvas.height = image.height;
@@ -222,7 +226,7 @@ GLEffect.prototype._runShaders = function () {
     'use strict';
     var numItems = 4;
     this._createAttribute('aVertexPosition', 2, [1, 1, -1, 1, 1, -1, -1, -1]);
-    this._createAttribute('aTexturePosition', 2, [1, 0, 0, 0, 1, 1, 0, 1]);
+    this._createAttribute('aTexturePosition', 2, [1, 1, 0, 1, 1, 0, 0, 0]);
 
     var ctx = this.getContext();
     ctx.clear(ctx.COLOR_BUFFER_BIT);
