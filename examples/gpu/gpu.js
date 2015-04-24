@@ -17,9 +17,8 @@ function runFilters() {
     var image = SRC;
     var k;
     for (k = 0; k < FILTERS.length; k++) {
-        FILTERS[k].importGLImage(image);
-        FILTERS[k].run();
-        image = FILTERS[k].canvas;
+        FILTERS[k].run(image);
+        image = FILTERS[k].getCanvas();
     }
     var end = new Date().getTime();
     $('outputStatus').value = 'Run in ' + (end - start) + 'ms';  // Load image + apply filters
@@ -147,7 +146,7 @@ function refreshFilterList() {
         opt.appendChild(document.createTextNode(name || 'Default'));
         select.appendChild(opt);
         if (!FILTERS[k].ui_nodisplay) {
-            outdiv.appendChild(FILTERS[k].canvas);
+            outdiv.appendChild(FILTERS[k].getCanvas());
         }
     }
 }
