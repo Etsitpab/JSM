@@ -1,6 +1,6 @@
-/*global Image, Matrix, GLEffect, $, readFile, formatSourceCode */
-/*jslint vars: true, nomen: true, browser: true */
-/*exported init */
+/*global Image, Matrix, GLEffect, $, readFile */
+/*jslint vars: true, nomen: true, browser: true, plusplus: true */
+/*exported init, viewFilter, compileFilter */
 
 'use strict';
 
@@ -10,6 +10,20 @@ var IMAGE, VIDEO, MATRIX;
 var SRC;
 var TIMER;
 var FILTERS;
+
+// Create and run the GLEffect
+function runFilters() {
+    var start = new Date().getTime();
+    var image = SRC;
+    var k;
+    for (k = 0; k < FILTERS.length; k++) {
+        FILTERS[k].importGLImage(image);
+        FILTERS[k].run();
+        image = FILTERS[k].canvas;
+    }
+    var end = new Date().getTime();
+    $('outputStatus').value = 'Run in ' + (end - start) + 'ms';  // Load image + apply filters
+}
 
 
 /********** DATA LOADING FUNCTIONS **********/
@@ -103,10 +117,39 @@ function removeAllChildren(elmt) {
 }
 
 // Get the selected filter, or null if no selection
-function getSelectedFilter(filter) {
+function getSelectedFilter() {
     var filter = $('filterList');
     var id = filter.selectedIndex;
     return (id < 0) ? null : FILTERS[filter.options[id].value];
+}
+
+// Remove the spaces at the end of a line
+function removeTrailingSpaces(str) {
+    var lines = (str + '\n').split(/[ \t\r]*\n/);
+    do {
+        lines.pop();
+    } while (lines.length && !lines[lines.length - 1].length);
+    return lines.join('\n');
+}
+
+// Refresh the list of filters
+function refreshFilterList() {
+    $('filterDetails').style.display = 'none';
+    var outdiv = $('outputArea');
+    removeAllChildren(outdiv);
+    var select = $('filterList');
+    removeAllChildren(select);
+    var k, name, opt;
+    for (k = 0; k < FILTERS.length; k++) {
+        name = FILTERS[k].ui_name;
+        opt = document.createElement('option');
+        opt.value = k;
+        opt.appendChild(document.createTextNode(name || 'Default'));
+        select.appendChild(opt);
+        if (!FILTERS[k].ui_nodisplay) {
+            outdiv.appendChild(FILTERS[k].canvas);
+        }
+    }
 }
 
 // Add a new filter in the list
@@ -122,11 +165,9 @@ function viewFilter(doView) {
     var filter = getSelectedFilter();
     if (doView && filter) {
         // View
-        var name = filter.ui_name;
-        var shader = filter.fragmentShaderCode;
         $('filterDetails').style.display = '';
-        $('shaderName').value = name || "Default";
-        $('shaderCode').value = formatSourceCode(shader);
+        $('shaderName').value = filter.ui_name || 'Default';
+        $('shaderCode').value = removeTrailingSpaces(filter.sourceCode);
         $('shaderDisplay').checked = !filter.ui_nodisplay;
     } else {
         // Hide
@@ -140,10 +181,11 @@ function viewFilter(doView) {
 
 // Compile the selected filter
 function compileFilter() {
+    var filter = null;
     try {
-        var filter = new GLEffect($('shaderCode').value);
+        filter = new GLEffect($('shaderCode').value);
     } catch (e) {
-        alert('Compilation failed---see console for more details');
+        window.alert('Compilation failed---see console for more details');
         throw e;
     }
     filter.ui_name = $('shaderName').value;
@@ -158,44 +200,8 @@ function compileFilter() {
     runFilters();
 }
 
-// Refresh the list of filters
-function refreshFilterList() {
-    'use strict';
-    $('filterDetails').style.display = 'none';
-    var outdiv = $('outputArea');
-    removeAllChildren(outdiv);
-    var select = $('filterList');
-    removeAllChildren(select);
-    var k, name, opt;
-    for (k = 0; k < FILTERS.length; k++) {
-        name = FILTERS[k].ui_name;
-        opt = document.createElement('option');
-        opt.value = k;
-        opt.appendChild(document.createTextNode(name || "Default"));
-        select.appendChild(opt);
-        if (!FILTERS[k].ui_nodisplay) {
-            outdiv.appendChild(FILTERS[k].canvas);
-        }
-    }
-}
 
-
-/********** OVERALL FUNCTIONS **********/
-
-// Create and run the GLEffect
-function runFilters() {
-    var start = new Date().getTime();
-    var image = SRC;
-    var k;
-    for (k = 0; k < FILTERS.length; k++) {
-        FILTERS[k].importGLImage(image);
-        FILTERS[k].run();
-        image = FILTERS[k].canvas;
-    }
-    var end = new Date().getTime();
-    $('outputStatus').value = 'Run in ' + (end - start) + 'ms';  // Load image + apply filters
-}
-
+/********** INITIALIZATION **********/
 
 // Initialize the demo
 function init() {

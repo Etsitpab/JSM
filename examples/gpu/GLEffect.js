@@ -1,6 +1,5 @@
 /*jslint vars: true, nomen: true, browser: true */
-/*jshint multistr: true */
-/*global Float32Array */
+/*global Float32Array, WebGLTexture, HTMLCanvasElement */
 
 /** @class GLEffect */
 
@@ -14,49 +13,55 @@
  * @throw {Error}
  *  If the compilation fails.
  */
-function GLEffect(shaderCode, canvas) {
+function GLEffect(sourceCode, canvas) {
     'use strict';
     this.canvas = canvas || window.document.createElement('canvas');
     this.context = this._createContext();
     if (!this.context) {
         return null;
     }
-    if (shaderCode) {
-        this.fragmentShaderCode = shaderCode;
+    if (sourceCode) {
+        this.sourceCode = sourceCode;
     }
-    var fshader = this._compileShader(this.fragmentShaderCode);
+    var fshader = this._compileShader(this.sourceCode);
     var vshader = this._compileShader(this.vertexShaderCode, true);
     this.program = this._createProgram(fshader, vshader);
     return this;
 }
 
-/** Default vertex shader source code. */
-GLEffect.prototype.vertexShaderCode = '                                     \n\
-    attribute vec2 aVertexPosition;                                         \n\
-    attribute vec2 aTexturePosition;                                        \n\
-                                                                            \n\
-    varying vec2 vPosition;                                                 \n\
-                                                                            \n\
-    void main(void) {                                                       \n\
-        vPosition = aTexturePosition;                                       \n\
-        gl_Position = vec4(aVertexPosition, 0.0, 1.0);                      \n\
-    }                                                                       \n\
-    ';
+/** Vertex shader source code. */
+GLEffect.prototype.vertexShaderCode = (function() {
+    'use strict';
+    var str = '';
+    str += 'attribute vec2 aVertexPosition;                                 \n';
+    str += 'attribute vec2 aTexturePosition;                                \n';
+    str += '                                                                \n';
+    str += 'varying vec2 vPosition;                                         \n';
+    str += '                                                                \n';
+    str += 'void main(void) {                                               \n';
+    str += '    vPosition = aTexturePosition;                               \n';
+    str += '    gl_Position = vec4(aVertexPosition, 0.0, 1.0);              \n';
+    str += '}                                                               \n';
+    return str;
+}());
 
-/** Default fragment shader source code. */
-GLEffect.prototype.fragmentShaderCode = '                                   \n\
-    precision mediump float;                                                \n\
-    varying vec2 vPosition;                                                 \n\
-                                                                            \n\
-    uniform sampler2D uTexture;                                             \n\
-    uniform ivec2 uSize;                                                    \n\
-                                                                            \n\
-    void main(void) {                                                       \n\
-        vec4 color = texture2D(uTexture, vPosition);                        \n\
-        float gray = dot(color.rgb, vec3(1.0)) / 3.0;                       \n\
-        gl_FragColor = vec4(vec3(gray), 1.0);                               \n\
-    }                                                                       \n\
-    ';
+/** Default effect source code (fragment shader code). */
+GLEffect.prototype.sourceCode = (function() {
+    'use strict';
+    var str = '';
+    str += 'precision mediump float;                                        \n';
+    str += 'varying vec2 vPosition;    // Pixel position (0..1)             \n';
+    str += '                                                                \n';
+    str += 'uniform vec2 uPixel;       // Pixel size                        \n';
+    str += 'uniform ivec2 uSize;       // Image size                        \n';
+    str += 'uniform sampler2D uImage;  // Input image                       \n';
+    str += '                                                                \n';
+    str += 'void main(void) {                                               \n';
+    str += '    vec4 color = texture2D(uImage, vPosition);                  \n';
+    str += '    gl_FragColor = vec4(color.rgb, color.a);                    \n';
+    str += '}                                                               \n';
+    return str;
+}());
 
 /** Import an image in the GPU.
  * @param {Image} image
@@ -233,5 +238,7 @@ GLEffect.prototype._runShaders = function () {
     ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, numItems);
 };
 
-// TODO: create a function to be used like:
-//  > effect.setUniform('vec3', 'color', 1, 1, 1);
+// TODO:
+//  new GLEffect(code, canvas);
+//  GLEffect.setParameters('name', value, 'other', [values], ...);
+//  GLEffect.run = function(images);  // replace 'importGLImage'
