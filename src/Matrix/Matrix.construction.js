@@ -29,14 +29,14 @@
 
     // Check if nodejs or browser
     var isNode = (typeof module !== 'undefined' && module.exports) ? true : false;
-    var fs, Canvas, newImage;
+    var fs, Canvas, NewImage;
     if (isNode) {
         fs = require("fs");
         // Do not forget: export NODE_PATH=/usr/local/lib/node_modules
         Canvas = require("canvas");
-        newImage = Canvas.Image;
+        NewImage = Canvas.Image;
     } else {
-        newImage = Image;
+        NewImage = Image;
     }
 
     var createCanvas = function (width, height) {
@@ -503,7 +503,7 @@
         };
 
         var readFromFileName = function (name) {
-            var im = new newImage();
+            var im = new NewImage();
             im.onerror = errCallback || function () {
                 throw new Error(errMsg + 'Error occuring while loading image.');
             };

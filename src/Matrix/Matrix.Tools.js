@@ -371,10 +371,6 @@
      *  Data to convert
      *
      * @return {Matrix}
-     *
-     * @fixme
-     *  A lot of time can be spent in this function. It should improved by 
-     *  avoiding the type checking for typedArray
      */
     Matrix.toMatrix = function (data, type) {
         if (data instanceof Matrix) {
@@ -385,12 +381,11 @@
         }
         var d = Array.prototype.concat.apply([], data);
         var isBoolean = false, size;
-        if (Tools.isArrayOfNumbers(d)) {
-        } else if (Tools.isArrayOfBooleans(d)) {
+        
+        if (Tools.isArrayOfBooleans(d)) {
             isBoolean = true;
-        } else {
-            throw new Error('Matrix.toMatrix: Array must only contain'
-                            + ' numbers or booleans.');
+        } else if (!Tools.isArrayOfNumbers(d)) {
+            throw new Error('Matrix.toMatrix: Array must only contain numbers or booleans.');
         }
         if (d.length === 1) {
             size = 1;

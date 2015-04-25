@@ -33,6 +33,7 @@ Matrix.prototype = Matrix.prototype || {};
 
     var dilatation33 = function (m) {
         var hh, ll, out, out2, v;
+
         hh = m.getSize(0);
         ll = m.getSize(1);
         out = Matrix.zeros(hh, ll, 3);
@@ -50,6 +51,7 @@ Matrix.prototype = Matrix.prototype || {};
         out = out.max(2);
         return out.cat(2, out, out);
     };
+
 
     Matrix.prototype.colorConstancy = function (algorithm, mask) {
         if (algorithm === undefined) {
@@ -95,8 +97,9 @@ Matrix.prototype = Matrix.prototype || {};
         mask_im = mask_im || Matrix.zeros(im.getSize(0), im.getSize(1), 1);
         mask_im = mask_im['+'](im.max(2)[">="](1));
         mask_im = dilatation33(mask_im);
-
         mask_im = mask_im['==='](0);
+        // mask_im = mask_im.imdilate([[1, 1, 1],[1, 1, 1], [1, 1, 1]]);
+        
         if (diff_order === 0 && sigma !== 0) {
             im = im.gaussian(sigma);
         }
@@ -112,7 +115,10 @@ Matrix.prototype = Matrix.prototype || {};
         var d = im['.*'](mask_im).reshape([size[0] * size[1], size[2]]);
         if (minkNorm !== -1) {
             d = (minkNorm === 1) ? d : d['.^'](minkNorm);
-            ill = d.sum(0)['.^'](1 / minkNorm);
+            ill = d.sum(0);
+            if (minkNorm !== 1) {
+                ill = ill['.^'](1 / minkNorm);
+            }
         } else {
             ill = d.max(0);
         }
@@ -278,32 +284,6 @@ var correctImage = function (im, ill, illout) {
     return im;
 };
 
-/*
-var Plot = Plot || {};
-Plot.prototype = Plot.prototype || {};
-
-Plot.prototype.drawMode = function (h, s, m, c, op) {
-    "use strict";
-    var nBin = h.numel();
-    var hm = Matrix.zeros(1, nBin);
-
-    var a = Math.round(m.bins[0]), b = Math.round(m.bins[1]);
-    var sum;
-    if (b >= a) {
-
-        sum = h.get([], [a, b]).sum2() / (b - a + 1);
-        hm.set([], [a, b], sum);
-        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": op || 0.33});
-    } else {
-        sum = h.get([], [a, -1]).sum2();
-        sum += h.get([], [0, b]).sum2();
-        sum /= (nBin - a + b + 1);
-        hm.set([], [a, -1], sum);
-        hm.set([], [0, b], sum);
-        this.addHistogram(s.getData(), hm.getData(), {fill: c, "fill-opacity": op || 0.33});
-    }
-};
-*/
 function bin2color(im, c) {
     "use strict";
     var R = im[".*"](c[0]), G = im[".*"](c[1]), B = im[".*"](c[2]);

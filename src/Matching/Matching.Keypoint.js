@@ -124,7 +124,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
      * @param {Object} patch
      * @param {String} [algo]
      */
-    Keypoint.prototype.extractMainOrientation = function (patch, algo) {
+    Keypoint.prototype.extractMainOrientation_old = function (patch, algo) {
         this.histogram = new Float32Array(this.nBin);
         var hist = this.histogram;
         var nBin = this.nBin;
@@ -151,6 +151,69 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     continue;
                 }
 
+                var bin = getIndex(dPhase[ij], nBin);
+                nPoints++;
+                //hist[bin] += exp(c * r2) * dNorm[ij];
+                hist[bin] += dNorm[ij];
+            }
+        }
+        var orientations = [];
+        switch (algo) {
+        case "ac":
+            var l = 0;
+            for (i = 0; i < nBin; i++) {
+                l += hist[i];
+            }
+            l = l / nPoints;
+            hist.nPoints = nPoints;
+            hist.lambda = l;
+            var modes = extractModes(hist, true, 0, nPoints, l, l * l);
+            hist.modes = modes;
+            for (i = 0, ei = modes.length; i < ei; i++) {
+                orientations.push(modes[i].phase);
+            }
+            return orientations;
+        case "max":
+            var max = 0;
+            for (i = 0, ei = hist.length; i < ei; i++) {
+                if (hist[i] > hist[max]) {
+                    max = i;
+                }
+            }
+            return [max / nBin];
+        default:
+            throw new Error("Keypoint.extractMainOrientation: " +
+                            "Wrong algorithm choice: "  + this.algorithm + ".");
+        }
+    };
+    Keypoint.prototype.extractMainOrientation = function (patch, algo) {
+        this.histogram = new Float32Array(this.nBin);
+        var hist = this.histogram;
+        var nBin = this.nBin;
+        algo = (algo || this.algorithm).toLowerCase();
+        this.algorithm = algo;
+        var getIndex = indexCircularPhase;
+
+        var dPhase = patch.phase.getData(),
+            dNorm = patch.norm.getData(),
+            view = patch.view;
+        var xs = view.getFirst(1), dx = view.getStep(1), ys = view.getFirst(0);
+
+        var size = view.getSize(0);
+        var wSize = Math.floor(size / 2), wSize2 = wSize * wSize;
+        var nPoints = 0;
+        var exp = Math.exp, c = -16 / wSize2;
+        var i, ei, j, _j, ij, j2, r2;
+        for (j = 0, _j = xs; j < size; j++, _j += dx) {
+            for (i = 0, ij = _j + ys, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
+                r2 = j2 + (i - wSize) * (i - wSize);
+                if (r2 > wSize2) {
+                    continue;
+                }
+                if (ij >= dPhase.length) {
+                    console.log(ij, dPhase.length, i, j, _j);
+                    throw new Error();
+                }
                 var bin = getIndex(dPhase[ij], nBin);
                 nPoints++;
                 //hist[bin] += exp(c * r2) * dNorm[ij];

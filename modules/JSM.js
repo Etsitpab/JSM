@@ -3550,10 +3550,6 @@ if (typeof window === 'undefined') {
      *  Data to convert
      *
      * @return {Matrix}
-     *
-     * @fixme
-     *  A lot of time can be spent in this function. It should improved by 
-     *  avoiding the type checking for typedArray
      */
     Matrix.toMatrix = function (data, type) {
         if (data instanceof Matrix) {
@@ -3564,12 +3560,11 @@ if (typeof window === 'undefined') {
         }
         var d = Array.prototype.concat.apply([], data);
         var isBoolean = false, size;
-        if (Tools.isArrayOfNumbers(d)) {
-        } else if (Tools.isArrayOfBooleans(d)) {
+        
+        if (Tools.isArrayOfBooleans(d)) {
             isBoolean = true;
-        } else {
-            throw new Error('Matrix.toMatrix: Array must only contain'
-                            + ' numbers or booleans.');
+        } else if (!Tools.isArrayOfNumbers(d)) {
+            throw new Error('Matrix.toMatrix: Array must only contain numbers or booleans.');
         }
         if (d.length === 1) {
             size = 1;
@@ -3705,8 +3700,8 @@ if (typeof window === 'undefined') {
      *  values. It should work if the indices are valid. The solution may be
      *  not obvious.
      * @fixme
-     *  Due to time spent in checking arguments the resulting function is 
-     *  very slow this should be reduce using the type of the array to check 
+     *  Due to time spent in checking arguments the resulting function is
+     *  very slow this should be reduce using the type of the array to check
      *  if values are integer or not.
      */
     Matrix_prototype.selectView = function (args) {
@@ -3725,7 +3720,8 @@ if (typeof window === 'undefined') {
             if (arg.islogical() && check(this.getSize(), arg.getSize(), td)) {
                 return v.selectBooleanDimension(0, data);
                 // Indices selection
-            } else if (T.isArrayOfNumbers(data, 0, this.numel(0) - 1)) {
+            }
+            if (T.isArrayOfNumbers(data, 0, this.numel(0) - 1)) {
                 return v.selectIndicesDimension(0, data);
             }
             throw new Error("Matrix.selectView: Invalid Matrix selection.");
@@ -3751,7 +3747,7 @@ if (typeof window === 'undefined') {
         return MatrixView.prototype.select.apply(this.getView(), args);
     };
 
-    
+
     /** Allow to extract a subpart of the Matrix for each dimension
      * if no arguments is provided then it will return a new vector
      * with all the elements one after the others.
@@ -3805,22 +3801,22 @@ if (typeof window === 'undefined') {
     };
 
     Matrix.set = function () {
-	var mat = Array.prototype.shift.apply(arguments);
-	if (!(mat instanceof Matrix)) {
-	    throw new Error("Matrix.set: Matrix to modify must be provided.");
-	}
+        var mat = Array.prototype.shift.apply(arguments);
+        if (!(mat instanceof Matrix)) {
+            throw new Error("Matrix.set: Matrix to modify must be provided.");
+        }
         return Matrix_prototype.set.apply(mat.getCopy(), arguments);
     };
-    
+
     Matrix.reshape = function () {
-	var mat = Array.prototype.shift.apply(arguments);
-	if (!(mat instanceof Matrix)) {
-	    throw new Error("Matrix.set: Matrix to modify must be provided.");
-	}
-	mat = mat.getCopy();
+        var mat = Array.prototype.shift.apply(arguments);
+        if (!(mat instanceof Matrix)) {
+            throw new Error("Matrix.set: Matrix to modify must be provided.");
+        }
+        mat = mat.getCopy();
         return mat.reshape.apply(mat, arguments);
     };
-	
+
     //////////////////////////////////////////////////////////////////
     //                      Matrix Manipulation                     //
     //////////////////////////////////////////////////////////////////
@@ -3835,7 +3831,6 @@ if (typeof window === 'undefined') {
      * @return {Matrix} new Matrix.
      *
      * @matlike
-     * @todo Create a tag Matlab-like and a tag also see.
      */
     Matrix_prototype.repmat = function () {
         // Check parameters
@@ -4468,14 +4463,14 @@ if (typeof window === 'undefined') {
 
     // Check if nodejs or browser
     var isNode = (typeof module !== 'undefined' && module.exports) ? true : false;
-    var fs, Canvas, newImage;
+    var fs, Canvas, NewImage;
     if (isNode) {
         fs = require("fs");
         // Do not forget: export NODE_PATH=/usr/local/lib/node_modules
         Canvas = require("canvas");
-        newImage = Canvas.Image;
+        NewImage = Canvas.Image;
     } else {
-        newImage = Image;
+        NewImage = Image;
     }
 
     var createCanvas = function (width, height) {
@@ -4942,7 +4937,7 @@ if (typeof window === 'undefined') {
         };
 
         var readFromFileName = function (name) {
-            var im = new newImage();
+            var im = new NewImage();
             im.onerror = errCallback || function () {
                 throw new Error(errMsg + 'Error occuring while loading image.');
             };
@@ -5362,7 +5357,7 @@ if (typeof window === 'undefined') {
         var poissrnd_lambdas = function (lambda) {
             var exp = Math.exp, random = Math.random;
             for (var i = 0, ie = lambda.length; i < ie; i++) {
-                var p = 1, k = 0, L = exp(-lambda[i])
+                var p = 1, k = 0, L = exp(-lambda[i]);
                 do {
                     k++;
                     p *= random();
@@ -5551,12 +5546,12 @@ if (typeof window === 'undefined') {
         }
 
         if (subs.ndims() > 2) {
-            throw Error("Matrix.accumarray: Subs must be a 2D Array.");
+            throw new Error("Matrix.accumarray: Subs must be a 2D Array.");
         }
         
         // Scaning the from the second dimension (dim = 1)
         var sd = subs.getData(), N = subs.numel(), ni = subs.getSize(0);
-        var i, j, _j, ij, ie, s;
+        var i, j, _j, ij, s;
 
         var ind = new Uint32Array(ni);
         for (j = 0, _j = 0; _j < N; j++, _j += ni) {
@@ -6471,7 +6466,9 @@ if (typeof window === 'undefined') {
     //                     Arithmetic Operators                     //
     //////////////////////////////////////////////////////////////////
 
-    /* Function used to generate automatically the other function */
+    /* Function generating automatically the arithmetic operators 
+       functions 
+    */
     var generateArithmeticOperators = function () {
         var operators = {
             '+': {
@@ -6637,7 +6634,6 @@ if (typeof window === 'undefined') {
 
         // Template function
         var fct = (function (b) {
-            "use strict";
             b = Matrix.toMatrix(b);
             var x, n = this.numel();
             var a = this, ar, ai, br, bi;
@@ -6699,7 +6695,6 @@ if (typeof window === 'undefined') {
         }).toString();
 
         var fct2 = (function (A, B) {
-            'use strict';
             A = Matrix.toMatrix(A);
             B = Matrix.toMatrix(B);
 
@@ -6726,16 +6721,18 @@ if (typeof window === 'undefined') {
 
         var o, op, fun;
         for (o in operators) {
-            op = operators[o];
-            fun = replace(fct, op, "real/real");
-            fun = replace(fun, op, "real/imag");
-            fun = replace(fun, op, "imag/real");
-            fun = replace(fun, op, "imag/imag");
-            eval("Matrix.prototype." + op.name + " = " + fun);
+            if (operators.hasOwnProperty(o)) {
+                op = operators[o];
+                fun = replace(fct, op, "real/real");
+                fun = replace(fun, op, "real/imag");
+                fun = replace(fun, op, "imag/real");
+                fun = replace(fun, op, "imag/imag");
+                eval("Matrix.prototype." + op.name + " = " + fun);
 
-            fun = fct2.replace("\"AIsScalar\";", op.AIsScalar);
-            fun = fun.replace("\"AIsMatrix\";", op.AIsMatrix);
-            eval("Matrix." + op.name + " = " + fun);
+                fun = fct2.replace("\"AIsScalar\";", op.AIsScalar);
+                fun = fun.replace("\"AIsMatrix\";", op.AIsMatrix);
+                eval("Matrix." + op.name + " = " + fun);
+            }
         }
     };
 
@@ -7595,6 +7592,7 @@ if (typeof window === 'undefined') {
      * The upper part is set to zero.
      *
      * See also:
+
      *  {@link Matrix#tril},
      *  {@link Matrix#diag}.
      *
@@ -7692,7 +7690,7 @@ if (typeof window === 'undefined') {
         return D;
     };
 
-    /* Apply a function on two Matrix by extending the non-singleton 
+    /** Apply a function on two Matrix by extending the non-singleton 
      * dimensions.
      *
      * @param {Function|String} fun
@@ -7812,6 +7810,21 @@ if (typeof window === 'undefined') {
             }
         } else {
             throw new Error("Matrix.bsxfun: Wrong function argument.");
+        }
+        return out;
+    };
+
+    /** Return a Matrix containg of the same where values are 
+     * either -1, 0, 1 depending on the sign of the elements.
+     *
+     * @matlike
+     */
+    Matrix.prototype.sign = function () {
+        var d = this.getData();
+        var out = new Matrix(this.getSize());
+        var od = out.getData();
+        for (var i = 0, ie = d.length; i < ie; i++) {
+            od[i] = d[i] > 0 ? 1 : (d[i] < 0 ? -1 : 0);
         }
         return out;
     };

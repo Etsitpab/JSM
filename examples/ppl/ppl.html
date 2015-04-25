@@ -1,20 +1,22 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<meta charset="UTF-8">
 <html>
   <head>
     <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
 
-    <script type="text/javascript" src="../../modules/JSM.js"></script>
-    <script type="text/javascript" src="../../modules/Image.js"></script>
-    <script type="text/javascript" src="../../modules/Linalg.js"></script>
-    <script type="text/javascript" src="../../src/Plot/Plot.class.js"></script>
-    <script type="text/javascript" src="../../projects/CIE.js"></script>
-    <script type="text/javascript" src="../../projects/CIE.data.js"></script>
-    <script type="text/javascript" src="../../projects/Math.object.js"></script>
-    <script type="text/javascript" src="../../projects/colorConstancy.js"></script>
+    <script type="text/javascript" src="../../min/JSM.min.js"></script>
+    <script type="text/javascript" src="../../min/Image.min.js"></script>
+    <script type="text/javascript" src="../../min/Linalg.min.js"></script>
+    <script type="text/javascript" src="../../min/Plot.min.js"></script>
+    <script type="text/javascript" src="../../min/CIE.min.js"></script>
+    <script type="text/javascript" src="../../min/CIE.data.min.js"></script>
+    <script type="text/javascript" src="../../min/Math.object.min.js"></script>
+    <script type="text/javascript" src="../../min/colorConstancy.min.js"></script>
       
     <script type="text/javascript" src="../base.js"> </script>          
     <script type="text/javascript" src="ppl.js"> </script>          
 
+    <title>Illuminant Estimation with Projections on Planckian Locus</title>
 </head>
 
   <body>
@@ -22,149 +24,175 @@
     <div id="demo">
       <h1>Illuminant Estimation with Projections on Planckian Locus</h1>
       <input type="file" id="loadFile"/>
-        <div id="interface">
+      <div id="interface">
+        
+        <div id="ui">
+          <input type="button" id="displayHelp" value="Help"/>
+          <input type="button" id="reset" value="Reset image"/>
+          <input type="button" id="applyPPL" value="Launch benchmark"/>
+          <hr></hr>
+          <label> Image selection </label>
+          <select id="selectAction">
+            <option value="wp">White patch selection</option>
+            <option value="chart">White chart removal</option>
+            <option value="scatter">Scatter plot</option>
+          </select>
+          <label> Correction done with </label>
+          <select id="modesList">
+          </select>
+          <hr></hr>
           
-          <div id="ui">
-            <label> Working examples </label>
-            <select id="examples">
+          <fieldset id="PPL">
+            <legend> PPL parameters </legend>
+            <label class="val"> k </label>
+            <input type="range" id="k" class="val" min="0" step="1" max="10" value="3"></input>
+            <input type="text" id="kVal" class="val" value="" readonly>
+            <br>
+            <label class="val"> &delta; </label>
+            <input type="range" id="delta" class="val" min="0.0025" step="0.0025" max="0.05" value="0.01"></input>
+            <input type="text" id="deltaVal" class="val" value="" readonly>
+
+            <label class="val"> Bins </label>
+            <input type="range" id="bins" class="val" min="25" step="25" max="500" value="50"></input>
+            <input type="text" id="binsVal" class="val" value="" readonly>
+
+            <label> Intensity threshold </label>
+            <input type="range" id="threshold" class="val" style="width:69%" min="0" step="0.01" max="1" value="0.97"></input>
+            <input type="text" id="thresholdVal" class="val" value="" readonly>
+          </fieldset>
+
+          <fieldset id="view">
+            <legend>Options</legend>
+            <label> Chromaticity Diagram </label>
+            <select id="diagram">
+              <option value="rgY"> 1931 CIE rg </option>
+              <option value="xyY"> 1931 CIE xy </option>
+              <option value="1960 uvY"> 1960 CIE uv </option>
+              <option value="1976 u'v'Y"> 1976 CIE u'v' </option>
             </select> 
-            <hr></hr>
-            <input type="button" value="Reset image" onclick="reset();"></input>
-            <input type="button" value="Export image" onclick="exportImage();"></input>
-            <hr></hr>
-            
-            <fieldset id="view">
-              <legend>View</legend>
-              <label> Chromaticity Diagram </label>
-              <select id="diagram">
-                <option value="rgY"> 1931 CIE rg </option>
-                <option value="xyY"> 1931 CIE xy </option>
-                <option value="1960 uvY"> 1960 CIE uv </option>
-                <option value="1976 u'v'Y"> 1976 CIE u'v' </option>
-              </select> 
-              <label> Output Illuminant  </label>
-              <select id="outputStdIll">
-                <option value="A"> A </option>
-                <option value="B"> B </option>
-                <option value="C"> C </option>
-                <option value="D50"> D50 </option>
-                <option value="D55"> D55 </option>
-                <option value="D65"> D65 </option>
-                <option value="D75"> D75 </option>
-                <option value="E"> E </option>
-                <option value="F1"> F1 </option>
-                <option value="F2"> F2 </option>
-                <option value="F3"> F3 </option>
-                <option value="F4"> F4 </option>
-                <option value="F5"> F5 </option>
-                <option value="F6"> F6 </option>
-                <option value="F7"> F7 </option>
-                <option value="F8"> F8 </option>
-                <option value="F9"> F9 </option>
-                <option value="F10"> F10 </option>
-                <option value="F11"> F11 </option>
-                <option value="F12"> F12 </option>
-              </select>
-              <label> Select </label>
-              <select id="clickAction">
-                <option value="ewChr"> Expected white </option>
-                <option value="awChr"> Actual white </option>
-              </select> 
-            </fieldset>
-            
-            <fieldset>
-              <legend>Illuminant Correction</legend>
-              <select id="inputStdIll">
-                <option value="A"> A </option>
-                <option value="B"> B </option>
-                <option value="C"> C </option>
-                <option value="D50"> D50 </option>
-                <option value="D55"> D55 </option>
-                <option value="D65"> D65 </option>
-                <option value="D75"> D75 </option>
-                <option value="E"> E </option>
-                <option value="F1"> F1 </option>
-                <option value="F2"> F2 </option>
-                <option value="F3"> F3 </option>
-                <option value="F4"> F4 </option>
-                <option value="F5"> F5 </option>
-                <option value="F6"> F6 </option>
-                <option value="F7"> F7 </option>
-                <option value="F8"> F8 </option>
-                <option value="F9"> F9 </option>
-                <option value="F10"> F10 </option>
-                <option value="F11"> F11 </option>
-                <option value="F12"> F12 </option>
-              </select> 
-            
-              <label> Input CCT </label>
-              <input type="text" id="inputCCT"></input>
-            </fieldset>
-            
-            <fieldset id="PPL">
-              <legend> PPL </legend>
-              <label> k </label>
-              <input type="range" id="k" min="0" step="1" max="10" value="3"></input>
-              <label> Delta </label>
-              <input type="range" id="delta" min="0.0025" step="0.0025" max="0.05" value="0.01"></input>
-              <label> Bins </label>
-              <input type="range" id="bins" min="25" step="25" max="500" value="50"></input>
-              <label> Intensity threshold </label>
-              <input type="range" id="threshold" min="0" step="0.01" max="1" value="0.97"></input>
-              <hr></hr>
-              <label> Correction on mode </label>
-              <select id="modesList">
-              </select>
-              <hr></hr>
-
-              <input type="button" id="applyPPL" value="Apply"/>
-
-            </fieldset>
-
-            
-            <fieldset>
-              <legend>Automatic Correction</legend>
-              <label>  Algo </label>
-              <select id="wbAlgo">
-                <option value="grey_world"> Grey World </option>
-                <option value="max_rgb"> Max RGB </option>
-                <option value="shades_of_grey"> Shades Of Grey </option>
-                <option value="grey_edge"> Grey Edge </option>
-              </select>
-            </fieldset>
-            
-            <hr></hr>
-            <label> Expected White chromaticity </label>
-            <input type="text" id="ewChr1" style="width:calc(45%);" readonly></input>
-            <input type="text" id="ewChr2" style="width:calc(45%);" readonly></input>
-            <label Actual White chromaticity </label>
-            <input type="text" id="awChr1" style="width:calc(45%);" readonly></input>
-            <input type="text" id="awChr2" style="width:calc(45%);" readonly></input>
-            <label> AngularError </label>
-            <input type="text" id="angularError" readonly></input>
-            
+            <label> Output Illuminant  </label>
+            <select id="outputStdIll">
+              <option value="A"> A </option>
+              <option value="B"> B </option>
+              <option value="C"> C </option>
+              <option value="D50"> D50 </option>
+              <option value="D55"> D55 </option>
+              <option value="D65"> D65 </option>
+              <option value="D75"> D75 </option>
+              <option value="E"> E </option>
+              <option value="F1"> F1 </option>
+              <option value="F2"> F2 </option>
+              <option value="F3"> F3 </option>
+              <option value="F4"> F4 </option>
+              <option value="F5"> F5 </option>
+              <option value="F6"> F6 </option>
+              <option value="F7"> F7 </option>
+              <option value="F8"> F8 </option>
+              <option value="F9"> F9 </option>
+              <option value="F10"> F10 </option>
+              <option value="F11"> F11 </option>
+              <option value="F12"> F12 </option>
+            </select>
+          </fieldset>
+          
+          <hr></hr>
+          
+          <label> Reference white chr. </label>
+          <input type="text" id="ewChr1" style="width:calc(45%);" readonly></input>
+          <input type="text" id="ewChr2" style="width:calc(45%);" readonly></input>
+          <label> Estimated white chr. </label>
+          <input type="text" id="awChr1" style="width:calc(45%);" readonly></input>
+          <input type="text" id="awChr2" style="width:calc(45%);" readonly></input>
+          <label> Angular error </label>
+          <input type="text" id="angularError" readonly></input>
+          <hr></hr>
+          <label> Log </label>
+          <div id="log">
           </div>
-          <div id="image">
-            <div id="left" style="height:100%; width:calc(66%); display:inline-block;">
-            </div>
-            <div id="right" style="height:100%; width:calc(32%); display:inline-block;">
-            </div>
-          </div>
-        
-          <!--
-          <div id="warn">
-            <b>Warning:</b> 
-            <p>This demo works best on chrome and <a href="http://www.chromium.org" target="_blank">chromium</a> browser. 
-              On other browser, some functionality may be slower or unavailable.</p>
-            <b>Tips :</b>
-            <p>
-              Click on image or on chromaticity diagram will select the white point on the image.
-              Shift + click on image allow you to view chromaticities of selected rectangle.
-            </p>
-          </div>
-          -->
+          
         </div>
-        
+        <div id="image">
+          <div id="left" style="height:100%; width:calc(66%); display:inline-block;">
+          </div>
+          <div id="right" style="height:100%; width:calc(32%); display:inline-block;">
+          </div>
+        </div>
+      </div>
+      
     </div>
+
+    <div id="help">
+      <h2>How to use this demo</h2>
+      <p>
+        This demo aims at demonstrating the abilities of the PPL (projections on planckian locus) algorithm.
+        It allows you to upload an image, set a white reference from a white chart in the picture, remove this white chart,
+        and finally run several algorithms and compare how well they estimate the illuminant.
+      </p>
+      <p>
+        All the algorithms rely linear images, which means that we remove the gamma correction before computing the estimation.
+        Therefore, the errors are as well are computed on linear images.
+      </p>
+      <h3>Instructions</h3>
+      <ul>
+        <li>
+          First upload an image using the file selector in the top left part of this page.
+        </li>
+        <li>
+          Select a white reference using shift+dragging to select a rectangular area on the image.
+          The estimation is done by averaging the pixels selected. A corresponding scatter plot will also appeared in the chromaticity diagram.
+        </li>
+        <li>
+          On the left panel, replace "White patch selection" with "White chart removal" option. Then 
+          using shift+dragging on the image you will be able to remove this white chart to avoid biasing the estimations.
+        </li>
+        <li>
+          Then you can click on launch the benchmark button. Processing may take up to one minute.
+          Once it finishes, you can choose the correction to apply on the image via the "Correction done with" selector.
+          A small log will also be displayed, summing up the errors obtained for each algorithm.
+        </li>
+      </ul>
+      
+      <h3>Plots guideline</h3>
+      <ul>
+        <li>
+          Navigation in the picture may be done using dragging for translation and mouse wheel for zoom in/out.
+        </li>
+        <li>
+          Click on the image or on the chromaticity diagram will correct the image white balance based either
+          on the pixel color or the chromaticity selected. 
+        </li>
+        <li>
+          Depending on the Image selection field value, shift+dragging on the image diagram will:
+          <ul>
+            <li>
+              Select a white patch reference by averaging the pixels, and plot the chromaticities into the chromaticity diagram.
+            </li>
+            <li>
+              Select and remove part of the picture.
+            </li>
+            <li>
+              Produce a scatter plot of the selected pixels.
+              <b>Please be careful with large areas selection they can slow down the application significantly.</b>.
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>Options</h3>
+      The option field set allows you to choose in which diagram the chromaticities are displayed. as well as the rendering illuminant.
+      
+      <h3>Notes</h3>
+      To prevent browser crashes and reduce the time required, the allowed image size has been restricted to stay in the range 1200x1200.
+      
+      Note that this demo tested was only Chrome and Firefox web browsers, and might not work with the others.
+      <p>
+      The code and parameters used to compute grey-world, grey-edge, shades-of-grey and white-patch results results
+      from an adaptation of a matlab code by <a href="http://cat.uab.es/~joost">Joost Van-de-Weijer</a> that can be found on his webpage.
+      </p>
+      <h3></h3>
+      <input type="button" id="closeHelp" value="Close"/>
+
+    </div>
+
   </body>
 </html>

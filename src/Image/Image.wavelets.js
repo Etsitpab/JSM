@@ -455,41 +455,7 @@
         }
     };
 
-    var filter = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO, addL, addH) {
-        // add
-        addL = addL ? true : false;
-        addH = addH ? true : false;
-
-        // 1. ARGUMENTS
-        var ce = Math.ceil, fl = Math.floor;
-
-        var K = kernelL.length;
-        origin = (origin === 'cl' ? fl : ce)((K - 1) / 2);
-
-        // 2. Filtering
-        var cs = vI.getFirst(2), ocs = vO.getFirst(2);
-        var xs = vI.getFirst(1), oxs = vO.getFirst(1);
-        var ys = vI.getFirst(0), dy = vI.getStep(0);
-        var ly = vI.getEnd(0), ny = vI.getSize(0);
-        var dc = vI.getStep(2), odc = vO.getStep(2);
-        var dx = vI.getStep(1), odx = vO.getStep(1);
-        var oys = vO.getFirst(0), ody = vO.getStep(0);
-        var idL = inL.getData(),  idH = inH.getData(),
-            odL = outL.getData(), odH = outH.getData();
-
-        var lc = vI.getEnd(2);
-        var lx = vI.getEnd(1);
-
-        var c, oc, o_x;
-        var _x, nx, yx;
-        var y, oy;
-        var k, s, sTmp, sumL, sumH;
-
-        var nydy = ny * dy;
-        var o = origin * dy;
-        var kdy = dy;
-        dy *= sub;
-        /*
+    /*
         for (y = ys, ny = c(ys + K / 2), oy = oys; y < ny; y += dy, oy += ody) {
             for (k = 0, s = y + o, sum = 0; k < K; k++, s -= kdy) {
                 sTmp = s;
@@ -535,15 +501,37 @@
                 od[oy] = sum;
             }
          }*/
+    /*
+    var filter = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
+        // 1. ARGUMENTS
+        var ce = Math.ceil, fl = Math.floor;
 
-        // Iterator to scan the view on dimension greater than 0
+        var K = kernelL.length;
+        origin = (origin === 'cl' ? fl : ce)((K - 1) / 2);
 
-        // var itI = vI.getIterator(1), itO = vO.getIterator(1);
-        // var i, it = itI.iterator, bi = itI.begin, ei = itI.end();
-        // var o, ot = itO.iterator, bo = itO.begin;
-        //for (_x = bi(), o_x = bo(); _x !== ei; _x = it(), o_x = ot()) {
-            //console.log("i", _x, o_x);
-        //}
+        // 2. Filtering
+        var cs = vI.getFirst(2), ocs = vO.getFirst(2);
+        var xs = vI.getFirst(1), oxs = vO.getFirst(1);
+        var ys = vI.getFirst(0), dy = vI.getStep(0);
+        var ly = vI.getEnd(0), ny = vI.getSize(0);
+        var dc = vI.getStep(2), odc = vO.getStep(2);
+        var dx = vI.getStep(1), odx = vO.getStep(1);
+        var oys = vO.getFirst(0), ody = vO.getStep(0);
+        var idL = inL.getData(),  idH = inH.getData(),
+            odL = outL.getData(), odH = outH.getData();
+
+        var lc = vI.getEnd(2);
+        var lx = vI.getEnd(1);
+
+        var c, oc, o_x;
+        var _x, nx, yx;
+        var y, oy;
+        var k, s, sTmp, sumL, sumH;
+
+        var nydy = ny * dy;
+        var o = origin * dy;
+        var kdy = dy;
+        dy *= sub;
         for (c = 0, oc = 0; c < lc; c += dc, oc += odc) {
             for (_x = c + xs, nx = c + lx, o_x = oc + oxs; _x < nx; _x += dx, o_x += odx) {
                 var yx0 = ys + _x, nyx = ly + _x;
@@ -559,42 +547,48 @@
                         sumL += kernelL[k] * idL[sTmp];
                         sumH += kernelH[k] * idH[sTmp];
                     }
-                    if (addL) {
-                        odL[oy] += sumL;
-                    } else {
-                        odL[oy] = sumL;
-                    }
-                    if (addH) {
-                        odH[oy] += sumH;
-                    } else {
-                        odH[oy] = sumH;
-                    }
+                    odL[oy] += sumL;
+                    odH[oy] += sumH;
                 }
             }
         }
     };
+ */
 
-    var filterND = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO, addL, addH) {
-        // add
-        addL = addL ? true : false;
-        addH = addH ? true : false;
-
-        // 1. ARGUMENTS
-        var c = Math.ceil, f = Math.floor;
+    var filter1D = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+        var y, oy, k, s, sumL, sumH, sTmp;
+        for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
+            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+                sTmp = s;
+                while (sTmp < yx0) {
+                    sTmp += ly;
+                }
+                while (sTmp >= nyx) {
+                    sTmp -= ly;
+                }
+                if (isOdd && sTmp === nyx - kdy) {
+                    sTmp -= kdy; 
+                }
+                sumL += kernelL[k] * idL[sTmp];
+                sumH += kernelH[k] * idH[sTmp];
+            }
+            odL[oy] += sumL;
+            odH[oy] += sumH;
+        }
+    };
+    var filterND = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
 
         var K = kernelL.length;
-        origin = (origin === 'cl' ? f : c)((K - 1) / 2);
-
-        // 2. Filtering
+        origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
+        var isOdd = vI.getSize(0) % 2 ? true : false; 
+        
         var ys = vI.getFirst(0), dy = vI.getStep(0);
-        var ly = vI.getEnd(0), ny = vI.getSize(0);
+        var ly = vI.getEnd(0) + (isOdd ? dy : 0);
         var oys = vO.getFirst(0), ody = vO.getStep(0);
 
         var idL = inL.getData(),  idH = inH.getData(),
             odL = outL.getData(), odH = outH.getData();
 
-
-        var nydy = ny * dy;
         var orig = origin * dy;
         var kdy = dy;
         dy *= sub;
@@ -602,57 +596,78 @@
         var itI = vI.getIterator(1), itO = vO.getIterator(1);
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
+
         var k, s, sTmp, sumL, sumH;
         for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
             var yx0 = ys + i, nyx = ly + i;
-            for (y = i + ys, oy = o + oys; y < nyx; y += dy, oy += ody) {
+            filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH);
+            /*
+            for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
                 for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                     sTmp = s;
                     while (sTmp < yx0) {
-                        sTmp += nydy;
+                        sTmp += ly;
                     }
                     while (sTmp >= nyx) {
-                        sTmp -= nydy;
+                        sTmp -= ly;
+                    }
+                    if (isOdd && sTmp === nyx - kdy) {
+                        sTmp -= kdy; 
                     }
                     sumL += kernelL[k] * idL[sTmp];
                     sumH += kernelH[k] * idH[sTmp];
                 }
-                if (addL) {
-                    odL[oy] += sumL;
-                } else {
-                    odL[oy] = sumL;
-                }
-                if (addH) {
-                    odH[oy] += sumH;
-                } else {
-                    odH[oy] = sumH;
-                }
-            }
+                odL[oy] += sumL;
+                odH[oy] += sumH;
+            }*/
         }
     };
 
     var zeros = Matrix.zeros;
+    
+    var dwt = function (s, name, dim) {
+        var wav = new Wavelet(name), fL = wav.filterL, fH = wav.filterH;
+        var size = s.getSize();
+        size[dim] = Math.ceil(size[dim] / 2);
 
-    /** Compute the 1D DWT (Discrete Wavelet Transform)
-     * of a column vector.
-     * __See also :__
-     * {@link Matrix#idwt},
-     * {@link Matrix#dwt2}.
-     *
-     * @param {Matrix} signal
-     * @param {String} name
-     *  Wavelet name.
-     * @return {Array}
-     *  Array containing approximation coefficients and details.
-     */
-    Matrix.dwt2 = function (im, name) {
+        // Create output data
+        var dL = zeros(size), dH = zeros(size);
+        var v = dL.getView().swapDimensions(0, dim);
+        var iV = s.getView().swapDimensions(0, dim);
+
+        // H filtering from siganl to output
+        filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
+        return [dL, dH];
+    };
+    var idwt = function (bands, name, dim) {
+        var wav = new Wavelet(name);
+        var fL = wav.invFilterL, fH = wav.invFilterH;
+        var size = bands[0].getSize();
+        size[dim] = size[dim] * 2;
+        var L = zeros(size), H = zeros(size);
+
+        var v = L.getView().selectDimension(dim, [0, 2, -1]);
+        bands[0].extractViewTo(v, L);
+        bands[1].extractViewTo(v, H);
+        v.restore().swapDimensions(0, dim);
+
+        // Out array
+        var out = zeros(size);
+        var vO = out.getView().swapDimensions(0, dim);
+
+        // Process scale
+        filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
+        return out;
+    };
+
+    var dwt2 = function (im, name) {
         var wav = new Wavelet(name);
         var fL = wav.filterL, fH = wav.filterH;
         var h = im.getSize(0), w = im.getSize(1), c = im.getSize(2);
-
+        
         // Create output image
         var hw = Math.ceil(w / 2), hh = Math.ceil(h / 2);
-
+        
         // Buffer image
         var bL = zeros(hh, w, c), bH = zeros(hh, w, c);
         var vB = bL.getView();
@@ -662,30 +677,17 @@
         filterND(im, im, vI, fL, fH, 'cr', 2, bL, bH, vB);
 
         // V filtering from buffer to data
-        var dLL = zeros(hh, hw, c), dHL = zeros(hh, hw, c),
-            dLH = zeros(hh, hw, c), dHH = zeros(hh, hw, c);
+        var dA = zeros(hh, hw, c), dV = zeros(hh, hw, c),
+            dH = zeros(hh, hw, c), dD = zeros(hh, hw, c);
 
-        var v = dLL.getView().swapDimensions(0, 1);
+        var v = dA.getView().swapDimensions(0, 1);
 
         vB.swapDimensions(0, 1);
-        filterND(bL, bL, vB, fL, fH, 'cr', 2, dLL, dLH, v);
-        filterND(bH, bH, vB, fL, fH, 'cr', 2, dHL, dHH, v);
-        return [dLL, dLH, dHL, dHH];
+        filterND(bL, bL, vB, fL, fH, 'cr', 2, dA, dH, v);
+        filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
+        return [dA, dH, dV, dD];
     };
-
-    /** Compute the 2D inverse DWT (Discrete Wavelet Transform).
-     *
-     * __See also :__
-     * {@link Matrix#dwt},
-     * {@link Matrix#idwt2}.
-     * @param {Array} bands
-     *  Array containing approximation and details coefficients.
-     * @param {String} name
-     *  Wavelet name.
-     * @return {Matrix}
-     *  Matrix with the reconstructed signal.
-     */
-    Matrix.idwt2 = function (bands, name) {
+    var idwt2 = function (bands, name) {
         var wav = new Wavelet(name);
         var fL = wav.invFilterL, fH = wav.invFilterH;
         var h = bands[0].getSize(0), w = bands[0].getSize(1), c = bands[0].getSize(2);
@@ -698,15 +700,15 @@
         B.select([], [0, 2, -1]);
         dL.set([0, 2, -1], bands[0]);
         dH.set([0, 2, -1], bands[2]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B, false, true);
+        filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B);
         dL.set([0, 2, -1], [], bands[1]);
         dH.set([0, 2, -1], [], bands[3]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B, false, true);
+        filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B);
         B.restore().swapDimensions(0, 1);
-        filterND(bL, bH, B, fL, fH, 'cl', 1, out, out, O, false, true);
+        filterND(bL, bH, B, fL, fH, 'cl', 1, out, out, O);
         return out;
     };
-
+    
     /** Compute the 1D DWT (Discrete Wavelet Transform)
      * of a column vector.
      * __See also :__
@@ -720,25 +722,12 @@
      *  Dimension on which perform th dwt.
      * @return {Array}
      *  Array containing approximation coefficients and details.
+     * @matlike
      */
     Matrix.dwt = function (im, name, dim) {
         dim = dim || 0;
-        var wav = new Wavelet(name);
-        var fL = wav.filterL, fH = wav.filterH;
-        var size = im.getSize();
-        size[dim] = Math.ceil(size[dim] / 2);
-
-        // Create output image
-        var dataL = zeros(size), dataH = zeros(size);
-        var v = dataL.getView().swapDimensions(0, dim);
-        var iV = im.getView().swapDimensions(0, dim);
-
-        // H filtering from image to buffer
-        filterND(im, im, iV, fL, fH, 'cr', 2, dataL, dataH, v);
-
-        return [dataL, dataH];
+        return dwt(im, name, dim);
     };
-
     /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
      *
      * __See also :__
@@ -752,55 +741,431 @@
      *  Dimension on which perform th idwt.
      * @return {Matrix}
      *  Matrix with the reconstructed signal.
+     * @matlike
      */
     Matrix.idwt = function (bands, name, dim) {
         dim = dim || 0;
-        var wav = new Wavelet(name);
-        var fL = wav.invFilterL, fH = wav.invFilterH;
-        var size = bands[0].getSize();
-        size[dim] = size[dim] * 2;
-        var L = zeros(size), H = zeros(size);
-
-        var v = L.getView().selectDimension(dim, [0, 2, -1]);
-        bands[0].extractViewTo(v, L);
-        bands[1].extractViewTo(v, H);
-        v.restore().swapDimensions(0, dim);
-
-        // Buffer image
-        var O = zeros(size), vO = O.getView().swapDimensions(0, dim);
-
-        // Process scale
-        filterND(L, H, v, fL, fH, 'cl', 1, O, O, vO, false, true);
-        return O;
+        return idwt(bands, name, dim);
     };
-
-    /** Compute the PSNR of two signal of the same size.
+        
+    /** Compute the 2D DWT (Discrete Wavelet Transform)
+     * of a column vector.
      * __See also :__
-     * {@link Matrix#norm}.
+     * {@link Matrix#idwt},
+     * {@link Matrix#dwt2}.
+     *
      * @param {Matrix} signal
-     * @param {Matrix} ref
-     * @return {Matrix}
-     *  Scalar Matrix containing the PSNR value.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array containing approximation coefficients and details.
+     * @matlike
      */
-    Matrix.psnr = function (A, B, peakval) {
-        A = Matrix.toMatrix(A);
-        B = Matrix.toMatrix(B);
-        Tools.checkSizeEquals(A.size(), B.size());
-        if (!Tools.isSet(peakval)) {
-            var tA = A.type(), tB = B.type();
-            var peakval1 = A.isfloat() ? 1 : Matrix.intmax(tA) - Matrix.intmin(tB);
-            var peakval2 = B.isfloat() ? 1 : Matrix.intmax(tB) - Matrix.intmin(tB);
-            peakval = Math.max(peakval1, peakval2);
-        } else {
-            peakval = 1;
-        }
-        var dRef = B.getData(), d2 = A.getData();
-        var i, ie, ssd = 0;
-        for (i = 0, ie = d2.length; i < ie; i++) {
-            var tmp = dRef[i] - d2[i];
-            ssd += tmp * tmp;
-        }
-        return Matrix.toMatrix(10 * Math.log10(peakval * peakval * ie / ssd));
+    Matrix.dwt2 = function (im, name) {
+        return dwt2(im, name);
     };
+    /** Compute the 2D inverse DWT (Discrete Wavelet Transform).
+     *
+     * __See also :__
+     * {@link Matrix#dwt},
+     * {@link Matrix#idwt2}.
+     * @param {Array} bands
+     *  Array containing approximation and details coefficients.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Matrix}
+     *  Matrix with the reconstructed signal.
+     * @matlike
+     */
+    Matrix.idwt2 = function (bands, name) {
+        return idwt2(bands, name);
+    };
+
+    /** Perform a DWT (Discrete Wavelet Transform)
+     * on each vector presents on a given Matrix dimension.
+     *
+     * __See also :__
+     * {@link Matrix#waverec},
+     * {@link Matrix#dwt}.
+     *
+     * @param {Matrix} signal
+     * @param {Number} n
+     *  Number of level of the decomposition.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} [dimension=0] 
+     *  Dimension on which the transformation is performed.
+     * @return {Array}
+     *  Array of two elements, one contains the coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @matlike
+     */
+    Matrix.wavedec = function (s, n, name, dim) {
+        dim = dim || 0;
+        var sd = new Uint16Array(n + 2), outSize = 0;
+        sd[n + 1] = s.getSize(dim);
+        var l;
+        for (l = n; l >= 1; l--) {
+            sd[l] = Math.ceil(sd[l + 1] / 2);
+            outSize += sd[l];
+        }
+        sd[0] = sd[1];
+        outSize += sd[0];
+
+        var cumsize = [0, sd[0]];
+        for (l = 2; l < n + 2; l++) {
+            cumsize[l] = sd[l - 1] + cumsize[l - 1];
+        }
+
+        var size = s.getSize();
+        size[dim] = outSize;
+        var matOut = zeros(size), outView = matOut.getView();
+        var matIn = s, dL, dH;
+        for (l = n; l >= 1; l--) {
+            var wt = dwt(matIn, name, dim);
+            outView.selectDimension(dim, [cumsize[l], cumsize[l + 1] - 1]);
+            wt[1].extractViewTo(outView, matOut);
+            outView.restore();
+            matIn = wt[0];
+        }
+        outView.selectDimension(dim, [cumsize[0], cumsize[1] - 1]);
+        wt[0].extractViewTo(outView, matOut);
+        return [matOut, new Matrix([sd.length], sd)];
+    };
+    /** Reconstruct the signal from a DWT (Discrete Wavelet Transform)
+     * on many of a column vector.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec},
+     * {@link Matrix#idwt}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds concontains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} [dimension=0] 
+     *  Dimension on which the transformation has been performed.
+     * @return {Matrix}
+     *  The reconstructed signal.
+     * @matlike
+     */
+    Matrix.waverec = function (lc, name, dim) {
+        dim = dim || 0;
+        var sd = lc[1].getData();
+        var cumsize = [0, sd[0]];
+        var l, n = sd.length - 2;
+        for (l = 2; l < n + 2; l++) {
+            cumsize[l] = sd[l - 1] + cumsize[l - 1];
+        }
+        var input = lc[0];
+        var dLView = input.getView().selectDimension(dim, [cumsize[0], cumsize[1] - 1]);
+        var dL = input.extractViewFrom(dLView);
+
+        for (l = 1; l < cumsize.length - 1; l++) {
+            var dHView = input.getView().selectDimension(dim, [cumsize[l], cumsize[l + 1] - 1]);
+            var dH = input.extractViewFrom(dHView);
+            if (dL.size(dim) === dH.size(dim) + 1) {
+                dLView = dL.getView().selectDimension(dim, [0, -2]);
+                dL = dL.extractViewFrom(dLView);
+            }
+            dL = idwt([dL, dH], name, dim);
+        }
+        
+        if (dL.size(dim) === sd[sd.length - 1] + 1) {
+            dLView = dL.getView().selectDimension(dim, [0, -2]);
+            dL = dL.extractViewFrom(dLView);
+        }
+        return dL;
+    };
+
+    /** Perform a 2D DWT (Discrete Wavelet Transform)
+     *
+     * __See also :__
+     * {@link Matrix#waverec2},
+     * {@link Matrix#dwt2}.
+     *
+     * @param {Matrix} signal
+     * @param {Number} n
+     *  Number of level of the decomposition.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array of two elements, one contains the coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @matlike
+     */
+    Matrix.wavedec2 = function (s, n, name) {
+        var sdx = new Array(n + 2);
+        var sdy = new Array(n + 2);
+        var sdc = new Array(n + 2);
+        sdy[n + 1] = s.getSize(0);
+        sdx[n + 1] = s.getSize(1);
+        sdc[n + 1] = s.getSize(2);
+        var l;
+        for (l = n; l >= 1; l--) {
+            sdy[l] = Math.ceil(sdy[l + 1] / 2);
+            sdx[l] = Math.ceil(sdx[l + 1] / 2);
+            sdc[l] = sdc[l + 1];
+        }
+        sdy[0] = sdy[1];
+        sdx[0] = sdx[1];
+        sdc[0] = sdc[1];
+
+        var outSize = sdx[0] * sdy[0] * sdc[0];
+        var cSize = [0, outSize];
+        for (l = 2; l < n + 2; l++) {
+            var subBandSize = sdy[l - 1] * sdx[l - 1] * sdc[l - 1];
+            for (var b = 0; b < 3; b++) {
+                outSize += subBandSize;
+                cSize.push(outSize);
+            }
+        }
+
+        var out = new Float64Array(outSize);
+        var matIn = s, dL, dH;
+        for (l = n; l >= 1; l--) {
+            var wt = dwt2(matIn, name);
+            var s = 1 + 3 * (l - 1);
+            out.subarray(cSize[s], cSize[s + 1]).set(wt[1].getData());
+            out.subarray(cSize[s + 1], cSize[s + 2]).set(wt[2].getData());
+            out.subarray(cSize[s + 2], cSize[s + 3]).set(wt[3].getData());
+            matIn = wt[0];
+        }
+        out.subarray(cSize[0], cSize[1]).set(wt[0].getData());
+        return [new Matrix([outSize], out), Matrix.toMatrix([sdy, sdx, sdc])];
+    };
+    /** Reconstruct the signal from a 2D DWT (Discrete Wavelet Transform).
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  The reconstructed signal.
+     * @matlike
+     */
+    Matrix.waverec2 = function (lc, name) {
+        var sdy = lc[1].get([], 0).getData();
+        var sdx = lc[1].get([], 1).getData();
+        var sdc = lc[1].get([], 2).getData();
+
+        var outSize = sdx[0] * sdy[0] * sdc[0];
+        var cSize = [0, outSize];
+        
+        var l, n = sdy.length - 2;
+        for (l = 2; l < n + 2; l++) {
+            var subBandSize = sdy[l - 1] * sdx[l - 1] * sdc[l - 1];
+            for (var b = 0; b < 3; b++) {
+                outSize += subBandSize;
+                cSize.push(outSize)
+            }
+        }
+        var data = lc[0].getData();
+        var subSize = [sdy[0], sdx[0], sdc[0]];
+        var A, H, V, D;
+        A = new Matrix(subSize, data.subarray(cSize[0], cSize[1]))
+        for (l = 1; l < n + 1; l++) {
+            if (A.getSize(0) !== sdy[l] || A.getSize(1) !== sdx[l]) {
+                A = A.get([0, sdy[l] - 1], [0, sdx[l] - 1], [])
+            }
+            var s = 1 + 3 * (l - 1);
+            subSize = [sdy[l], sdx[l], sdc[l]];
+            H = new Matrix(subSize, data.subarray(cSize[s], cSize[s + 1]));
+            V = new Matrix(subSize, data.subarray(cSize[s + 1], cSize[s + 2]));
+            D = new Matrix(subSize, data.subarray(cSize[s + 2], cSize[s + 3]));
+            A = idwt2([A, H, V, D], name);
+        }
+        if (A.getSize(0) !== sdy[l] || A.getSize(1) !== sdx[l]) {
+            A = A.get([0, sdy[l] - 1], [0, sdx[l] - 1], [])
+        }
+        return A;
+    };
+    /** Reconstruct the signal from a 2D DWT (Discrete Wavelet Transform)
+     * at the coarsest level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array of three elements, one contains the coefficients 
+     *  the second contains the sizes of each subbands, and the third 
+     *  contains the approximation coefficients at the scale j-1.
+     * @matlike
+     */
+    Matrix.upwlev2 = function (lc, name) {
+        var sdy = lc[1].get([], 0).getData();
+        var sdx = lc[1].get([], 1).getData();
+        var sdc = lc[1].get([], 2).getData();
+
+        // If there no possible reconstruction
+        if (sdx.length === 2) {
+            return [new Matrix(), new Matrix(), Matrix.reshape(lc[0], lc[1].get(0, []).getData())];
+        }
+
+        var outSize = sdx[0] * sdy[0] * sdc[0];
+        var cSize = [0, outSize];
+        
+        var l, n = sdy.length - 2;
+        for (l = 2; l < n + 2; l++) {
+            var subBandSize = sdy[l - 1] * sdx[l - 1] * sdc[l - 1];
+            for (var b = 0; b < 3; b++) {
+                outSize += subBandSize;
+                cSize.push(outSize)
+            }
+        }
+        var data = lc[0].getData();
+        var subSize = [sdy[0], sdx[0], sdc[0]];
+        var A, H, V, D;
+        l = 1;
+        var Am = new Matrix(subSize, data.subarray(cSize[0], cSize[1]))
+        var s = 1 + 3 * (l - 1);
+        subSize = [sdy[l], sdx[l], sdc[l]];
+        H = new Matrix(subSize, data.subarray(cSize[s], cSize[s + 1]));
+        V = new Matrix(subSize, data.subarray(cSize[s + 1], cSize[s + 2]));
+        D = new Matrix(subSize, data.subarray(cSize[s + 2], cSize[s + 3]));
+        A = idwt2([Am, H, V, D], name);
+        if (A.getSize(0) !== sdy[l] || A.getSize(1) !== sdx[l]) {
+            A = A.get([0, sdy[l + 1] - 1], [0, sdx[l + 1] - 1], []);
+        }
+
+        var sizes = lc[1].get([1, -1]);
+        sizes.set(0, [], sizes.get(1, []));
+
+        var out = new Float64Array(A.numel() + cSize[cSize.length - 1] - cSize[s + 3]);
+        out.subarray(0, A.numel()).set(A.getData());
+        out.subarray(A.numel(), A.numel() + cSize[cSize.length - 1] - cSize[s + 3]).set(data.subarray(cSize[s + 3]));
+        return [new Matrix([out.length], out), sizes, Am];
+    };
+
+    /** Returns the coefficients corresponding to the approximation subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#detcoef2},
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} level
+     *  Wavelet name.
+     * @return {Matrix}
+     *  If the level corresponds to the last level of decomposition, 
+     *  the coefficients returned will be a view on the coefficient
+     *  provided. Therefore, a modification on one will affect both.
+     * @matlike
+     */
+    Matrix.appcoef2 = function (lc, name, j) {
+        var J = lc[1].size(0) - 2;
+        while (J > j + 1) {
+            lc = Matrix.upwlev2(lc, name);
+            J = lc[1].size(0) - 2;
+        }
+        var sizes = lc[1].get([1, -1]).prod(1).getData();
+        var outSize = sizes[0];
+        var data = lc[0].getData();
+        var size = lc[1].get(0).getData();
+        return new Matrix(size, data.subarray(0, sizes[0]));
+    };
+    /** Returns the coefficients corresponding to a detail subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#appcoef2}.
+     *
+     * @param {String} type
+     *  Can be either 'h', 'v' or 'd'.'
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {Number} level
+     *  The level of the subband.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
+     * @matlike
+     */
+    Matrix.detcoef2 = function (type, lc, j) {
+        var sizes = lc[1].get([1, -1]).prod(1).getData();
+        var J = lc[1].size(0) - 2;
+        var outSize = sizes[0], cSize = [0, outSize];
+        var n;
+        for (n = 0; n < J; n++) {
+            for (var b = 0; b < 3; b++) {
+                outSize += sizes[n];
+                cSize.push(outSize)
+            }
+        }
+        var data = lc[0].getData();
+        var scale = J - (j + 1);
+        var size = lc[1].get([scale + 1], []).getData();
+        var band = 1 + scale * 3; 
+        if (type === 'h') {
+            var start = cSize[band], end = cSize[band + 1];
+        } else if (type === 'v') {
+            var start = cSize[band + 1], end = cSize[band + 2];
+        } else if (type === 'd') {
+            var start = cSize[band + 2], end = cSize[band + 3];
+        } else if (type === 'all') {
+            return [
+                Matrix.detcoef2('h', lc, j),
+                Matrix.detcoef2('v', lc, j),
+                Matrix.detcoef2('d', lc, j)
+            ];
+        }
+        return new Matrix(size, data.subarray(start, end));
+    };
+
+    /** Returns the maximum level of the decomposition according 
+     * to a mother wavelet name.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Matrix} sizes
+     *  Matrix containing the size(s) of the signal to decompose.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Number}
+     * @matlike
+     */
+    Matrix.dwtmaxlev = function (s, name) {
+        s = Matrix.toMatrix(s).min().getDataScalar();
+        var wav = new Wavelet(name);
+        var dl = wav.filterL.length,
+            dh = wav.filterH.length,
+            rl = wav.invFilterL.length,
+            rh = wav.invFilterH.length;
+        var w = Math.max(dl, dh, rl, rh);
+        var maxlev = Math.floor(Math.log(s / (w - 1)) / Math.log(2));
+        return maxlev;
+    };
+
+    /** Reconstruct a signal from a given subband. 
+     * To be implemented.
+     */
+    Matrix.wrcoef2 = function (type, lc, name, n) {};
 
 })();
