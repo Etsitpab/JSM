@@ -1589,6 +1589,7 @@
      * @param {Matrix} ref
      * @return {Matrix}
      *  Scalar Matrix containing the PSNR value.
+     * @method psnr
      */
     Matrix.psnr = function (A, B, peakval) {
         A = Matrix.toMatrix(A);
