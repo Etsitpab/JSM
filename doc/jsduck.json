@@ -40,6 +40,7 @@
 
         "../src/Image/Image.class.js",
         "../src/Image/Image.color.js",
+        "../src/Image/Image.fourier.js",
         "../src/Image/Image.wavelets.js",
 
         "../src/Matching/Matching.class.js",

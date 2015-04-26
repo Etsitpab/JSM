@@ -14,6 +14,11 @@ input, select, fieldset, file {
     border: 1px solid #e6e6e6;
 }
 
+fieldset {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
 input[type=button]:hover {
     background-color: silver;
 }
@@ -22,7 +27,7 @@ input[type=button], [type=file], select {
     background-color: #e6e6e6;
 }
 
-input[type=button], [type=text], [type=range], [type=file], label , select {
+input[type=button], [type=text], [type=range], [type=file], label, select {
     color: black;
     display: inline-block; 
     width: 100%;
@@ -33,6 +38,49 @@ input[type=button], [type=text], [type=range], [type=file], label , select {
 input[type=text]  {
     text-align:right;
 }
+
+.parameter {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+}
+
+.parameter > div {
+    flex: 1 0;
+}
+.parameter > input[type=range] {
+    flex: 1;
+}
+.parameter > input[type=button] {
+    flex: 1;
+    margin: 1px;
+}
+
+label.val {
+    width: 20px;
+    display: inline-block;
+    vertical-align: middle;
+}
+input[type=range].val {
+    width: calc(70% - 6px - 20px);
+    vertical-align: middle;
+    margin-right: 0px;
+}
+input[type=text].val {
+    width: 30%;
+    vertical-align: middle;
+}
+
+input[type=range].val2 {
+    width: calc(70% - 3px);
+    vertical-align: middle;
+    margin-right: 0px;
+}
+input[type=text].val2 {
+    width: 30%;
+    vertical-align: middle;
+}
+
 
 p { 
     margin-top: 5px;
@@ -51,7 +99,6 @@ p {
     box-shadow: 0 8px 24px rgba(100, 100, 100, 0.5);
     padding: 20px;
     margin: auto;
-    /* margin-top: 30px;*/
     display: absolute;
     width: calc(100% - 100px);
     height: calc(100% - 70px);

@@ -55,8 +55,12 @@
             v.extractTo(this.getData(), mat.getData());
             return mat;
         }
-        if (this.isreal() || mat.isreal()) {
-            this.toComplex();
+        if (this.isreal()) {
+            v.extractTo(this.getData(), mat.getRealData());
+            return mat;
+        }
+        if (mat.isreal()) {
+            mat.toComplex();
         }
         v.extractTo(this.getRealData(), mat.getRealData());
         v.extractTo(this.getImagData(), mat.getImagData());
@@ -89,12 +93,12 @@
      * @private
      *
      * @fixme
-     *  There is a bug with the case 1.b) when the Matrix containing the
+     *  1) There is a bug with the case 1.b) when the Matrix containing the
      *  indices does not have the same size as the matrix containing the
      *  values. It should work if the indices are valid. The solution may be
      *  not obvious.
-     * @fixme
-     *  Due to time spent in checking arguments the resulting function is
+     *
+     *  2) Due to time spent in checking arguments the resulting function is
      *  very slow this should be reduce using the type of the array to check
      *  if values are integer or not.
      */
@@ -343,6 +347,26 @@
         return [this.extractViewFrom(v), n];
     };
 
+    /** Circular shift on given dimensions.
+     *
+     * __Also see:__
+     * {@link Matrix#permute},
+     * {@link Matrix#shiftdim}.
+     *
+     * @param {Integer[]} shift Defines the shift on each dimension.
+     *
+     * @param {Integer[]}  [dimension] To be specified if shift argument 
+     *  is a scalar. Corresponds to which dimension must be shifted.
+     *
+     * @method circshift
+     *
+     * @chainable
+     */
+    Matrix_prototype.circshift = function (K, dim) {
+        var v = this.getView().circshift(K, dim);
+        return this.extractViewFrom(v);
+    };
+    
     /** Rotates Matrix counter-clockwise by a multiple of 90 degrees.
      *
      * @param {Integer} k

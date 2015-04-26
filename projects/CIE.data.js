@@ -16,9 +16,9 @@
  * @author Guillaume Tartavel <guillaume.tartavel@telecom-paristech.fr>
  */
 
-/** Color Matching functions (CMF) 'CIE 1931 RGB' and 'CIE 1931 XYZ'. */
 (function (Matrix, CIE) {
     "use strict";
+    /* Color Matching functions (CMF) 'CIE 1931 RGB' and 'CIE 1931 XYZ'. */
     var lambda = Matrix.colon(360, 830).getData(),
         x = Tools.arrayFromBase64(
             "xDUIOYLuGDlLwis5HvFAOfq6WDnfX3M5UrKIOdynmTm2saw5BPHBOe+G2TlTWvM5kAwIOpCHGDoO \
@@ -139,16 +139,18 @@
         throw new Error("Matrix.getCMF: Currently only xyY coordinates are supported.")
     };
 
-    var daylightSpectrum = Tools.arrayFromBase64("AAA8ACgBKAI8AmkCZwKwAnoCkgK0AxgEIwTIA3ME5wTnBL0EvQRvBGoEVAQpBEAEHQQUBOgDwAO2\
-    A3oDiQOHA3QDSANSAzMDOQNRAy0DzwLnAvwCeALMAgIDiwLdAa0CigKUAmICFAJNAmsCAAAtAN8A\
-    pAGVAZ8BfAGyAYEBXgGyAc4BtwFyAW8BZwFFARYB8gDJAKIAgwBWADwAKQASAAAA8P/d/93/xv+5\
-    /6r/of+U/5b/iP90/3j/iP97/4D/lv+M/4f/m/+y/5H/mf+W/6D/rf+j/57/AAAUACgAVQBOAEIA\
-    NQA8AB4ADAD1//v/+v/0/+f/4//l/+f/5//v//H/9P/0//b/+//9/wAAAgAFABQAIAAoAC4AMgBC\
-    AEkAVgBiAGUAUwBgAFUARgBLAFAAQgAzAEoARABGAEAANwA8AEEA", Int16Array);
+    var daylightSpectrum = Tools.arrayFromBase64(
+        "AAA8ACgBKAI8AmkCZwKwAnoCkgK0AxgEIwTIA3ME5wTnBL0EvQRvBGoEVAQpBEAEHQQUBOgDwAO2\
+        A3oDiQOHA3QDSANSAzMDOQNRAy0DzwLnAvwCeALMAgIDiwLdAa0CigKUAmICFAJNAmsCAAAtAN8A\
+        pAGVAZ8BfAGyAYEBXgGyAc4BtwFyAW8BZwFFARYB8gDJAKIAgwBWADwAKQASAAAA8P/d/93/xv+5\
+        /6r/of+U/5b/iP90/3j/iP97/4D/lv+M/4f/m/+y/5H/mf+W/6D/rf+j/57/AAAUACgAVQBOAEIA\
+        NQA8AB4ADAD1//v/+v/0/+f/4//l/+f/5//v//H/9P/0//b/+//9/wAAAgAFABQAIAAoAC4AMgBC\
+        AEkAVgBiAGUAUwBgAFUARgBLAFAAQgAzAEoARABGAEAANwA8AEEA",
+        Int16Array);
     daylightSpectrum = Matrix.toMatrix(new Float32Array(daylightSpectrum)).reshape(54, 3)["./"](10);
     // Matrix.toMatrix(Matrix.CIE.daylightSpectrum.S0).cat(1, Matrix.toMatrix(Matrix.CIE.daylightSpectrum.S1), Matrix.toMatrix(Matrix.CIE.daylightSpectrum.S2)).display()
-
-    /** Daylight spectrum moments. */
+    
+    /* Daylight spectrum moments. */
     CIE.daylightSpectrum = {
         'S0': new Float32Array([0.04, 6.0, 29.6, 55.3,  57.3,  61.8, 61.5, 68.8,
                                 63.4, 65.8, 94.8, 104.8, 105.9, 96.8, 113.9,
