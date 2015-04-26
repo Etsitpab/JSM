@@ -975,8 +975,12 @@ if (typeof window === 'undefined') {
             v.extractTo(this.getData(), mat.getData());
             return mat;
         }
-        if (this.isreal() || mat.isreal()) {
-            this.toComplex();
+        if (this.isreal()) {
+            v.extractTo(this.getData(), mat.getRealData());
+            return mat;
+        }
+        if (mat.isreal()) {
+            mat.toComplex();
         }
         v.extractTo(this.getRealData(), mat.getRealData());
         v.extractTo(this.getImagData(), mat.getImagData());
@@ -1009,12 +1013,12 @@ if (typeof window === 'undefined') {
      * @private
      *
      * @fixme
-     *  There is a bug with the case 1.b) when the Matrix containing the
+     *  1) There is a bug with the case 1.b) when the Matrix containing the
      *  indices does not have the same size as the matrix containing the
      *  values. It should work if the indices are valid. The solution may be
      *  not obvious.
-     * @fixme
-     *  Due to time spent in checking arguments the resulting function is
+     *
+     *  2) Due to time spent in checking arguments the resulting function is
      *  very slow this should be reduce using the type of the array to check
      *  if values are integer or not.
      */
@@ -1263,6 +1267,26 @@ if (typeof window === 'undefined') {
         return [this.extractViewFrom(v), n];
     };
 
+    /** Circular shift on given dimensions.
+     *
+     * __Also see:__
+     * {@link Matrix#permute},
+     * {@link Matrix#shiftdim}.
+     *
+     * @param {Integer[]} shift Defines the shift on each dimension.
+     *
+     * @param {Integer[]}  [dimension] To be specified if shift argument 
+     *  is a scalar. Corresponds to which dimension must be shifted.
+     *
+     * @method circshift
+     *
+     * @chainable
+     */
+    Matrix_prototype.circshift = function (K, dim) {
+        var v = this.getView().circshift(K, dim);
+        return this.extractViewFrom(v);
+    };
+    
     /** Rotates Matrix counter-clockwise by a multiple of 90 degrees.
      *
      * @param {Integer} k
@@ -5243,51 +5267,49 @@ if (typeof window === 'undefined') {
             ]);
         var b = new Float64Array(
             [
-                    -0.00000000029734388465e0, 0.00000000269776334046e0,
-                    -0.00000000640788827665e0, -0.00000001667820132100e0,
-                    -0.00000021854388148686e0, 0.00000266246030457984e0,
+               -0.00000000029734388465e0,  0.00000000269776334046e0,
+               -0.00000000640788827665e0, -0.00000001667820132100e0,
+               -0.00000021854388148686e0,  0.00000266246030457984e0,
                 0.00001612722157047886e0, -0.00025616361025506629e0,
-                0.00015380842432375365e0, 0.00815533022524927908e0,
-                    -0.01402283663896319337e0, -0.19746892495383021487e0,
+                0.00015380842432375365e0,  0.00815533022524927908e0,
+               -0.01402283663896319337e0, -0.19746892495383021487e0,
                 0.71511720328842845913e0,
-                    -0.00000000001951073787e0, -0.00000000032302692214e0,
-                0.00000000522461866919e0, 0.00000000342940918551e0,
-                    -0.00000035772874310272e0, 0.00000019999935792654e0,
+               -0.00000000001951073787e0, -0.00000000032302692214e0,
+                0.00000000522461866919e0,  0.00000000342940918551e0,
+               -0.00000035772874310272e0,  0.00000019999935792654e0,
                 0.00002687044575042908e0, -0.00011843240273775776e0,
-                    -0.00080991728956032271e0, 0.00661062970502241174e0,
+               -0.00080991728956032271e0,  0.00661062970502241174e0,
                 0.00909530922354827295e0, -0.20160072778491013140e0,
                 0.51169696718727644908e0,
-
                 0.00000000003147682272e0, -0.00000000048465972408e0,
-                0.00000000063675740242e0, 0.00000003377623323271e0,
-                    -0.00000015451139637086e0, -0.00000203340624738438e0,
-                0.00001947204525295057e0, 0.00002854147231653228e0,
-                    -0.00101565063152200272e0, 0.00271187003520095655e0,
+                0.00000000063675740242e0,  0.00000003377623323271e0,
+               -0.00000015451139637086e0, -0.00000203340624738438e0,
+                0.00001947204525295057e0,  0.00002854147231653228e0,
+               -0.00101565063152200272e0,  0.00271187003520095655e0,
                 0.02328095035422810727e0, -0.16725021123116877197e0,
                 0.32490054966649436974e0,
                 0.00000000002319363370e0, -0.00000000006303206648e0,
-                    -0.00000000264888267434e0, 0.00000002050708040581e0,
+               -0.00000000264888267434e0,  0.00000002050708040581e0,
                 0.00000011371857327578e0, -0.00000211211337219663e0,
-                0.00000368797328322935e0, 0.00009823686253424796e0,
-                    -0.00065860243990455368e0, -0.00075285814895230877e0,
+                0.00000368797328322935e0,  0.00009823686253424796e0,
+               -0.00065860243990455368e0, -0.00075285814895230877e0,
                 0.02585434424202960464e0, -0.11637092784486193258e0,
                 0.18267336775296612024e0,
-                    -0.00000000000367789363e0, 0.00000000020876046746e0,
-                    -0.00000000193319027226e0, -0.00000000435953392472e0,
+               -0.00000000000367789363e0,  0.00000000020876046746e0,
+               -0.00000000193319027226e0, -0.00000000435953392472e0,
                 0.00000018006992266137e0, -0.00000078441223763969e0,
-                    -0.00000675407647949153e0, 0.00008428418334440096e0,
-                    -0.00017604388937031815e0, -0.00239729611435071610e0,
+               -0.00000675407647949153e0,  0.00008428418334440096e0,
+               -0.00017604388937031815e0, -0.00239729611435071610e0,
                 0.02064129023876022970e0, -0.06905562880005864105e0,
                 0.09084526782065478489e0
             ]);
 
-        var out = A.getCopy();
-        var data = out.getData(), i, ie;
+        var data = A.getData(), i, ie;
         var w, t, k, y, u;
         var abs = Math.abs, floor = Math.floor, exp = Math.exp;
         // Erf computation
         if (JINT === 0) {
-            for (i = 0, ie = out.getLength(); i < ie; i++) {
+            for (i = 0, ie = A.getLength(); i < ie; i++) {
                 w = abs(data[i]);
                 if (w < 2.2e0) {
                     t = w * w;
@@ -5322,7 +5344,7 @@ if (typeof window === 'undefined') {
             }
             // Erfc computation
         } else if (JINT === 1) {
-            for (i = 0, ie = out.getLength(); i < ie; i++) {
+            for (i = 0, ie = A.getLength(); i < ie; i++) {
                 t = pa / (pa + abs(data[i]));
                 u = t - 0.5e0;
                 y = (((((((((p22 * u + p21) * u + p20) * u +
@@ -5339,7 +5361,7 @@ if (typeof window === 'undefined') {
             }
             // Erfcx computation
         } else if (JINT === 2) {
-            for (i = 0, ie = out.getLength(); i < ie; i++) {
+            for (i = 0, ie = A.getLength(); i < ie; i++) {
                 t = pa / (pa + abs(data[i]));
                 u = t - 0.5e0;
                 y = (((((((((p22 * u + p21) * u + p20) * u +
@@ -5355,14 +5377,13 @@ if (typeof window === 'undefined') {
                 data[i] = exp(data[i] * data[i]) * y;
             }
         }
-        return out;
+        return A;
     };
 
     /** Apply the error function at each element of the matrix.
      *
      * @chainable
      * @matlike
-     * @fixme Should act in place.
      */
     Matrix_prototype.erf = function () {
         return calerf(this, 0);
@@ -5373,7 +5394,6 @@ if (typeof window === 'undefined') {
      *
      * @chainable
      * @matlike
-     * @fixme Should act in place.
      */
     Matrix_prototype.erfc = function () {
         return calerf(this, 1);
@@ -5384,51 +5404,51 @@ if (typeof window === 'undefined') {
      *
      * @chainable
      * @matlike
-     * @fixme Should act in place.
      */
     Matrix_prototype.erfcx = function () {
         return calerf(this, 2);
     };
-
+    
+    /** Apply the gamma function to the `Matrix`.
+     * @chainable 
+     * @fixme check the output epecially for negative values.
+     * @method gamma
+     */
     (function (Matrix_prototype) {
         var xbig = 171.624;
-        var p = new Float64Array(
-            [-1.71618513886549492533811,
+        var p = new Float64Array([
+            -1.71618513886549492533811,
              24.7656508055759199108314,
-             -379.804256470945635097577,
+            -379.804256470945635097577,
              629.331155312818442661052,
              866.966202790413211295064,
-             -31451.2729688483675254357,
-             -36144.4134186911729807069,
+            -31451.2729688483675254357,
+            -36144.4134186911729807069,
              66456.1438202405440627855
             ]),
-            q = new Float64Array(
-                [-30.8402300119738975254353,
+            q = new Float64Array([
+                -30.8402300119738975254353,
                  315.350626979604161529144,
-                 -1015.15636749021914166146,
-                 -3107.77167157231109440444,
+                -1015.15636749021914166146,
+                -3107.77167157231109440444,
                  22538.1184209801510330112,
                  4755.84627752788110767815,
-                 -134659.959864969306392456,
-                 -115132.259675553483497211
-                ]),
-            c = new Float64Array(
-                [-0.001910444077728,
+                -134659.959864969306392456,
+                -115132.259675553483497211
+            ]),
+            c = new Float64Array([
+                -0.001910444077728,
                  8.4171387781295e-4,
-                 -5.952379913043012e-4,
+                -5.952379913043012e-4,
                  7.93650793500350248e-4,
-                 -0.002777777777777681622553,
+                -0.002777777777777681622553,
                  0.08333333333333333331554247,
                  0.0057083835261
-                ]);
+            ]);
 
         var trunc = function (x) {
             return (x > 0) ? Math.floor(x) : Math.ceil(x);
         };
-        /** Apply the gamma function to the `Matrix`.
-         * @chainable 
-         * @fixme check the output epecially for negative values.
-         */
         Matrix_prototype.gamma = function () {
             if (!this.isreal()) {
                 throw "Matrix.gamma: Do not work on complex numbers.";
