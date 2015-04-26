@@ -1083,9 +1083,9 @@
         ctx2.drawImage(c1, 0, 0);
         return Matrix.imread(c2).convertImage(this.type());
     };
-    /** Compute the histogram of an grey-level image.
+    /** Compute the histogram of a grey-level image.
      *
-     * @param {Matrix} bins
+     * @param {Matrix} [bins=256]
      * number of bins used for the histogram.
      *
      * @return {Matrix}
@@ -1581,4 +1581,34 @@
         };
         return applyFilter(this, mask, f_bilat);
     }
+    
+    /** Compute the PSNR of two signal of the same size.
+     * __See also :__
+     * {@link Matrix#norm}.
+     * @param {Matrix} signal
+     * @param {Matrix} ref
+     * @return {Matrix}
+     *  Scalar Matrix containing the PSNR value.
+     */
+    Matrix.psnr = function (A, B, peakval) {
+        A = Matrix.toMatrix(A);
+        B = Matrix.toMatrix(B);
+        Tools.checkSizeEquals(A.size(), B.size());
+        if (!Tools.isSet(peakval)) {
+            var tA = A.type(), tB = B.type();
+            var peakval1 = A.isfloat() ? 1 : Matrix.intmax(tA) - Matrix.intmin(tB);
+            var peakval2 = B.isfloat() ? 1 : Matrix.intmax(tB) - Matrix.intmin(tB);
+            peakval = Math.max(peakval1, peakval2);
+        } else {
+            peakval = 1;
+        }
+        var dRef = B.getData(), d2 = A.getData();
+        var i, ie, ssd = 0;
+        for (i = 0, ie = d2.length; i < ie; i++) {
+            var tmp = dRef[i] - d2[i];
+            ssd += tmp * tmp;
+        }
+        return Matrix.toMatrix(10 * Math.log10(peakval * peakval * ie / ssd));
+    };
+    
 })(Matrix, Matrix.prototype);

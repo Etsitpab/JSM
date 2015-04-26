@@ -490,7 +490,9 @@
     //                     Arithmetic Operators                     //
     //////////////////////////////////////////////////////////////////
 
-    /* Function used to generate automatically the other function */
+    /* Function generating automatically the arithmetic operators 
+       functions 
+    */
     var generateArithmeticOperators = function () {
         var operators = {
             '+': {
@@ -656,7 +658,6 @@
 
         // Template function
         var fct = (function (b) {
-            "use strict";
             b = Matrix.toMatrix(b);
             var x, n = this.numel();
             var a = this, ar, ai, br, bi;
@@ -718,7 +719,6 @@
         }).toString();
 
         var fct2 = (function (A, B) {
-            'use strict';
             A = Matrix.toMatrix(A);
             B = Matrix.toMatrix(B);
 
@@ -745,16 +745,18 @@
 
         var o, op, fun;
         for (o in operators) {
-            op = operators[o];
-            fun = replace(fct, op, "real/real");
-            fun = replace(fun, op, "real/imag");
-            fun = replace(fun, op, "imag/real");
-            fun = replace(fun, op, "imag/imag");
-            eval("Matrix.prototype." + op.name + " = " + fun);
+            if (operators.hasOwnProperty(o)) {
+                op = operators[o];
+                fun = replace(fct, op, "real/real");
+                fun = replace(fun, op, "real/imag");
+                fun = replace(fun, op, "imag/real");
+                fun = replace(fun, op, "imag/imag");
+                eval("Matrix.prototype." + op.name + " = " + fun);
 
-            fun = fct2.replace("\"AIsScalar\";", op.AIsScalar);
-            fun = fun.replace("\"AIsMatrix\";", op.AIsMatrix);
-            eval("Matrix." + op.name + " = " + fun);
+                fun = fct2.replace("\"AIsScalar\";", op.AIsScalar);
+                fun = fun.replace("\"AIsMatrix\";", op.AIsMatrix);
+                eval("Matrix." + op.name + " = " + fun);
+            }
         }
     };
 
@@ -1614,6 +1616,7 @@
      * The upper part is set to zero.
      *
      * See also:
+
      *  {@link Matrix#tril},
      *  {@link Matrix#diag}.
      *
@@ -1711,7 +1714,7 @@
         return D;
     };
 
-    /* Apply a function on two Matrix by extending the non-singleton 
+    /** Apply a function on two Matrix by extending the non-singleton 
      * dimensions.
      *
      * @param {Function|String} fun
@@ -1831,6 +1834,21 @@
             }
         } else {
             throw new Error("Matrix.bsxfun: Wrong function argument.");
+        }
+        return out;
+    };
+
+    /** Return a Matrix containg of the same where values are 
+     * either -1, 0, 1 depending on the sign of the elements.
+     *
+     * @matlike
+     */
+    Matrix.prototype.sign = function () {
+        var d = this.getData();
+        var out = new Matrix(this.getSize());
+        var od = out.getData();
+        for (var i = 0, ie = d.length; i < ie; i++) {
+            od[i] = d[i] > 0 ? 1 : (d[i] < 0 ? -1 : 0);
         }
         return out;
     };

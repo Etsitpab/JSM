@@ -5,19 +5,6 @@ var stack, stackIt, image, mask, modules;
 
 var onclick, onmousewheel;
 
-var getPosition = function (e, event) {
-    'use strict';
-    var left = 0, top = 0;
-    while (e.offsetParent !== undefined && e.offsetParent !== null) {
-        left += e.offsetLeft + (e.clientLeft !== null ? e.clientLeft : 0);
-        top += e.offsetTop + (e.clientTop !== null ? e.clientTop : 0);
-        e = e.offsetParent;
-    }
-    left = -left + event.pageX;
-    top = -top + event.pageY;
-    return [left, top];
-};
-
 function exportImage() {
     "use strict";
     var output = stack[stackIt].image;
@@ -27,7 +14,6 @@ function exportImage() {
         var max = output.max();
         output = output["-"](min)["./"](max - min);
     }
-
     output.toImage(function () {
         open(this.src, '_blank');
     });
@@ -57,22 +43,7 @@ function updateOutput(image) {
     image.imshow(outputCanvas, "fit");
     outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
 
-    // Histograms
-    if (image.size(2) === 3) {
-        var red_hist = image.get([], [], 0).imhist();
-        var green_hist = image.get([], [], 1).imhist();
-        var blue_hist = image.get([], [], 2).imhist();
-        var grey_hist = image.rgb2gray().imhist();//blue_hist.min(green_hist);
-        var M = Math.max(red_hist.max().getDataScalar(), green_hist.max().getDataScalar(),
-                         blue_hist.max().getDataScalar(), grey_hist.max().getDataScalar());
-        $("histogram").drawHistogram(red_hist.getData(), M, "", undefined, 'red');
-        $("histogram").drawHistogram(green_hist.getData(), M, "", undefined, 'green', false);
-        $("histogram").drawHistogram(blue_hist.getData(), M, "", undefined, 'blue', false);
-        $("histogram").drawHistogram(grey_hist.getData(), M, "", undefined, 'grey', false);
-    } else {
-        var hist = image.imhist();
-        $("histogram").drawHistogram(hist.getData(), hist.max().getData(), "", undefined, 'grey');
-    }
+    drawImageHistogram("histogram", image);
 }
 
 
@@ -199,6 +170,7 @@ var crop = function () {
         $F("y1", 0);
         $F("y2", 1);
         $F("rotation", 0);
+        updateParameters();
         updateOutput();
     };
 
@@ -211,6 +183,15 @@ var crop = function () {
             rotation: $F("rotation")
         };
     };
+    var updateParameters = function () {
+        var r = Math.round;
+        $V("x1Val", r($F("x1") * 100) + "%");
+        $V("x2Val", r($F("x2") * 100) + "%");
+        $V("y1Val", r($F("x1") * 100) + "%");
+        $V("y2Val", r($F("y2") * 100) + "%");
+        $V("rotationVal", $I("rotation") * 90 + "°");
+    };
+    updateParameters();
     crop.fun = function (img, p) {
         img = img.rot90(p.rotation);
         var x = img.getSize(1) - 1, y = img.getSize(0) - 1;
@@ -221,6 +202,7 @@ var crop = function () {
     };
 
     var onChange = function () {
+        updateParameters();
         change("crop", getParameters());
     };
     var onApply = function () {
@@ -239,14 +221,6 @@ var crop = function () {
 
 var contrast = function () {
     "use strict";
-    contrast.reset = function () {
-        $("channels_contrast").getElementsByTagName("option")[0].selected = "selected";
-        $("histeq_contrast").getElementsByTagName("option")[0].selected = "selected";
-        $F("gamma", 1);
-        $F("brightness", 0.5);
-        $F("contrast", 0.5);
-        updateOutput();
-    };
 
     var getParameters = function () {
         return {
@@ -256,6 +230,23 @@ var contrast = function () {
             contrast: $F("contrast"),
             channel: JSON.parse($("channels_contrast").value)
         };
+    };
+    var updateParameters = function () {
+        var r = Math.round;
+        $V("gammaVal", $F("gamma"));
+        $V("brightnessVal", $F("brightness") - 0.5);
+        $V("contrastVal", $F("contrast") - 0.5);
+    };
+    updateParameters();
+
+    contrast.reset = function () {
+        $("channels_contrast").getElementsByTagName("option")[0].selected = "selected";
+        $("histeq_contrast").getElementsByTagName("option")[0].selected = "selected";
+        $F("gamma", 1);
+        $F("brightness", 0.5);
+        $F("contrast", 0.5);
+        updateParameters();
+        updateOutput();
     };
     contrast.fun = function (img, p) {
         var im = img;
@@ -274,20 +265,20 @@ var contrast = function () {
         if (p.channel.length !== 0) {
             im = Matrix.set(img, [], [], p.channel, im);
         }
-        console.log(p.histeq);
         if (p.histeq === "uniform") {
             im = im.histeq(1023);
         }
         return im;
     };
+    
     var onChange = function () {
+        updateParameters();
         change("contrast", getParameters());
     };
     var onApply = function () {
         apply("contrast", getParameters());
         contrast.reset();
     };
-
 
     $("resetContrast").addEventListener("click", contrast.reset);
     $("applyContrast").addEventListener("click", onApply);
@@ -296,6 +287,75 @@ var contrast = function () {
     $("contrast").addEventListener("change", onChange);
     $("brightness").addEventListener("change", onChange);
     $("gamma").addEventListener("change", onChange);
+};
+
+var colEn = function () {
+    'use strict';
+    
+    var stretchLuminance = function (im) {
+        var l = im.mean(2), lm = l.min(), lM = l.max();
+        var ls = l["-"](lm)["./"](lM["-"](lm));
+        var ld = l.getData(), lsd = ls.getData(), od = im.getData();
+        var e = ld.length;
+        for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
+            var cst = lsd[r] / ld[r];
+            od[r] *= cst;
+            od[g] *= cst;
+            od[b] *= cst;
+        }
+    };
+    var stretchColorChannels = function (im) {
+        for (var c = 0; c < 3; c++) {
+            var channel = im.get([], [], c);
+            var min = channel.min(), max = channel.max();
+            channel["-="](min)["/="](max["-"](min));
+            im.set([], [], c, channel);
+        }
+    };
+    
+    var getParameters = function () {
+        return {
+            K: $F("K"),
+            gamma: $F("ceGamma"),
+            alpha: $F("alpha"),
+            w: $F("w") / 255,
+            wav: $V("wavelet")
+        };
+    };
+    
+    colEn.reset = function () {
+        Tools.tic();
+        $F("K", 20);
+        $F("ceGamma", 0.5);
+        $F("alpha", 0.0);
+        $F("w", 15);
+        $("wavelet").getElementsByTagName("option")[0].selected = "selected";
+        onChange();
+    };
+
+    colEn.fun = function (img, p) {
+        console.log(p.gamma, p.w, p.K, p.wav, p.alpha);
+        var out = img.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, 'image');
+        updateOutput(out);
+        return out;
+    };
+
+    var onApply = function () {
+        apply("colEn", getParameters());
+    };
+    var onChange = function () {
+        $V("KVal", $F("K"));
+        $V("ceGammaVal", $F("ceGamma"));
+        $V("alphaVal", $F("alpha"));
+        $V("wVal", $F("w"));
+    };
+    onChange();
+    $("K").addEventListener("change", onChange, false);
+    $("w").addEventListener("change", onChange, false);
+    $("alpha").addEventListener("change", onChange, false);
+    $("ceGamma").addEventListener("change", onChange, false);
+    $("applyColEn").addEventListener("click", onApply, false);
+    $("resetColEn").addEventListener("click", colEn.reset, false);
 };
 
 var thresholding = function () {
@@ -510,17 +570,23 @@ var hueSaturation = function () {
 var colorTemp = function () {
     "use strict";
 
-    colorTemp.reset = function () {
-        $F("inputCCT", 150);
-        $F("outputCCT", 150);
-        updateOutput();
-    };
-
     var getParameters = function () {
         return {
             tIn: $F("inputCCT"),
             tOut: $F("outputCCT")
         };
+    };
+    var updateParameters = function () {
+        $V("inputCCTVal", Math.round(1e6 / $F("inputCCT")));
+        $V("outputCCTVal", Math.round(1e6 / $F("outputCCT")));
+    };
+    updateParameters();
+
+    colorTemp.reset = function () {
+        $F("inputCCT", 153);
+        $F("outputCCT", 153);
+        updateParameters();
+        updateOutput();
     };
     colorTemp.fun = function (img, p) {
         if (p.tIn !== p.tOut) {
@@ -533,6 +599,7 @@ var colorTemp = function () {
         return img;
     };
     var onChange = function () {
+        updateParameters();
         change("colorTemp", getParameters());
     };
     var onApply = function () {
@@ -590,30 +657,37 @@ var noise = function () {
 var filter = function () {
     "use strict";
 
+    var getParameters = function () {
+       return {
+           filter: $V("filter"), 
+           filter2: $V("filter2"),
+           bilateral_sigmaS: $F("bilateral_sigmaS"),
+           bilateral_sigmaR: $F("bilateral_sigmaR")
+       };
+    };
+    var updateParameters = function () {
+        $V("sigmaSVal", $F("bilateral_sigmaS") * 10);
+        var sigmaR = 1 / (101 - $F("bilateral_sigmaR") * 100);
+        $V("sigmaRVal", sigmaR.toFixed(3));
+    };
+    updateParameters();
+
     filter.reset = function () {
-        $F("gaussian", 0);
-        $F("bilateral_sigma_s", 0);
-        $F("bilateral_sigma_i", 0);
+        $F("bilateral_sigmaS", 0);
+        $F("bilateral_sigmaR", 1);
         $("filter").getElementsByTagName("option")[0].selected = "selected";
         $("filter2").getElementsByTagName("option")[0].selected = "selected";
+        updateParameters();
         updateOutput();
     };
 
-    var getParameters = function () {
-       return {
-           gaussian: $F("gaussian"),
-           filter: $V("filter"), 
-           filter2: $V("filter2"),
-           bilateral_sigma_s: $F("bilateral_sigma_s"),
-           bilateral_sigma_i: $F("bilateral_sigma_i")
-       };
-    };
     filter.fun = function (img, p) {
-        if (p.gaussian > 0) {
-            img = img.fastBlur(p.gaussian * 50);
-        }
-        if (p.bilateral_sigma_s > 0 && p.bilateral_sigma_i > 0) {
-            img = img.imbilateral(p.bilateral_sigma_s * 10, 1 / (101 - p.bilateral_sigma_i * 100), 1.5);
+        if (p.bilateral_sigmaS > 0) {
+            if (p.bilateral_sigmaR === 1) {
+                img = img.fastBlur(p.bilateral_sigmaS * 10);
+            } else {
+                img = img.imbilateral(p.bilateral_sigmaS * 10, 1 / (101 - p.bilateral_sigmaR * 100), 1.5);
+            }
         }
         if (p.filter !== "none") {
             img = img.imfilter(Matrix.fspecial(p.filter));
@@ -624,6 +698,7 @@ var filter = function () {
         return img;
     };
     var onChange = function () {
+        updateParameters();
         change("filter", getParameters());
     };
     var onApply = function () {
@@ -633,9 +708,8 @@ var filter = function () {
 
     $("applyFilter").addEventListener("click", onApply);
     $("resetFilter").addEventListener("click", filter.reset);
-    $("gaussian").addEventListener("change", onChange);
-    $("bilateral_sigma_s").addEventListener("change", onChange);
-    $("bilateral_sigma_i").addEventListener("change", onChange);
+    $("bilateral_sigmaS").addEventListener("change", onChange);
+    $("bilateral_sigmaR").addEventListener("change", onChange);
     $("filter2").addEventListener("change", onChange);
     $("filter").addEventListener("change", onChange);
 };
@@ -870,6 +944,7 @@ window.onload = function () {
         hueSaturation,
         colorTemp,
         colorBalance,
+        colEn,
         noise,
         filter,
         thresholding,
@@ -877,7 +952,8 @@ window.onload = function () {
         colorspace,
         geometric,
         morphology,
-        sharpening
+        sharpening,
+        undoRedo
     ];
 
     var i;
@@ -887,93 +963,46 @@ window.onload = function () {
         }
     }
 
-    undoRedo();
-
-    var inputs = document.getElementsByTagName('input');
-    var focus = function () {
-        this.focus();
-    };
-    for (i = 0; i < inputs.length; i++) {
-        if (inputs[i].type == 'range') {
-            inputs[i].addEventListener('click', focus);
-        }
-    }
-
-    var read = function (evt) {
-
-        var callback = function (evt) {
-            var onread = function () {
-                stack = [];
-                stackIt = 0;
-                if ($V("workImage") === "visible") {
-                    var outputCanvas = $("outputImage"), div = $("image");
-                    var canvasXSize = div.offsetWidth, canvasYSize = div.offsetHeight;
-                    outputCanvas.width = canvasXSize;
-                    outputCanvas.height = canvasYSize;
-                    outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
-                    this.imshow(outputCanvas, "fit");
-                    image = Matrix.imread(outputCanvas).im2double();
-                } else {
-                    image = this.im2double()
-                }
-                stack[0] = {image: image};
-                mask = undefined;
-                updateOutput(image);
-                var legends = document.getElementsByTagName("legend");
-                var evObj = document.createEvent('Events');
-                evObj.initEvent("click", true, false);
-                legends[1].dispatchEvent(evObj);
-            };
-            var im = new Image();
-            im.src = this;
-            im.onload = function() {
-                im.height = 50;
-                im.style.marginRight = "3px";
-                $("images").appendChild(im);
+    var callback = function (evt) {
+        var onread = function () {
+            stack = [];
+            stackIt = 0;
+            if ($V("workImage") === "visible") {
+                var outputCanvas = $("outputImage"), div = $("image");
+                var canvasXSize = div.offsetWidth, canvasYSize = div.offsetHeight;
+                outputCanvas.width = canvasXSize;
+                outputCanvas.height = canvasYSize;
+                outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
+                this.imshow(outputCanvas, "fit");
+                image = Matrix.imread(outputCanvas).im2double();
+            } else {
+                image = this.im2double()
             }
-            im.onclick = function () {
-                Matrix.imread(im.src, onread);
-            }
+            stack[0] = {image: image};
+            mask = undefined;
+            updateOutput(image);
+            var legends = document.getElementsByTagName("legend");
+            var evObj = document.createEvent('Events');
+            evObj.initEvent("click", true, false);
+            legends[1].dispatchEvent(evObj);
         };
-
-        // Only call the handler if 1 or more files was dropped.
-        if (this.files.length) {
-            var i;
-            for (i = 0; i < this.files.length; i++) {
-                readFile(this.files[i], callback, "url");
-            }
+        var im = new Image();
+        im.src = this;
+        im.onload = function() {
+            im.height = 50;
+            im.style.marginRight = "3px";
+            $("images").appendChild(im);
+        }
+        im.onclick = function () {
+            Matrix.imread(im.src, onread);
         }
     };
 
-    $("loadFile").addEventListener("change", read, false);
-    document.body.onresize = updateOutput;
+    initFileUpload('loadFile', callback);
+    superCanvas("outputImage", onclick, onmousewheel);
     hideFieldset();
+    initInputs();
     initProcess();
-
-    var canvas = $("outputImage");
-    var click = function (e) {
-        var coord = getPosition(canvas, e);
-        if (onclick instanceof Function) {
-            onclick.bind(this)(coord, e);
-        }
-    };
-    canvas.addEventListener("click", click);
-
-    var onMouseWheel = function (event) {
-        event.stopPropagation();
-        event.preventDefault();
-        var coord = getPosition(canvas, event);
-        var direction = 0;
-        if (event.hasOwnProperty('wheelDelta')) {
-            direction = -event.wheelDelta / 120.0;
-        } else {
-            direction = event.detail / 3.0;
-        }
-        if (onmousewheel instanceof Function) {
-            onmousewheel.bind(this)(direction * 0.01, coord, event);
-        }
-    };
-    canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
-    canvas.addEventListener('mousewheel', onMouseWheel, false);
+    document.body.onresize = updateOutput;
 };
 

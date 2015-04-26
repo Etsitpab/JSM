@@ -55,8 +55,11 @@
             v.extractTo(this.getData(), mat.getData());
             return mat;
         }
-        if (this.isreal() || mat.isreal()) {
+        if (this.isreal()) {
             this.toComplex();
+        }
+        if (mat.isreal()) {
+            mat.toComplex();
         }
         v.extractTo(this.getRealData(), mat.getRealData());
         v.extractTo(this.getImagData(), mat.getImagData());
@@ -94,8 +97,8 @@
      *  values. It should work if the indices are valid. The solution may be
      *  not obvious.
      * @fixme
-     *  Due to time spent in checking arguments the resulting function is 
-     *  very slow this should be reduce using the type of the array to check 
+     *  Due to time spent in checking arguments the resulting function is
+     *  very slow this should be reduce using the type of the array to check
      *  if values are integer or not.
      */
     Matrix_prototype.selectView = function (args) {
@@ -114,7 +117,8 @@
             if (arg.islogical() && check(this.getSize(), arg.getSize(), td)) {
                 return v.selectBooleanDimension(0, data);
                 // Indices selection
-            } else if (T.isArrayOfNumbers(data, 0, this.numel(0) - 1)) {
+            }
+            if (T.isArrayOfNumbers(data, 0, this.numel(0) - 1)) {
                 return v.selectIndicesDimension(0, data);
             }
             throw new Error("Matrix.selectView: Invalid Matrix selection.");
@@ -140,7 +144,7 @@
         return MatrixView.prototype.select.apply(this.getView(), args);
     };
 
-    
+
     /** Allow to extract a subpart of the Matrix for each dimension
      * if no arguments is provided then it will return a new vector
      * with all the elements one after the others.
@@ -194,22 +198,22 @@
     };
 
     Matrix.set = function () {
-	var mat = Array.prototype.shift.apply(arguments);
-	if (!(mat instanceof Matrix)) {
-	    throw new Error("Matrix.set: Matrix to modify must be provided.");
-	}
+        var mat = Array.prototype.shift.apply(arguments);
+        if (!(mat instanceof Matrix)) {
+            throw new Error("Matrix.set: Matrix to modify must be provided.");
+        }
         return Matrix_prototype.set.apply(mat.getCopy(), arguments);
     };
-    
+
     Matrix.reshape = function () {
-	var mat = Array.prototype.shift.apply(arguments);
-	if (!(mat instanceof Matrix)) {
-	    throw new Error("Matrix.set: Matrix to modify must be provided.");
-	}
-	mat = mat.getCopy();
+        var mat = Array.prototype.shift.apply(arguments);
+        if (!(mat instanceof Matrix)) {
+            throw new Error("Matrix.set: Matrix to modify must be provided.");
+        }
+        mat = mat.getCopy();
         return mat.reshape.apply(mat, arguments);
     };
-	
+
     //////////////////////////////////////////////////////////////////
     //                      Matrix Manipulation                     //
     //////////////////////////////////////////////////////////////////
@@ -224,7 +228,6 @@
      * @return {Matrix} new Matrix.
      *
      * @matlike
-     * @todo Create a tag Matlab-like and a tag also see.
      */
     Matrix_prototype.repmat = function () {
         // Check parameters

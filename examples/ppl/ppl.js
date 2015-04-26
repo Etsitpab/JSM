@@ -3,31 +3,56 @@ var CS = Matrix.CIE;
 var diagram = "xyY";
 
 var addScatter = false;
-var im;
-var imModif;
+var imgOrig;
+var imgCurrent;
+var MAX_SIZE = 1200;
 
-var IMAGE;
 
-function updateOutput(image) {
+var colorsName = [
+    "red", "lime", "blue", "yellow",
+    "fuchsia", "aqua", "olive", "purple",
+    "teal", "maroon", "green", "navy",
+    "black", "gray", "sylver"
+];
+/*
+(function (oldConsole) {
     "use strict";
-    var outputCanvas = $("outputImage");
-    var div = $("image");
-    var canvasXSize = div.offsetWidth;
-    var canvasYSize = div.offsetHeight;
-    outputCanvas.width = canvasXSize;
-    outputCanvas.height = canvasYSize;
-    image.imshow(outputCanvas, "fit");
-    outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
-}
-
-function setImage(im) {
+    window.console = {
+        log: function() {
+            
+            $("log").innerHTML += Array.prototype.join.call(arguments, ' ') + "<br>";
+            var d = $('log');
+            if(d.scrollHeight > d.clientHeight) {
+                d.scrollTop = d.scrollHeight - d.clientHeight;
+            }
+        }, 
+        warn: function(txt) {
+            oldConsole.warn(txt);
+        }, 
+        profile: function() {
+            oldConsole.profile();
+        }, 
+        profileEnd: function() {
+            oldConsole.profileEnd();
+        }
+    };
+})(console);
+ */
+function displayImage(im) {
     'use strict';
-    imModif = im;
     var dataURL = im.toImage(function () {
         var image = $('workingImage');
         image.setAttributeNS('http://www.w3.org/1999/xlink',
 			     'xlink:href', dataURL.src);
     });
+}
+
+function setImage(im) {
+    'use strict';
+    if (im) {
+        imgCurrent = im;
+    }
+    displayImage(imgCurrent);
 }
 
 function illuminantToCCT(input) {
@@ -49,32 +74,36 @@ function illuminantToCCT(input) {
 
 function getWhiteRefRGB() {
     'use strict';
-    var chr = [$('ewChr1').value, $('ewChr2').value, 1];
+    var chr = [$F('ewChr1'), $F('ewChr2'), 1];
     if (diagram !== 'xyY') {
         chr = Matrix.Colorspaces[diagram + ' to xyY'](chr);
     }
-    return Matrix.Colorspaces['xyY to RGB'](chr);
+    chr = Matrix.Colorspaces['xyY to XYZ'](chr);
+    chr = Matrix.Colorspaces['XYZ to LinearRGB'](chr);
+    return chr;
 }
 
 function getActualWhiteRGB() {
     'use strict';
-    var chr = [$('awChr1').value, $('awChr2').value, 1];
+    var chr = [$F('awChr1'), $F('awChr2'), 1];
     if (diagram !== 'xyY') {
         chr = Matrix.Colorspaces[diagram + ' to xyY'](chr);
     }
-    return Matrix.Colorspaces['xyY to RGB'](chr);
+    chr = Matrix.Colorspaces['xyY to XYZ'](chr);
+    chr = Matrix.Colorspaces['XYZ to LinearRGB'](chr);
+    return chr;
 }
 
 function updateError() {
     'use strict';
     var errorElmt = $('angularError');
     var err = angularError(getWhiteRefRGB(), getActualWhiteRGB()) || 0;
-    errorElmt.value = err.toFixed(1);
+    errorElmt.value = err.toFixed(2) + "°";
 }
 
 function setChromaticity(chr1, chr2, id) {
     'use strict';
-    id = id || $('clickAction').value;
+    id = id || "ewChr";
     $(id + '1').value = chr1.toFixed(4);
     $(id + '2').value = chr2.toFixed(4);
     updateError();
@@ -82,43 +111,39 @@ function setChromaticity(chr1, chr2, id) {
 
 function changeIlluminant(input) {
     'use strict';
-    var outputStdIll = $('outputStdIll').value;
-    setImage(correctImage(im, input, outputStdIll));
-
-    var inputCCTField = $('inputCCT');
-    inputCCTField.value = illuminantToCCT(input);
+    var outputStdIll = $V('outputStdIll');
+    displayImage(correctImage(imgCurrent, input, outputStdIll));
 
     var cDiagram = $('chromaticityDiagram').getPlot();
 
     if (diagram !== 'xyY') {
-        input = Matrix.Colorspaces['xyY to ' + diagram](input);
+        input = Matrix.Colorspaces['xyY to ' + diagram](input.slice());
     }
     cDiagram.setCursor(input[0], input[1]);
-    setChromaticity(input[0], input[1]);
+    setChromaticity(input[0], input[1], "awChr");
 }
 
 function reset() {
     'use strict';
-    setImage(im);
+    setImage(imgOrig.getCopy());
     $('imagePlot').getPlot().setAxis();
 }
 
 function exportImage() {
     'use strict';
     var canvas = document.createElement('canvas');
-    imModif.imshow(canvas);
+    imgCurrent.imshow(canvas);
     open(canvas.toDataURL());
 }
 
 function plotScatter(x1, y1, x2, y2) {
     'use strict';
     var min = Math.min, max = Math.max, round = Math.round;
-    x1 = round(x1);
-    y1 = round(y1);
-    x2 = round(x2);
-    y2 = round(y2);
-
-    var subIm = im.get([min(-y1, -y2), max(-y1, -y2)], [min(x1, x2), max(x1, x2)]);
+    var Y1 = round(max(min(-y1, -y2), 0));
+    var Y2 = round(min(max(-y1, -y2), imgCurrent.getSize(0) - 1));
+    var X1 = round(max(min(x1, x2), 0));
+    var X2 = round(min(max(x2, x2), imgCurrent.getSize(1) - 1));
+    var subIm = imgCurrent.get([Y1, Y2], [X1, X2]);
     var points = [
         subIm.get([], [], 0).getData(),
         subIm.get([], [], 1).getData(),
@@ -136,186 +161,230 @@ function plotScatter(x1, y1, x2, y2) {
 
 function callback(image) {
     'use strict';
-    im = image.im2double();
-    $('inputStdIll').selectedIndex = 5; // D65
+
+    image = limitImageSize(image, MAX_SIZE);
+    imgOrig = image.im2double();
+    imgCurrent = image.im2double();
+
+    
     $('outputStdIll').selectedIndex = 5; // D65
     var imagePlot = $('imagePlot').getPlot().clear();
-    image.toImage(function () {
+    imgCurrent.toImage(function () {
         imagePlot.addImage(this, 0, 0, {id: 'workingImage'});
-        imagePlot.selectarea = plotScatter;
     });
 }
 
-var out;
-var applyPPL = function (event) {
-    'use strict';
-    function plotIsoCCTLines(p, diagram, t, dist) {
-        "use strict";
-        var i, color = "blue";
-        var u1 = [], u2 = [], v1 = [], v2 = [];
-        for (i = 0; i < t.length; i++) {
-            var l = Matrix.CIE.getIsoCCTLine(t[i], dist, diagram);
-            p.addPath(l.x, l.y, {"class": "CCT", stroke: color, "stroke-width": 0.5});
-            u1.push(l.x[0]);
-            u2.unshift(l.x[1]);
-            v1.push(l.y[0]);
-            v2.unshift(l.y[1]);
-        }
-        var u = u1.concat(u2), v = v1.concat(v2);
-        u.push(u[0]);
-        v.push(v[0]);
-        p.addPath(u, v, {stroke: color, "stroke-width": 0.5});
+var selectAction = function () {
+    var action = $V('selectAction');
+    var imagePlot = $('imagePlot').getPlot();
+    if (action === "scatter") {
+        imagePlot.selectarea = plotScatter;
+    } else if (action === "wp") { 
+        imagePlot.selectarea = estimateWhiteRef;
+    } else if (action === "chart") {
+        imagePlot.selectarea = removeWhiteChart;
     }
+};
 
-    var p = {
-        k: parseFloat($("k").value),
-        delta: parseFloat($("delta").value),
-        bins : parseFloat($("bins").value),
-        s: parseFloat($("threshold").value)
+var removeWhiteChart = function (x1, y1, x2, y2) {
+    'use strict';
+    var m = Math.min, M = Math.max, r = Math.round;
+    var Y1 = r(M(m(-y1, -y2), 0));
+    var Y2 = r(m(M(-y1, -y2), imgCurrent.getSize(0) - 1));
+    var X1 = r(M(m(x1, x2), 0));
+    var X2 = r(m(M(x2, x2), imgCurrent.getSize(1) - 1));
+    imgCurrent.set([Y1, Y2], [X1, X2], 0);
+    setImage();
+};
+
+var estimateWhiteRef = function (x1, y1, x2, y2) {
+    'use strict';
+    var m = Math.min, M = Math.max, r = Math.round;
+    var Y1 = r(M(m(-y1, -y2), 0));
+    var Y2 = r(m(M(-y1, -y2), imgCurrent.getSize(0) - 1));
+    var X1 = r(M(m(x1, x2), 0));
+    var X2 = r(m(M(x2, x2), imgCurrent.getSize(1) - 1));
+    var wp = imgCurrent.get([Y1, Y2], [X1, X2]);
+    wp = wp.reshape([wp.size(0) * wp.size(1), wp.size(2)]).mean(0);
+    var xyY = Matrix.Colorspaces['RGB to xyY'](wp.getData());
+    xyY[2] = 1;    
+    setChromaticity(xyY[0], xyY[1], "ewChr");
+    plotScatter(x1, y1, x2, y2);
+};
+
+function plotIsoCCTLines(p, diagram, t, dist) {
+    "use strict";
+    var i, color = "gray";
+    var u1 = [], u2 = [], v1 = [], v2 = [];
+    for (i = 0; i < t.length; i++) {
+        var l = Matrix.CIE.getIsoCCTLine(t[i], dist, diagram);
+        p.addPath(l.x, l.y, {"id": "CCT" + i, stroke: color, "stroke-width": 0.5});
+        u1.push(l.x[0]);
+        u2.unshift(l.x[1]);
+        v1.push(l.y[0]);
+        v2.unshift(l.y[1]);
+    }
+    var u = u1.concat(u2), v = v1.concat(v2);
+    u.push(u[0]);
+    v.push(v[0]);
+    p.addPath(u, v, {"id": "CCT", stroke: color, "stroke-width": 0.5});
+}
+function removeIsoCCTLines(p) {
+    var p = $('chromaticityDiagram').getPlot();
+    var ids = p.getCurvesIds();
+    
+    for (var i in ids) {
+        if (ids[i].substr(0, 3) === "CCT") {
+            p.remove(ids[i]);
+        }
+    }
+};
+
+var computeEstimations = function (img) {
+    'use strict';
+    var imgLinear = Matrix.applycform(img, 'sRGB to LinearRGB');
+    var estimations = {
+        ppl: img.miredHistogram({
+            k: $F("k"),
+            delta: $F("delta"),
+            bins : $F("bins"),
+            s: $F("threshold")
+        }),
+        gw: imgLinear.colorConstancy('grey_world'),
+        wp: imgLinear.colorConstancy('max_rgb'),
+        sg: imgLinear.colorConstancy('shades_of_grey'),
+        ge: imgLinear.colorConstancy('grey_edge')
     };
+    return estimations;
+};
 
-
-    console.log("Applying the algorithm with parameters : k = ", p.k, "delta = ", p.delta, "bins = ", p.bins, "s = ", p.s);
-    Tools.tic();
-    console.profile();
-    out = im.miredHistogram(p);
-    console.profileEnd();
-    console.log("Time needed:", Tools.toc());
-
-
-    var t1 = Matrix.ldivide(out.scale, 1e6).getData();
+var plotPPL = function (ppl) {
+    var p = {
+        k: $F("k"),
+        delta: $F("delta"),
+        bins : $F("bins"),
+        s: $F("threshold")
+    };
+    var t1 = Matrix.ldivide(ppl.scale, 1e6).getData();
     var cDiagram = $('chromaticityDiagram').getPlot();
     plotIsoCCTLines(cDiagram, diagram, t1, p.delta);
     var h = $('histogram').getPlot();
     h.clear();
-    h.addHistogram(out.scale.getData(), out.histogramWeighted.getData(), {'fill-opacity': 0.33});
+    h.addHistogram(ppl.scale.getData(), ppl.histogramWeighted.getData(), {'fill-opacity': 0.33});
 
-    var colorsName = [
-        "red", "lime", "blue", "yellow",
-        "fuchsia", "aqua", "olive", "purple",
-        "teal", "maroon", "green", "navy",
-        "black", "gray", "sylver"
-    ];
-
-    var i;
+    // Add modes
     $("modesList").innerHTML = "";
-    for (i = 1; i < out.modes.length; i++) {
+    for (var i = 1; i < ppl.modes.length; i++) {
         var c = colorsName[i - 1];
-        var m = out.modes[i];
-        h.drawMode(out.histogramWeighted, out.scale, m, c);
-        addOption("modesList", i, c.toUpperCase());
+        var m = ppl.modes[i];
+        h.drawMode(ppl.histogramWeighted, ppl.scale, m, c);
     }
-    $("modesList").addEventListener("change", function () {chooseIlluminant(parseInt(this.value));})
-    var chooseIlluminant = function (i) {
-        var inputIll = out.modes[i].illxy;
-        changeIlluminant(inputIll);
+};
+var estimations;
+var applyPPL = function (event) {
+    'use strict';
+
+    estimations = computeEstimations(imgCurrent);
+    plotPPL(estimations.ppl);
+    var log = function () {
+        $("log").innerHTML += Array.prototype.join.call(arguments, ' ') + "<br>";
+        var d = $('log');
+        if(d.scrollHeight > d.clientHeight) {
+            d.scrollTop = d.scrollHeight - d.clientHeight;
+        }
     };
-    chooseIlluminant(1);
-};
-
-var eventsFunc =  {
-    param: {
-        onChangeDiagram: function (event) {
-            'use strict';
-            diagram = this.value;
-            var cDiagram = $('chromaticityDiagram').getPlot();
-            cDiagram.clear();
-            cDiagram.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
-            cDiagram.remove("Spectrum locus");
-            cDiagram.remove("Standards illuminants");
-            cDiagram.setLegend('ne');
-            cDiagram.setTitle();
-
-        },
-        onChange: function (event) {
-            'use strict';
-            if (event.which === 13) {
-                im.load(libPath + this.value + '.png', callback);
-            }
-        },
-        onChangeWBAlgo: function (event) {
-            'use strict';
-            var inputIll;
-            if (this.value === "mired") {
-                var out = im.miredHistogram();
-                inputIll = out.modes[0].illxy;
-            } else {
-                var cc = im.colorConstancy(this.value);
-                inputIll = cc.getData();
-                inputIll = Matrix.Colorspaces['RGB to xyY'](inputIll);
-                inputIll[2] = 1;
-            }
-            changeIlluminant(inputIll);
-        },
-        onChangeInputCCT: function (event) {
-            'use strict';
-            if (event.which === 13) {
-                var tIn = parseInt(this.value, 10);
-                changeIlluminant(tIn);
-            }
-        },
-        onChangeStdIll: function (event) {
-            'use strict';
-            var inputStdIll = $('inputStdIll');
-            var inputIll = Matrix.CIE.getIlluminant(inputStdIll.value);
-            changeIlluminant(inputIll);
-        }
-    },
-    click: {
-        clickDiagram: function (coord) {
-            'use strict';
-            var pos = [coord.x, coord.y, 1];
-            if (diagram !== 'xyY') {
-                pos = Matrix.Colorspaces[diagram + ' to xyY'](pos);
-            }
-            changeIlluminant(pos);
-        }
-    },
-    select: {
-        clickImage:  function (coord) {
-            'use strict';
-            var x = Math.round(coord.x);
-            var y = Math.round(-coord.y);
-            var rgb = [
-                im.get(y, x, 0).getData()[0],
-                im.get(y, x, 1).getData()[0],
-                im.get(y, x, 2).getData()[0]
-            ];
-            var xyY = Matrix.Colorspaces['RGB to xyY'](rgb);
-            xyY[2] = 1;
-            changeIlluminant(xyY);
-            if (diagram !== 'xyY') {
-                xyY = Matrix.Colorspaces['xyY to ' + diagram](xyY);
-            }
-        }
+    $("log").innerHTML = "";
+    log("ERRORS:");
+    log("-------");
+    $("modesList").innerHTML = "";
+    for (var i = 1; i < estimations.ppl.modes.length; i++) {
+        addOption("modesList", "PP" + i, "PPL mode 1 (" + colorsName[i - 1] + ")");
+        log("PPL mode "+ i + ":", angularError(getWhiteRefRGB(), estimations.ppl.modes[i].RGB).toFixed(2) + '&deg');
     }
+    addOption("modesList", "GW", "Grey-World");
+    addOption("modesList", "WP", "Max-RGB");
+    addOption("modesList", "SG", "Shades-of-grey");
+    addOption("modesList", "GE", "Grey-Edge");
+    var c = function (color, N, sc, sp) {
+        Matrix.Colorspaces['LinearRGB to XYZ'](color, N, sc, sp);
+        Matrix.Colorspaces['XYZ to xyY'](color, N, sc, sp);
+        return color;
+    };
+
+    $("modesList").addEventListener("change", function () {
+        var algo = this.value.substr(0, 2)
+        var illuminant;
+        if (algo === "PP") {
+            var i = parseInt(this.value.substr(-1));
+            illuminant = estimations.ppl.modes[i].illxy;
+        } else if (algo === "GW") {
+            illuminant = c(estimations.gw.get().getData());
+        } else if (algo === "WP") {
+            illuminant = c(estimations.wp.get().getData());
+        } else if (algo === "SG") {
+            illuminant = c(estimations.sg.get().getData());
+        } else if (algo === "GE") {
+            illuminant = c(estimations.ge.get().getData());
+        }
+        illuminant[2] = 1;
+        changeIlluminant(illuminant);
+    })
+    changeIlluminant(estimations.ppl.modes[1].illxy);
+    log("Gray-World:", angularError(getWhiteRefRGB(), estimations.gw.get().getData()).toFixed(2) + '&deg');
+    log("Max-RGB:", angularError(getWhiteRefRGB(), estimations.wp.get().getData()).toFixed(2) + '&deg');
+    log("SoG:", angularError(getWhiteRefRGB(), estimations.sg.get().getData()).toFixed(2) + '&deg');
+    log("Grey-Edge:", angularError(getWhiteRefRGB(), estimations.ge.get().getData()).toFixed(2) + '&deg');
 };
+
 
 function startUI() {
     'use strict';
     // UI default parameters and events
-    var param = eventsFunc.param;
     var diagramElement = $('diagram');
-    diagramElement.addEventListener('click', param.onChangeDiagram, false);
+    diagramElement.addEventListener('click', function (event) {
+        'use strict';
+        diagram = this.value;
+        setChromaticitydiagram();
+    }, false);
     diagramElement.selectedIndex = 1; // xyY
 
-    var wbAlgo = $('wbAlgo');
-    wbAlgo.addEventListener('click', param.onChangeWBAlgo, false);
-
-    var inputCCTField = $('inputCCT');
-    inputCCTField.addEventListener('keypress', param.onChangeInputCCT,
-				    false);
-
-    var inputStdIll = $('inputStdIll');
-    inputStdIll.addEventListener('click', param.onChangeStdIll, false);
-    inputStdIll.selectedIndex = 5; // D65
-
     var outputStdIll = $('outputStdIll');
-    outputStdIll.addEventListener('click', param.onChangeStdIll, false);
     outputStdIll.selectedIndex = 5; // D65
 
     var ill = Matrix.CIE.getIlluminant('current', diagram);
     setChromaticity(ill[0], ill[1], 'awChr');
+    setChromaticity(ill[0], ill[1], 'ewChr');
+
+    $("selectAction").addEventListener('change', selectAction);
+    $("reset").addEventListener('click', reset);
+    $("applyPPL").addEventListener("click", applyPPL);
+    initInputs();
+
+    document.body.onresize = resize;
+    var imagePlot = $('imagePlot').getPlot();
+    imagePlot.clear();
+    imagePlot.selectarea = estimateWhiteRef;
+    $("selectAction").getElementsByTagName("option")[0].selected = "selected";
+
+    $("histogram").getPlot().clear();
+    setChromaticitydiagram();
+    $("log").innerHTML = "";
+    $("modesList").innerHTML = "";
+    var ill = Matrix.CIE.getIlluminant('current', diagram);
+    setChromaticity(ill[0], ill[1], 'awChr');
+    setChromaticity(ill[0], ill[1], 'ewChr');
+
+    var onChange = function () {
+        $V("kVal", $F("k"));
+        $V("deltaVal", $F("delta"));
+        $V("binsVal", $F("bins"));
+        $V("thresholdVal", $F("threshold"));
+    };
+    onChange();
+    $("k").addEventListener('change', onChange);
+    $("delta").addEventListener('change', onChange);
+    $("bins").addEventListener('change', onChange);
+    $("threshold").addEventListener('change', onChange);
 }
 
 var resize = function () {
@@ -331,11 +400,15 @@ var resize = function () {
     pH.setHeight($('right').clientHeight / 2);
 };
 
-window.onload = function () {
-    "use strict";
-    startUI();
+var setChromaticitydiagram = function () {
+    var p = $("chromaticityDiagram").getPlot().clear();
+    p.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
+    p.remove("Standards illuminants");
+    p.remove("Spectrum locus");
+};
 
-    // Image Plot
+var createPlots = function () {
+        // Image Plot
     var width = 500;
     var height = 400;
     var plotProperties = {
@@ -345,18 +418,27 @@ window.onload = function () {
     $S("right").verticalAlign = 'top';
 
     var imagePlot = new Plot('imagePlot', [$('left').clientWidth, $('left').clientHeight], 'left', plotProperties);
-    imagePlot.click = eventsFunc.select.clickImage;
+    imagePlot.click =  function (coord) {
+        var x = Math.round(coord.x);
+        var y = Math.round(-coord.y);
+        var rgb = imgCurrent.get(y, x, [0, 2]).getData()
+        var xyY = Matrix.Colorspaces['RGB to xyY'](rgb);
+        xyY[2] = 1;
+        changeIlluminant(xyY);
+        if (diagram !== 'xyY') {
+            xyY = Matrix.Colorspaces['xyY to ' + diagram](xyY);
+        }
+    };
     // Diagram Plot
     plotProperties = {
         'ticks-display': false,
         'preserve-ratio': true,
         'legend-display': 'none'
     };
+    imagePlot.selectarea = estimateWhiteRef;
+    
     var p = new Plot('chromaticityDiagram', [$('right').clientWidth, $('right').clientHeight / 2], 'right', plotProperties);
-    p.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
-
-    p.remove("Standards illuminants");
-    p.remove("Spectrum locus");
+    setChromaticitydiagram();
 
     plotProperties = {
         'ticks-display': false,
@@ -367,51 +449,27 @@ window.onload = function () {
                       [$('right').clientWidth, $('right').clientHeight / 2], 'right', plotProperties);
 
     // Click on diagram
-    p.click = eventsFunc.click.clickDiagram;
+    p.click = function (coord) {
+        var pos = [coord.x, coord.y, 1];
+        if (diagram !== 'xyY') {
+            pos = Matrix.Colorspaces[diagram + ' to xyY'](pos);
+        }
+        changeIlluminant(pos);
+    };
     p.setLegend();
+}
 
-    document.body.onresize = resize;
-
-    var inputs = document.getElementsByTagName('input');
-    var focus = function () {
-        this.focus();
-    };
-    var i;
-    for (i = 0; i < inputs.length; i++) {
-        if (inputs[i].type == 'range') {
-            inputs[i].addEventListener('click', focus);
-        }
-    }
-
-    $("applyPPL").addEventListener("click", applyPPL);
-
-    var read = function (evt) {
-
-        var callback2 = function (evt) {
-            im = Matrix.imread(this, callback);
-            fieldset.show("PPL");
-            $("modesList").innerHTML = "";
-        };
-
-        // Only call the handler if 1 or more files was dropped.
-        if (this.files.length) {
-            var i;
-            for (i = 0; i < this.files.length; i++) {
-                readFile(this.files[i], callback2, "url");
-            }
-        }
-
-    };
-    $("loadFile").addEventListener("change", read, false);
-
-    hideFieldset();
-
-    // Add some examples
-    for (i = 1; i <= 10; i++) {
-        addOption("examples", "ppl/"+i+".png", "Example " + i);
-    }
-    $("examples").addEventListener("click", function () {
-        im = Matrix.imread(this.value, callback);fieldset.show("PPL");$("modesList").innerHTML = "";});
+window.onload = function () {
+    "use strict";
+    createPlots();
+    startUI();
+    var displayHelp = initHelp();
+    displayHelp();
+    initFileUpload("loadFile",function (evt) {
+        Matrix.imread(this, callback);
+        startUI();
+    });
+    //hideFieldset();
 };
 
 Plot.prototype.drawMode = function (h, s, m, c) {

@@ -123,8 +123,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
             for (i = 0; i < nScale; i++) {
                 var s = {};
                 s.sigma = sigmaInit * Math.pow(scaleRatio, i);
-                s.blur = image.fastBlur(s.sigma);
-                //s.blur = image.gaussian(s.sigma);
+                //s.blur = image.fastBlur(s.sigma);
+                s.blur = image.gaussian(s.sigma);
                 s.gray = s.blur.rgb2gray();
                 s.gradient = s.gray.gradient(1, 1, 1, 1, 1);
 
@@ -205,14 +205,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     yD[j] *= yD[j];
                 }
                 var std = s[k].sigma * 1.4;
-                gradient.xy = gradient.xy.fastBlur(std);
-                gradient.x  = gradient.x.fastBlur(std);
-                gradient.y  = gradient.y.fastBlur(std);
-                /*
+                // gradient.xy = gradient.xy.fastBlur(std);
+                // gradient.x  = gradient.x.fastBlur(std);
+                // gradient.y  = gradient.y.fastBlur(std);
                 gradient.xy = gradient.xy.gaussian(std);
                 gradient.x  = gradient.x.gaussian(std);
                 gradient.y  = gradient.y.gaussian(std);
-                */
             }
             return this;
         },
@@ -331,7 +329,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * @return {Object} 
          *  The patch
          */
-        getImagePatch: function (key, rgb) {
+        getImagePatch_old: function (key, rgb, grad) {
             var sigma = key.sigma;
             // Looking for closer blured image
             var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
@@ -358,8 +356,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else if (yMax > image.getSize(0) - 1) {
                 return null;
             }
+            
             var patch = image.get([yMin, yMax], [xMin, xMax]);
-
             if (dMin > 1e-2) {
                 var sigmaIm = this.scale[sMin].sigma;
                 sigma = Math.sqrt(sigma * sigma - sigmaIm * sigmaIm);
@@ -367,6 +365,38 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             // return {patch: patch, mean: [1, 1, 1]};
             return patch;
+        },
+        getViewOnImagePatch: function (key) {
+            var sigma = key.sigma;
+            // Looking for closer blured image
+            var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
+            for (i = 0, ei = this.nScale; i < ei; i++) {
+                d = this.scale[i].sigma - sigma;
+                if (abs(d) < dMin && d <= 0) {
+                    dMin = abs(d);
+                    sMin = i;
+                }
+            }
+            var scale = this.scale[sMin], image = scale.gray;
+
+            // Get RGB patch
+            var x = key.x, y = key.y, s = Math.round(key.factorSize * sigma);
+            var round = Math.round;
+            var xMin = round(x - s), xMax = round(x + s);
+            var yMin = round(y - s), yMax = round(y + s);
+
+            if (xMin < 0 || yMin < 0) {
+                return null;
+            } else if (xMax > image.getSize(1) - 1) {
+                return null;
+            } else if (yMax > image.getSize(0) - 1) {
+                return null;
+            }
+            return {
+                norm: scale.gradient.norm,
+                phase: scale.gradient.phase,
+                view: image.getView().select([yMin, yMax], [xMin, xMax])
+            };
         },
         /** Extract the main direction(s) of all keypoint detected in 
          * the scalespace.
@@ -383,8 +413,10 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var i, ei, newKeypoints = [], o, eo;
             for (i = 0, ei = keypoints.length; i < ei; i++) {
                 var key = keypoints[i];
-                var patch = this.getImagePatch(key);
+                var patch = this.getViewOnImagePatch(key);
+                //var patch = this.getImagePatch_old(key);
                 if (patch !== null) {
+                    //var orientations = key.extractMainOrientation_old(patch, this.algorithm);
                     var orientations = key.extractMainOrientation(patch, this.algorithm);
                     for (o = 0, eo = orientations.length; o < eo; o++) {
                         var k = key.getCopy();
@@ -432,7 +464,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             for (k = 0, ek = keypoints.length; k < ek; k++) {
                 var key = keypoints[k];
-                var patchRGB = this.getImagePatch(key, true);
+                var patchRGB = this.getImagePatch_old(key, true);
                 patchRGB = this.normalizePatch(patchRGB);
                 var mem = [];
                 for (i = 0; i < descriptors.length; i++) {
