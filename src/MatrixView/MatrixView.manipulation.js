@@ -21,8 +21,7 @@
 (function (MatrixView, MatrixView_prototype) {
     'use strict';
 
-    /**
-     * Allow to select an subpart of the MatrixView on each dimension.
+    /** Allow to select an subpart of the MatrixView on each dimension.
      *
      * __Also see:__
      * {@link MatrixView#selectIndicesDimension},
@@ -92,8 +91,7 @@
         return this;
     };
 
-    /**
-     * Defines how iterator will scan the view
+    /** Defines how iterator will scan the view
      *
      * __Also see:__
      * {@link MatrixView#ipermute}.
@@ -151,8 +149,7 @@
         return this;
     };
 
-    /**
-     * Inverse dimension permutation.
+    /** Inverse dimension permutation.
      *
      * __Also see:__
      * {@link MatrixView#permute}.
@@ -172,7 +169,6 @@
      * @chainable
      */
     MatrixView_prototype.ipermute = function (dim) {
-
         // Create a dim indices Array
         var i, ie, indices = [];
         for (i = 0, ie = dim.length; i < ie; i++) {
@@ -187,8 +183,7 @@
         return this.permute(indices.sort(f));
     };
 
-    /**
-     * Rotates MatrixView counterclockwise by a multiple of 90 degrees.
+    /** Rotates MatrixView counterclockwise by a multiple of 90 degrees.
      *
      *     // Create view
      *     var v = new MatrixView([2, 2]);
@@ -235,8 +230,7 @@
         return this;
     };
 
-    /**
-     * Flip matrix dimension.
+    /** Flip matrix dimension.
      *
      * __Also See:__ {@link MatrixView#flipud}, {@link MatrixView#fliplr}.
      *
@@ -250,8 +244,7 @@
         return this.selectDimension(d, [-1, 0]);
     };
 
-    /**
-     * Flip matrix left to right.
+    /** Flip matrix left to right.
      *
      * __Also See:__ {@link MatrixView#flipdim}, {@link MatrixView#flipud}.
      *
@@ -263,8 +256,7 @@
         return this.select([0, -1], [-1, 0]);
     };
 
-    /**
-     * Flip matrix up to down.
+    /** Flip matrix up to down.
      *
      * __Also See:__ {@link MatrixView#flipdim}, {@link MatrixView#fliplr}.
      *
@@ -276,26 +268,68 @@
         return this.select([-1, 0], [0, -1]);
     };
 
-    /**
-     * Move the required dimension to first dimension.
+    /** Circular shift on given dimensions of the view.
      *
-     * @method setWorkingDimension
+     * __Also see:__
+     * {@link MatrixView#permute}.
+     *
+     *     // Create view
+     *     var v = new MatrixView([5, 5]);
+     *     var d = [
+     *        0,  1,  2,  3,  4, 
+     *        5,  6,  7,  8,  9, 
+     *       10, 11, 12, 13, 14, 
+     *       15, 16, 17, 18, 19, 
+     *       20, 21, 22, 23, 24 
+     *     ];
+     *     var out = new Array(25);
+     *     // Circular permutation of two indices
+     *     v.circshift([2, -2]);
+     *     var mat = v.extract(d, out); 
+     *
+     * @param {Integer[]} shift Defines the shift on each dimension.
+     *
+     * @param {Integer[]}  [dimension] To be specified if shift argument 
+     *  is a scalar. Corresponds to which dimension must be shifted.
+     * 
+     * @method circshift
+     *
      * @chainable
-     * @todo Remove this ugly function.
-     * @deprecated do not rely on the existence of this function.
      */
-    MatrixView_prototype.setWorkingDimension = function (dim) {
-        if (dim >= this.getDimLength()) {
-            throw new Error('Invalid dimension.');
-        }
-        var perm = [];
-        var j, je = this.getDimLength();
-        for (j = 0; j < je; j++) {
-            perm[j] = j;
-        }
-        perm = perm.splice(dim, 1).concat(perm);
+    (function () {
+        var selectDim = function (v, k, dim) {
+            var size = v.getSize(dim), sel = new Array(size);
+            k %= size;
+            var start = k > 0 ? size - k : -k;
+            var end = k > 0 ? k : size + k;
+            var i, j;
+            for (i = start, j = 0; j < end; i++, j++) {
+                sel[j] = i;
+            }
+            for (i = 0, j = end; j < size; i++, j++) {
+                sel[j] = i;
+            }
+            v.selectIndicesDimension(dim, sel);
+        };
 
-        return this.permute(perm);
-    };
+        MatrixView_prototype.circshift = function (K, dim) {
+            var errMsg = "MatrixView.circshift: Invalid arguments."
+            if (Tools.isArrayLike(K) && !Tools.isSet(dim)) {
+                if (K.length > this.getDimLength()) {
+                    console.log(K.length, this.getDimLength());
+                    throw new Error(errMsg);
+                }
+                for (var k = 0, ke = K.length; k < ke; k++) {
+                    selectDim(this, K[k], k);
+                }
+                return this;
+            }
+            if (Tools.isInteger(K) && Tools.isInteger(dim, 0)) {
+                selectDim(this, K, dim);
+                return this;
+            }
+            throw new Error(errMsg);
+        };
+    })();
 
 })(MatrixView, MatrixView.prototype);
