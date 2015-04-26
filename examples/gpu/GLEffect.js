@@ -41,7 +41,12 @@
  */
 function GLEffect(sourceCode, canvas) {
     'use strict';
-    this.canvas = canvas || window.document.createElement('canvas');
+    this.canvas = canvas;
+    if (!this.canvas) {
+        this.canvas = window.document.createElement('canvas');
+        this.canvas.width = '1px';
+        this.canvas.height = '1px';
+    }
     this.context = this._createContext();
     if (!this.context) {
         return null;
@@ -73,8 +78,9 @@ GLEffect.prototype.vertexShaderCode = (function() {
     return str;
 }());
 
-/** Source code of the effect, written in GLSL. @readonly @type {String} */
-GLEffect.prototype.sourceCode = (function() {
+// TODO: cite it in the class documentation
+/** First lines of the source code, for convenience. @readonly @type {String} */
+GLEffect.sourceCodeHeader = (function() {
     'use strict';
     var str = '';
     str += 'precision mediump float;                                        \n';
@@ -84,13 +90,19 @@ GLEffect.prototype.sourceCode = (function() {
     str += 'uniform ivec2 uSize;       // Image size                        \n';
     str += 'uniform sampler2D uImage;  // Input image                       \n';
     str += '                                                                \n';
+    return str;
+}());
+
+/** Source code of the effect, written in GLSL. @readonly @type {String} */
+GLEffect.prototype.sourceCode = (function() {
+    'use strict';
+    var str = GLEffect.sourceCodeHeader;
     str += 'void main(void) {                                               \n';
     str += '    vec4 color = texture2D(uImage, vPosition);                  \n';
     str += '    gl_FragColor = vec4(color.rgb, color.a);                    \n';
     str += '}                                                               \n';
     return str;
 }());
-
 
 // TODO: handle WebGLTexture as input/output
 // TODO: several images?
@@ -160,6 +172,23 @@ GLEffect.prototype.getCanvas = function () {
 GLEffect.prototype.getContext = function () {
     'use strict';
     return this.context;
+};
+
+/** Get a list of the effect's parameters.
+ * @return {Array}
+ *  List of the parameters which can be changed.
+ */
+GLEffect.prototype.getParametersList = function () {
+    'use strict';
+    var ignored = {'uImage': 1, 'uSize': 1, 'uPixel': 1};
+    var list = [];
+    var param;
+    for (param in this.setters) {
+        if (this.setters.hasOwnProperty(param) && !ignored[param]) {
+            list.push(param);
+        }
+    }
+    return list;
 };
 
 /** Create a context from the canvas.
@@ -342,6 +371,7 @@ GLEffect.prototype._createSetters = function () {
     var uniform, name, setter;
     var k, n = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
 
+    gl.useProgram(program);
     for (k = 0; k < n; k++) {
         uniform = gl.getActiveUniform(program, k);
         if (!uniform) {

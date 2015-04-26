@@ -1,52 +1,77 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <script type="text/javascript" src="../../modules/JSM.js"></script>
-    <script type="text/javascript" src="../../modules/Image.js"></script>
-    <script type="text/javascript" src="../../modules/Image.js"></script>
+    <title>GPU Processing</title>
 
-    <script type="text/javascript" src="../base.js"></script>
     <script type="text/javascript" src="GLEffect.js"></script>
     <script type="text/javascript" src="gpu.js"></script>
 
-    <title>GPU Processing</title>
+    <style>
+        td {
+            vertical-align: top;
+            padding: 5px;
+        }
+    </style>
   </head>
 
   <body onload="init()">
 
     <div id="content">
 
-      <fieldset>
+      <!-- INPUT IMAGE/VIDEO -->
+      <fieldset id="dropZone">
         <legend>Input Image/Video</legend>
-        <input type="file" id="inputFile" title="Load an image or a video..."/><br/>
+        <input type="button" value="Select" onclick="$('inputFile').click()"
+            title="Load an image or a video..."/>
+        or drag here an image or a video...<br/>
+        <input type="file" id="inputFile" style="display:none"/>
+        <img id="inputImage" width="1" height="1"/>
         <video id="inputVideo" width="1" height="1" controls="controls" src=""></video>
-        <canvas id="inputCanvas" width="1" height="1"></canvas>
       </fieldset>
+      <!-- FILTERS MENU -->
       <fieldset>
         <legend>Filters</legend>
         <table>
           <tr>
-            <td style="vertical-align: top; padding: 5px">
-              <select id="filterList" size="5" onchange="viewFilter(true)" title="List of active filter (click to edit)">
+            <!-- filters list -->
+            <td>
+              Active&nbsp;filters:<br/>
+              <select id="filterList" size="5" style="min-width: 7em" onchange="viewFilter(true)"
+                  title="List of active filter (click to edit)">
                 <option>Loading...</option>
               </select><br/>
               <input type="button" value="New..." onclick="appendNewFilter()" title="Add a new filter">
             </td>
+            <!-- filter details -->
             <td id="filterDetails" style="display: none; padding-left: 20px">
               <label>Name: <input type="text" id="shaderName" title="Name of the filter"/></label>
-              <input type="checkbox" id="shaderDisplay" title="Display the result of this filter"/>
-              <input type="button" value="Compile" onclick="compileFilter()" style="font-weight: bold" title="Recompile the filter to apply any changes"/>
-              <input type="button" value="Close" onclick="viewFilter(false)" title="Close the filter's details without saving"/>
-              <input type="button" value="Delete" onclick="deleteFilter()" title="Delete this filter"/><br/>
+              <input type="checkbox" id="shaderDisplay"
+                  title="Display the result of this filter"/>
+              <input type="button" value="Compile" onclick="compileFilter()" style="font-weight: bold"
+                  title="Recompile the filter to apply any changes"/>
+              <input type="button" value="Close" onclick="viewFilter(false)"
+                  title="Close the filter's details without saving"/>
+              <input type="button" value="Delete" onclick="deleteFilter()"
+                  title="Delete this filter"/><br/>
               <textarea cols="60" rows="12" id="shaderCode"></textarea>
+            </td>
+            <!-- parameters list -->
+            <td>
+              Parameters:<br/>
+              <select id="paramList" size="5" style="min-width:10em"
+                  title="List of editable parameters (click to edit)">
+                <option>Loading...</option>
+              </select><br/>
+              <input type="text" id="paramValue" style="width:10em" onkeydown="setParamKeydown(event)"/>
             </td>
           </tr>
         </table>
       </fieldset>
+      <!-- OUTPUT -->
       <fieldset>
         <legend>Output</legend>
         <input type="text" id="outputStatus" size="20" readonly="readonly" title="Filtering time"/><br/>
-        <div id="outputArea"></div>
+        <div id="outputArea">&nbsp;</div>
       </fieldset>
     </div>
 

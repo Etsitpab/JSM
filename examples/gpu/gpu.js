@@ -1,4 +1,4 @@
-/*global Image, Matrix, GLEffect, $, readFile */
+/*global GLEffect, Image, FileReader */
 /*jslint vars: true, nomen: true, browser: true, plusplus: true */
 /*exported init, viewFilter, compileFilter */
 
@@ -6,19 +6,25 @@
 
 
 // Global variables
-var IMAGE, VIDEO, MATRIX;
-var SRC;
+var IMAGE, VIDEO, IS_VIDEO;
 var TIMER;
 var FILTERS;
+
+// Shortcut for 'getElementById'
+function $(str) {
+    return window.document.getElementById(str);
+}
 
 // Create and run the GLEffect
 function runFilters() {
     var start = new Date().getTime();
-    var image = SRC;
+    var image = IS_VIDEO ? VIDEO : IMAGE;
+    if (!image) {
+        return;
+    }
     var k;
     for (k = 0; k < FILTERS.length; k++) {
-        FILTERS[k].run(image);
-        image = FILTERS[k].getCanvas();
+        image = FILTERS[k].run(image);
     }
     var end = new Date().getTime();
     $('outputStatus').value = 'Run in ' + (end - start) + 'ms';  // Load image + apply filters
@@ -29,26 +35,16 @@ function runFilters() {
 
 // Reset input to 1x1 pixel
 function resetInputs() {
-    var image = $('inputCanvas');
-    image.width = '1';
-    image.height = '1';
+    var image = $('inputImage');
+    image.width = '1px';
+    image.height = '1px';
     var video = $('inputVideo');
-    video.width = '1';
-    video.height = '1';
-}
-
-// Callback function: process the image once loaded
-function processLoadedImage(image) {
-    resetInputs();
-    SRC = IMAGE = image;
-    MATRIX = Matrix.imread(image).im2double();
-    MATRIX.imshow('inputCanvas');
-    runFilters();
+    video.width = '1px';
+    video.height = '1px';
 }
 
 // Callback function: process a frame of the VIDEO
 function processVideoFrame() {
-    SRC = VIDEO;
     runFilters();
     if (VIDEO.paused && TIMER) {
         clearInterval(TIMER);
@@ -56,16 +52,24 @@ function processVideoFrame() {
     }
 }
 
-// Callback function: create and display the uploaded image
+// Callback function: load the image
 function loadImageFromUrl() {
     var im = new Image();
     im.onload = function () {
-        processLoadedImage(this);
+        resetInputs();
+        IS_VIDEO = false;
+        IMAGE = im;
+        var img = $('inputImage');
+        img.width = im.width;
+        img.height = im.height;
+        img.src = im.src;
+        // MATRIX = Matrix.imread(image).im2double();
+        runFilters();
     };
     im.src = this;
 }
 
-// Callback function: TODO: doc
+// Callback function: load the video
 function loadVideoFromUrl() {
     var video = $('inputVideo');
     video.src = this;
@@ -80,29 +84,69 @@ function loadVideoFromUrl() {
         video.height = video.videoHeight;
     };
     video.oncanplaythrough = function () {
+        VIDEO = video;
+        IS_VIDEO = true;
         video.ontimeupdate = runEffectLoop;
         runEffectLoop();
     };
-    VIDEO = video;
     video.load();
 }
 
-// Callback function: load the selected image
+// Callback function: handle the selected file
 function fileSelectionCallback() {
     if (this.files.length) {
         var file = this.files[0];
-        var type = file.type.split('/')[0];
-        switch (type) {
-        case 'image':
-            readFile(this.files[0], loadImageFromUrl, 'url');
-            break;
-        case 'video':
-            readFile(this.files[0], loadVideoFromUrl, 'url');
-            break;
-        default:
-            throw new Error('Unknown data type: ' + type);
+        var type = file.type.match(new RegExp('^[^/]*'))[0];
+        var callbackList = {'image': loadImageFromUrl, 'video': loadVideoFromUrl};
+        var callback = callbackList[type];
+        if (!callback) {
+            throw new Error('Unknown file type, must be an image or video');
         }
+        var reader = new FileReader();
+        reader.onerror = function () {
+            throw new Error('Cannot load the selected file');
+        };
+        reader.onload = function () {
+            callback.call(reader.result);
+        };
+        reader.readAsDataURL(file);
     }
+}
+
+// Allow this element to be dropped on
+function makeDropArea(elmt) {
+    elmt.ondragover = function (evt) {
+        elmt.style.border = '2px dotted black';
+        evt.preventDefault();
+        evt.stopPropagation();
+    };
+    elmt.ondrop = function (evt) {
+        evt.preventDefault();
+        fileSelectionCallback.call(evt.dataTransfer);
+    };
+    document.ondragover = function () {
+        elmt.style.border = '2px dotted gray';
+    };
+    document.ondrop = function() {
+        elmt.style.border = '';
+    };
+}
+
+// Allow TAB to insert spaces
+function configureTabKey(elmt, spaces) {
+    var tab = '\t';
+    if (spaces) {
+        tab = new Array(spaces + 1).join(' ');
+    }
+    elmt.onkeydown = function (evt) {
+        if (evt.keyCode === 9) {
+            var index = this.selectionStart;
+            var txt = elmt.value;
+            elmt.value = txt.substr(0, index) + tab + txt.substr(elmt.selectionEnd);
+            elmt.selectionStart = elmt.selectionEnd = index + tab.length;
+            evt.preventDefault();
+        }
+    };
 }
 
 
@@ -135,20 +179,61 @@ function removeTrailingSpaces(str) {
 function refreshFilterList() {
     $('filterDetails').style.display = 'none';
     var outdiv = $('outputArea');
+    var filtersList = $('filterList');
+    var paramList = $('paramList');
     removeAllChildren(outdiv);
-    var select = $('filterList');
-    removeAllChildren(select);
-    var k, name, opt;
-    for (k = 0; k < FILTERS.length; k++) {
-        name = FILTERS[k].ui_name;
+    removeAllChildren(filtersList);
+    removeAllChildren(paramList);
+    var n, filter, name, group, opt, params;
+    for (n = 0; n < FILTERS.length; n++) {
+        filter = FILTERS[n];
+        name = filter.ui_name || 'Default';
+        // output canvas
+        if (!filter.ui_nodisplay) {
+            outdiv.appendChild(filter.getCanvas());
+        }
+        // filters list
         opt = document.createElement('option');
-        opt.value = k;
-        opt.appendChild(document.createTextNode(name || 'Default'));
-        select.appendChild(opt);
-        if (!FILTERS[k].ui_nodisplay) {
-            outdiv.appendChild(FILTERS[k].getCanvas());
+        opt.appendChild(document.createTextNode(name));
+        opt.value = n;
+        filtersList.appendChild(opt);
+        // parameters list
+        $('paramValue').value = '';
+        params = filter.getParametersList();
+        if (params.length) {
+            group = document.createElement('optgroup');
+            group.label = name;
+            group.id = 'filter-no-' + n;
+            params.reverse();
+            while (params.length) {
+                opt = document.createElement('option');
+                opt.appendChild(document.createTextNode(params.pop()));
+                group.appendChild(opt);
+            }
+            paramList.appendChild(group);
         }
     }
+}
+
+// Compile the selected filter
+function compileFilter() {
+    var filter = null;
+    try {
+        filter = new GLEffect($('shaderCode').value);
+    } catch (e) {
+        window.alert('Compilation failed---see console for more details');
+        throw e;
+    }
+    filter.ui_name = $('shaderName').value;
+    filter.ui_nodisplay = !$('shaderDisplay').checked;
+    var id = $('filterList').selectedIndex;
+    if (id < 0) {
+        FILTERS.push(filter);
+    } else {
+        FILTERS[id] = filter;
+    }
+    refreshFilterList();
+    runFilters();
 }
 
 // Add a new filter in the list
@@ -178,25 +263,35 @@ function viewFilter(doView) {
     }
 }
 
-// Compile the selected filter
-function compileFilter() {
-    var filter = null;
+// Display a filter parameter
+function setParam() {
+    var list = $('paramList');
+    var data = $('paramValue');
+    var index = list.selectedIndex;
+    if (index < 0) {
+        return;
+    }
+    var opt = list.options[index];
+    var n = opt.parentElement.id.match(/\d+$/)[0];
+    var value;
     try {
-        filter = new GLEffect($('shaderCode').value);
+        value = eval(data.value);
     } catch (e) {
-        window.alert('Compilation failed---see console for more details');
-        throw e;
+        alert('Invalid parameter value');
+        return;
     }
-    filter.ui_name = $('shaderName').value;
-    filter.ui_nodisplay = !$('shaderDisplay').checked;
-    var id = $('filterList').selectedIndex;
-    if (id < 0) {
-        FILTERS.push(filter);
-    } else {
-        FILTERS[id] = filter;
-    }
+    FILTERS[n].setParameters(opt.value, eval(data.value));
     refreshFilterList();
+    list.selectedIndex = index;
+    data.focus();
     runFilters();
+}
+
+// Handle event on 'setParam' field
+function setParamKeydown(evt) {
+    if (evt.keyCode === 13) {
+        setParam();
+    }
 }
 
 
@@ -205,5 +300,7 @@ function compileFilter() {
 // Initialize the demo
 function init() {
     appendNewFilter();
-    $('inputFile').addEventListener('change', fileSelectionCallback, false);
+    makeDropArea($('dropZone'));
+    configureTabKey($('shaderCode'), 4);
+    $('inputFile').onchange = fileSelectionCallback;
 }
