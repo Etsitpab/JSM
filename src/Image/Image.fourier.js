@@ -118,7 +118,6 @@
 
     // Faster algorithm when the signal size is a power of two (original code)
     var fft1d_2n = function (Xr, Xi, isign) {
-
         var m, l, j, istep, i;
         var wtemp, wr, wpr, wpi, wi, theta;
         var tempr, tempi;
@@ -269,37 +268,49 @@
     Matrix.fft = function (X) {
         return matrix_fft(Matrix.toMatrix(X), false);
     };
-    Matrix_prototype.fft2 = function () {
-        var Y = matrix_fft(this, false);
-        Y = matrix_fft(Y.transpose(), false);
-        return Y.transpose();
-    };
     /** Compute the 2D FFT of a matrix.
      *
      * __See also :__
      * {@link Matrix#fft},
      * {@link Matrix#ifft2}.
      */
+    Matrix_prototype.fft2 = function () {
+        var Y = matrix_fft(this, false);
+        Y = matrix_fft(Y.transpose(), false);
+        return Y.transpose();
+    };
     Matrix.fft2 = function (X) {
         var Y = matrix_fft(Matrix.toMatrix(X), false);
         Y = matrix_fft(Y.transpose(), false);
         return Y.transpose();
     };
 
-    // var a = Matrix.ones(5).cumsum(0).cumsum(1).display(); af = a.fft2().display(); af.fftshift().display()
-    Matrix.prototype.fftshift = function (X, dim) {
-        var out = Matrix.zeros(this.size());
-        if (this.ndims() === 2 || this.ndims() === 3) {
-            var h = this.getSize(0), w = this.getSize(1);
-            var ySel0 = [0, Math.floor(h / 2)], ySel1 = [Math.ceil(h / 2), h - 1];
-            var xSel0 = [0, Math.floor(w / 2)], xSel1 = [Math.ceil(w / 2), w - 1];
-            out.set(ySel0, xSel0, this.get(ySel0, xSel0).get([-1, 0], [-1, 0]).conj());
-            out.set(ySel0, xSel1, this.get(ySel0, xSel1).get([-1, 0], [-1, 0]).conj());
-            out.set(ySel1, xSel0, this.get(ySel1, xSel0).get([-1, 0], [-1, 0]).conj());
-            out.set(ySel1, xSel1, this.get(ySel1, xSel1).get([-1, 0], [-1, 0]).conj());
+    /** This function moves the zero-frequency of the fft of a 
+     * signal to the center of the array.
+     *
+     * @param {Integer} [dimension] It defines the dimension 
+     *  along which the signal is rearranged. Otherwise, the 
+     *  operation is done along all dimension.
+     *
+     * __See also :__
+     * {@link Matrix#fft},
+     * {@link Matrix#fft2}.
+     *
+     * @chainable
+     */
+    Matrix.prototype.fftshift = function (dim) {
+        var size = this.getSize();
+        if (Tools.isSet(dim)) {
+            if (!Tools.isInteger(dim, 0)) {
+                throw new Error("Matrix.fftshift: Dimension must be a positive integer");
+            }
+            return this.circshift(Math.floor(size[dim] / 2), dim);
         }
-        return out;            
-    };
+        for (var i = 0, ie = size.length; i < ie ; i++) {
+            size[i] = Math.floor(size[i] / 2)
+        }
+        return this.circshift(size);
+     };
 
     /** Compute the inverse FFT of a vector.
      *
