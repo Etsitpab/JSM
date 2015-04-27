@@ -280,7 +280,7 @@ function setParam() {
         alert('Invalid parameter value');
         return;
     }
-    FILTERS[n].setParameters(opt.value, eval(data.value));
+    FILTERS[n].setParameter(opt.value, eval(data.value));
     refreshFilterList();
     list.selectedIndex = index;
     data.focus();

@@ -1,7 +1,6 @@
 /*jslint vars: true, nomen: true, browser: true, plusplus: true */
 /*global Float32Array, Int32Array, WebGLTexture, HTMLCanvasElement */
 
-
 /** This class runs real-time effects.
  * They are written in GLSL (GL Shading Language) and run on the GPU using OpenGL.
  *
@@ -14,7 +13,8 @@
  *
  *     var sourceCode = ...  // the GLSL code, as a string
  *     var effect = new GLEffect(sourceCode);
- *     effect.setParameter('uStrength', 4, 'uLocation', [0.5, 0.5]);
+ *     effect.setParameter('uStrength', 4);
+ *     effect.setParameter('uLocation', [0.5, 0.5]);
  *     var outCanvas = effect.run(myCanvas);
  *
  * The parameters of the effects are uniform variables in the source code.
@@ -28,6 +28,9 @@
  * As an example, the value of the top-right neightbor of the current pixels is:
  *
  *      vec4 neighbor = texture2D(uImage, vPosition + uPixel);  // GLSL code
+ *
+ * To avoid code duplication when writing effects (in particular the former variables),
+ * consider using the code snippet contained in `GLEffect.sourceCodeHeader'.
  *
  * @constructor Create a new GLEffect to be run on the GPU.
  * @param {String} [sourceCode]
@@ -52,33 +55,27 @@ function GLEffect(sourceCode, canvas) {
         return null;
     }
     if (sourceCode) {
-        this.sourceCode = sourceCode;
+        this.sourceCode = sourceCode;  // otherwise, fall back to prototype
     }
     var fshader = this._compileShader(this.sourceCode);
     var vshader = this._compileShader(this.vertexShaderCode, true);
     this.program = this._createProgram(fshader, vshader);
-    this.setters = this._createSetters();
+
+    var that = this;
+    this.uImageLength = 0;  // number of images expected as input
+    this.setters = this._createSetters({
+        'uImage': function (uniform) {
+            if (uniform.name.substr(-3) === '[0]') {
+                that.uImageLength = uniform.size;
+            }
+        }
+    });
     return this;
 }
 
 
-/** Source code of the vertex shader. @private @type {String} */
-GLEffect.prototype.vertexShaderCode = (function() {
-    'use strict';
-    var str = '';
-    str += 'attribute vec2 aVertexPosition;                                 \n';
-    str += 'attribute vec2 aTexturePosition;                                \n';
-    str += '                                                                \n';
-    str += 'varying vec2 vPosition;                                         \n';
-    str += '                                                                \n';
-    str += 'void main(void) {                                               \n';
-    str += '    vPosition = aTexturePosition;                               \n';
-    str += '    gl_Position = vec4(aVertexPosition, 0.0, 1.0);              \n';
-    str += '}                                                               \n';
-    return str;
-}());
+/* ********* ATTRIBUTES ********* */
 
-// TODO: cite it in the class documentation
 /** First lines of the source code, for convenience. @readonly @type {String} */
 GLEffect.sourceCodeHeader = (function() {
     'use strict';
@@ -104,6 +101,25 @@ GLEffect.prototype.sourceCode = (function() {
     return str;
 }());
 
+/** Source code of the vertex shader. @private @type {String} */
+GLEffect.prototype.vertexShaderCode = (function() {
+    'use strict';
+    var str = '';
+    str += 'attribute vec2 aVertexPosition;                                 \n';
+    str += 'attribute vec2 aTexturePosition;                                \n';
+    str += '                                                                \n';
+    str += 'varying vec2 vPosition;                                         \n';
+    str += '                                                                \n';
+    str += 'void main(void) {                                               \n';
+    str += '    vPosition = aTexturePosition;                               \n';
+    str += '    gl_Position = vec4(aVertexPosition, 0.0, 1.0);              \n';
+    str += '}                                                               \n';
+    return str;
+}());
+
+
+/* ********* PUBLIC METHODS ********* */
+
 // TODO: handle WebGLTexture as input/output
 // TODO: several images?
 /** Apply the effect.
@@ -116,22 +132,46 @@ GLEffect.prototype.sourceCode = (function() {
 GLEffect.prototype.run = function (image) {
     'use strict';
 
+    var imageList;
+    var isArray = image instanceof Array;
+    if (!this.uImageLength) {
+        if (isArray) {
+            throw new Error('GLEffect expected a single image');
+        }
+    } else {
+        if (!isArray || image.length !== this.uImageLength) {
+            throw new Error('GLEffect expected ' + this.uImageLength + ' images');
+        }
+        imageList = image;
+        image = image[0];
+    }
+
     var ctx = this.getContext();
     var canvas = this.getCanvas();
     ctx.useProgram(this.program);
 
-    canvas.width = image.width;  // TODO: how to do this with textures?
-    canvas.height = image.height;
+    canvas.width = image.width;    // TODO: how to do this with textures?
+    canvas.height = image.height;  // TODO: check all image size
     ctx.viewport(0, 0, canvas.width, canvas.height);
 
-    this._bindTexture(image);
+    if (!imageList) {
+        this._bindTexture(image);
+        ctx.uniform1i(ctx.getUniformLocation(this.program, 'uImage'), 0);
+    } else {
+        var k, tab = [];
+        for (k = 0; k < this.uImageLength; k++) {
+            this._bindTexture(imageList[k], k);
+            tab.push(k);
+        }
+        ctx.uniform1iv(ctx.getUniformLocation(this.program, 'uImage'), new Int32Array(tab));
+    }
 
     ctx.clearColor(0.0, 0.0, 0.0, 1.0);
     this._run();
     return this.getCanvas();
 };
 
-/** Set uniform parameters of the effect.
+/** Set the value of an uniform parameter of the effect.
  * @param {String} name
  *  Name of the parameter to be set.
  * @param {Number | Array} value
@@ -139,18 +179,10 @@ GLEffect.prototype.run = function (image) {
  *  For array types (e.g. `vec2` or `vec[n]`), it must be an array.
  *  For matrix types (e.g. `mat3`), it must be an array of array, columnwise.
  */
-GLEffect.prototype.setParameters = function (/* name, value, ... */) {
+GLEffect.prototype.setParameter = function (name, value) {
     'use strict';
-    if (!arguments.length || arguments.length % 2) {
-        throw new Error('Invalid number of arguments');
-    }
-    var k, name, value;
-    for (k = 0; k + 1 < arguments.length; k += 2) {
-        name = arguments[k];
-        value = arguments[k + 1];
-        if (this.setters[name]) {
-            this.setters[name](value);
-        }
+    if (this.setters[name]) {
+        this.setters[name](value);
     }
 };
 
@@ -165,7 +197,7 @@ GLEffect.prototype.getCanvas = function () {
 };
 
 /** Get the WebGL context.
- * @return {WebGLRenderingContext}
+ * @return
  *  WebGL context.
  * @protected
  */
@@ -190,6 +222,9 @@ GLEffect.prototype.getParametersList = function () {
     }
     return list;
 };
+
+
+/* ********* PROTECTED / PRIVATE METHODS ********* */
 
 /** Create a context from the canvas.
  * @return
@@ -282,9 +317,16 @@ GLEffect.prototype._createProgram = function (vertexShader, fragmentShader) {
 };
 
 // TODO: handle matrices properly
-// Inspired by: github.com/greggman/webgl-fundamentals
-GLEffect.prototype._createSetters = function () {
+// TODO: check v.length
+/** Create setters for the uniform variables.
+ * Inspired by [WebGL Funcamentals](http://github.com/greggman/webgl-fundamentals)
+ * @param [actions = {}]
+ *  Callback functions to be called for specific uniform variables.
+ * @private
+ */
+GLEffect.prototype._createSetters = function (actions) {
     'use strict';
+    actions = actions || {};
     var gl = this.getContext();
     var program = this.program;
 
@@ -383,6 +425,9 @@ GLEffect.prototype._createSetters = function () {
         }
         setter = createSetter(uniform);
         uniformSetters[name] = setter;
+        if (actions[name]) {
+            actions[name](uniform);
+        }
     }
     return uniformSetters;
 };
@@ -434,9 +479,8 @@ GLEffect.prototype._run = function () {
     var cv = this.getCanvas();
     var ctx = this.getContext();
 
-    ctx.uniform1i(ctx.getUniformLocation(this.program, 'uTexture'), 0);
-    this.setParameters('uSize', [cv.width, cv.height]);
-    this.setParameters('uPixel', [1 / cv.width, 1 / cv.height]);
+    this.setParameter('uSize', [cv.width, cv.height]);
+    this.setParameter('uPixel', [1 / cv.width, 1 / cv.height]);
 
     // TODO: create attributes only once
     var numItems = 4;
