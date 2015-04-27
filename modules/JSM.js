@@ -3661,8 +3661,11 @@ if (typeof window === 'undefined') {
             v.extractTo(this.getData(), mat.getData());
             return mat;
         }
-        if (this.isreal() || mat.isreal()) {
+        if (this.isreal()) {
             this.toComplex();
+        }
+        if (mat.isreal()) {
+            mat.toComplex();
         }
         v.extractTo(this.getRealData(), mat.getRealData());
         v.extractTo(this.getImagData(), mat.getImagData());
