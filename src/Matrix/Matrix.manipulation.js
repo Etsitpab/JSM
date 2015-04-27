@@ -209,7 +209,7 @@
     Matrix.reshape = function () {
         var mat = Array.prototype.shift.apply(arguments);
         if (!(mat instanceof Matrix)) {
-            throw new Error("Matrix.set: Matrix to modify must be provided.");
+            throw new Error("Matrix.reshape: Matrix to modify must be provided.");
         }
         mat = mat.getCopy();
         return mat.reshape.apply(mat, arguments);
