@@ -39,7 +39,7 @@
             return err / N;
         }
         var testcs = function (csin, csout, N) {
-            N = N || 1e6;
+            N = N || 1e5;
             var test = function (nc, sc, sp, m) {
                 var input = rand(nc * N);
                 var input_backup = new Float32Array(input);
@@ -240,18 +240,18 @@
         }
     };
 
+    var log = function (msg, psnr, time) {
+        if (psnr < 150) {
+            console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
+        } else {
+            console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
+        }
+    };
+
     Matrix._benchmarkWavelets = function (N, name, dim) {
         N = N || 100;
         name = name || 'bi97';
         dim = dim || 1;
-
-        var log = function (msg, psnr, time) {
-            if (psnr < 150) {
-                console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
-            } else {
-                console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
-            }
-        };
 
         var s, wt, out, time, psnr;
         var SQN = Math.round(Math.pow(N * N * 3, 1 / 3));
@@ -334,31 +334,38 @@
 
     Matrix._benchmarkFourier = function (N) {
         N = N || 10;
-        var s, fft, out, time, l2;
+        var s, fft, out, time, psnr;
         var SQN = Math.round(Math.sqrt(N));
         s = Matrix.complex(Matrix.randi(9, N, 1), Matrix.randi(9, N, 1));
         Tools.tic();
         fft = Matrix.fft(s);
         out = Matrix.ifft(fft);
         time = Tools.toc();
-        l2 = s["-"](out)[".^"](2).abs().mean().getDataScalar();
-        console.log("FFT 1D decomposition/recomposition", "L2:", l2, "Time:", time);
+        psnr = Matrix.psnr(s, out).getDataScalar();
+        log("FFT 1D decomposition/recomposition", psnr, time);
 
         s = Matrix.randi(9, N, N);
         Tools.tic();
         fft = Matrix.fft2(s);
         out = Matrix.ifft2(fft);
         time = Tools.toc();
-        l2 = s["-"](out)[".^"](2).mean().getDataScalar();
-        console.log("FFT 2D decomposition/recomposition", "L2:", l2, "Time:", time);
+        psnr = Matrix.psnr(s, out).getDataScalar();
+        log("FFT 2D decomposition/recomposition", psnr, time);
+
+        s = Matrix.complex(Matrix.randi(9, N, N), Matrix.randi(9, N, N));
+        Tools.tic();
+        out = s.fftshift().ifftshift(); 
+        time = Tools.toc();
+        var psnr = Matrix.psnr(s, out).getDataScalar();
+        log("FFT shift/ishift", psnr, time);
     };
 
     Matrix._benchmark = function () {
         var i;
         for (i in Matrix) {
-            if (Matrix.hasOwnProperty(i) && i.match(/benchmark/)) {
-                console.log(i);
-                //Matrix[i]();
+            if (Matrix.hasOwnProperty(i) && i.match(/benchmark/) && i != "_benchmark") {
+                // console.log(i);
+                Matrix[i]();
             }
         }
     };
