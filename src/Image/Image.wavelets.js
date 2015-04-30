@@ -636,7 +636,7 @@
         var v = dL.getView().swapDimensions(0, dim);
         var iV = s.getView().swapDimensions(0, dim);
 
-        // H filtering from siganl to output
+        // H filtering from signal to output
         filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
         return [dL, dH];
     };
@@ -781,7 +781,7 @@
     Matrix.idwt2 = function (bands, name) {
         return idwt2(bands, name);
     };
-
+    
     /** Perform a DWT (Discrete Wavelet Transform)
      * on each vector presents on a given Matrix dimension.
      *
@@ -928,7 +928,7 @@
         };
     };
     
-    // Function used to resize approximation coefficient matrice
+    // Function used to resize approximation coefficient matrix
     // to its original size after reconstruction.
     var resizeMatrix = function (A, ds, l) {
         if (A.getSize(0) !== ds.ySizes[l + 1] || A.getSize(1) !== ds.xSizes[l + 1]) {
@@ -1180,7 +1180,5 @@
         var maxlev = Math.floor(Math.log(s / (w - 1)) / Math.log(2));
         return maxlev;
     };
-
-
 
 })();
