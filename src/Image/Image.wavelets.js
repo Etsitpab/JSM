@@ -108,38 +108,39 @@
                 1 + Math.sqrt(3),
                 3 + Math.sqrt(3),
                 3 - Math.sqrt(3),
-                1 - Math.sqrt(3)])
+                1 - Math.sqrt(3)
+            ])
         },
         'db4': {
             'name': 'Daubechies 4',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.010597401784997278,
-                0.032883011666982945,
-                0.030841381835986965,
-                    -0.18703481171888114,
-                    -0.027983769416983849,
-                0.63088076792959036,
-                0.71484657055254153,
-                0.23037781330885523
+                -0.010597401784997278,
+                 0.032883011666982945,
+                 0.030841381835986965,
+                -0.18703481171888114,
+                -0.027983769416983849,
+                 0.63088076792959036,
+                 0.71484657055254153,
+                 0.23037781330885523
             ])
         },
         'db8': {
             'name': 'Daubechies 8',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.00011747678400228192,
+               -0.00011747678400228192,
                 0.00067544940599855677,
-                    -0.00039174037299597711,
-                    -0.0048703529930106603,
+               -0.00039174037299597711,
+               -0.0048703529930106603,
                 0.0087460940470156547,
                 0.013981027917015516,
-                    -0.044088253931064719,
-                    -0.017369301002022108,
+               -0.044088253931064719,
+               -0.017369301002022108,
                 0.12874742662018601,
                 0.00047248457399797254,
-                    -0.28401554296242809,
-                    -0.015829105256023893,
+               -0.28401554296242809,
+               -0.015829105256023893,
                 0.58535468365486909,
                 0.67563073629801285,
                 0.31287159091446592,
@@ -151,7 +152,7 @@
             'name': 'Symlets 2',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.12940952255092145,
+               -0.12940952255092145,
                 0.22414386804185735,
                 0.83651630373746899,
                 0.48296291314469025
@@ -161,13 +162,13 @@
             'name': 'Symlets 4',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.075765714789273325,
-                    -0.02963552764599851,
+               -0.075765714789273325,
+               -0.02963552764599851,
                 0.49761866763201545,
                 0.80373875180591614,
                 0.29785779560527736,
-                    -0.099219543576847216,
-                    -0.012603967262037833,
+               -0.099219543576847216,
+               -0.012603967262037833,
                 0.032223100604042702
             ])
         },
@@ -175,21 +176,21 @@
             'name': 'Symlets 8',
             'orthogonal': true,
             'filterL': ([
-                    -0.0033824159510061256,
-                    -0.00054213233179114812,
+               -0.0033824159510061256,
+               -0.00054213233179114812,
                 0.031695087811492981,
                 0.0076074873249176054,
-                    -0.14329423835080971,
-                    -0.061273359067658524,
+               -0.14329423835080971,
+               -0.061273359067658524,
                 0.48135965125837221,
                 0.77718575170052351,
                 0.3644418948353314,
-                    -0.051945838107709037,
-                    -0.027219029917056003,
+               -0.051945838107709037,
+               -0.027219029917056003,
                 0.049137179673607506,
                 0.0038087520138906151,
-                    -0.014952258337048231,
-                    -0.0003029205147213668,
+               -0.014952258337048231,
+               -0.0003029205147213668,
                 0.0018899503327594609
             ])
         },
@@ -198,29 +199,29 @@
             'name': 'Coiflets 1',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.01565572813546454,
-                    -0.072732619512853897,
+               -0.01565572813546454,
+               -0.072732619512853897,
                 0.38486484686420286,
                 0.85257202021225542,
                 0.33789766245780922,
-                    -0.072732619512853897
+               -0.072732619512853897
             ])
         },
         'coif2': {
             'name': 'Coiflets 2',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.00072054944536451221,
-                    -0.0018232088707029932,
+               -0.00072054944536451221,
+               -0.0018232088707029932,
                 0.0056114348193944995,
                 0.023680171946334084,
-                    -0.059434418646456898,
-                    -0.076488599078306393,
+               -0.059434418646456898,
+               -0.076488599078306393,
                 0.41700518442169254,
                 0.81272363544554227,
                 0.38611006682116222,
-                    -0.067372554721963018,
-                    -0.041464936781759151,
+               -0.067372554721963018,
+               -0.041464936781759151,
                 0.016387336463522112
             ])
         },
@@ -228,29 +229,29 @@
             'name': 'Coiflets 4',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -1.7849850030882614e-06,
-                    -3.2596802368833675e-06,
+               -1.7849850030882614e-06,
+               -3.2596802368833675e-06,
                 3.1229875865345646e-05,
                 6.2339034461007128e-05,
-                    -0.00025997455248771324,
-                    -0.00058902075624433831,
+               -0.00025997455248771324,
+               -0.00058902075624433831,
                 0.0012665619292989445,
                 0.0037514361572784571,
-                    -0.0056582866866107199,
-                    -0.015211731527946259,
+               -0.0056582866866107199,
+               -0.015211731527946259,
                 0.025082261844864097,
                 0.039334427123337491,
-                    -0.096220442033987982,
-                    -0.066627474263425038,
+               -0.096220442033987982,
+               -0.066627474263425038,
                 0.4343860564914685,
                 0.78223893092049901,
                 0.41530840703043026,
-                    -0.056077313316754807,
-                    -0.081266699680878754,
+               -0.056077313316754807,
+               -0.081266699680878754,
                 0.026682300156053072,
                 0.016068943964776348,
-                    -0.0073461663276420935,
-                    -0.0016294920126017326,
+               -0.0073461663276420935,
+               -0.0016294920126017326,
                 0.00089231366858231456
             ])
         },
@@ -259,15 +260,15 @@
             'name': 'Biorthogonal 1-3',
             'orthogonal': false,
             'filterL': new Float64Array([
-                    -0.088388347648318447,
+               -0.088388347648318447,
                 0.088388347648318447,
                 0.70710678118654757,
                 0.70710678118654757,
                 0.088388347648318447,
-                    -0.088388347648318447
+               -0.088388347648318447
             ]),
             'filterH': new Float64Array([
-                    -0.70710678118654757,
+               -0.70710678118654757,
                 0.70710678118654757
             ])
         },
@@ -275,15 +276,15 @@
             'name': 'Biorthogonal 3-1',
             'orthogonal': false,
             'filterL': new Float64Array([
-                    -0.35355339059327379,
+               -0.35355339059327379,
                 1.0606601717798214,
                 1.0606601717798214,
-                    -0.35355339059327379
+               -0.35355339059327379
             ]),
             'filterH': new Float64Array([
-                    -0.17677669529663689,
+               -0.17677669529663689,
                 0.53033008588991071,
-                    -0.53033008588991071,
+               -0.53033008588991071,
                 0.17677669529663689
             ])
         },
@@ -293,35 +294,35 @@
             'filterL': new Float64Array([
                 0.0,
                 0.0019088317364812906,
-                    -0.0019142861290887667,
-                    -0.016990639867602342,
+               -0.0019142861290887667,
+               -0.016990639867602342,
                 0.01193456527972926,
                 0.04973290349094079,
-                    -0.077263173167204144,
-                    -0.09405920349573646,
+               -0.077263173167204144,
+               -0.09405920349573646,
                 0.42079628460982682,
                 0.82592299745840225,
                 0.42079628460982682,
-                    -0.09405920349573646,
-                    -0.077263173167204144,
+               -0.09405920349573646,
+               -0.077263173167204144,
                 0.04973290349094079,
                 0.01193456527972926,
-                    -0.016990639867602342,
-                    -0.0019142861290887667,
+               -0.016990639867602342,
+               -0.0019142861290887667,
                 0.0019088317364812906
             ]),
             'filterH': new Float64Array([
                 0.0,
                 0.014426282505624435,
-                    -0.014467504896790148,
-                    -0.078722001062628819,
+               -0.014467504896790148,
+               -0.078722001062628819,
                 0.040367979030339923,
                 0.41784910915027457,
-                    -0.75890772945365415,
+               -0.75890772945365415,
                 0.41784910915027457,
                 0.040367979030339923,
-                    -0.078722001062628819,
-                    -0.014467504896790148,
+               -0.078722001062628819,
+               -0.014467504896790148,
                 0.014426282505624435,
                 0.0,
                 0.0
@@ -333,24 +334,24 @@
             'filterL': new Float64Array([
                 0.0,
                 0.02674875741080976,
-                    -0.01686411844287495,
-                    -0.07822326652898785,
+               -0.01686411844287495,
+               -0.07822326652898785,
                 0.2668641184428723,
                 0.6029490182363579,
                 0.2668641184428723,
-                    -0.07822326652898785,
-                    -0.01686411844287495,
+               -0.07822326652898785,
+               -0.01686411844287495,
                 0.02674875741080976
             ]),
             'filterH': new Float64Array([
                 0.0,
-                    -0.09127176311424948,
+               -0.09127176311424948,
                 0.05754352622849957,
                 0.5912717631142470,
-                    -1.115087052456994,
+               -1.115087052456994,
                 0.5912717631142470,
                 0.05754352622849957,
-                    -0.09127176311424948,
+               -0.09127176311424948,
                 0.0,
                 0.0
             ])
@@ -431,7 +432,7 @@
      * + "d" for decomposition filters ;
      * + "r" for recomposition filters ;
      * + "l" for low-pass filters ;
-     * + "h" for high-pass filters ;
+     * + "h" for high-pass filters.
      * @return{Array}
      */
     Matrix.wfilters = function (name, type) {
@@ -575,9 +576,10 @@
      odH[oy] += sumH;
      }*/
     
-    var filter1D = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    var filter1DPer = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
+            var sig = [], fil = [];
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                 sTmp = s;
                 while (sTmp < yx0) {
@@ -589,13 +591,35 @@
                 if (isOdd && sTmp === nyx - kdy) {
                     sTmp -= kdy; 
                 }
+                sig.push(sTmp);
+                fil.push(k);
                 sumL += kernelL[k] * idL[sTmp];
                 sumH += kernelH[k] * idH[sTmp];
             }
+            console.log(sig);
+            console.log(fil);
             odL[oy] += sumL;
             odH[oy] += sumH;
         }
     };
+    var filter1DSym = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+        var y, oy, k, s, sumL, sumH, sTmp;
+        y0 += K - orig - 1;
+        ny -= orig;
+        for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
+            var sig = [], fil = [];
+            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+                sig.push(s);
+                fil.push(k);
+                sumL += kernelL[k] * idL[s];
+                sumH += kernelH[k] * idH[s];
+            }
+            console.log(oy, sig);
+            odL[oy] += sumL;
+            odH[oy] += sumH;
+        }
+    };
+    var filter1D = filter1DPer;
     var filterND = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
 
         var K = kernelL.length;
@@ -729,6 +753,7 @@
         dim = dim || 0;
         return dwt(im, name, dim);
     };
+
     /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
      *
      * __See also :__
@@ -1181,6 +1206,108 @@
         return maxlev;
     };
 
+    window.addEventListener("load", function () {
+        var test1 = function () {
+            filter1D = filter1DPer;
+            var name = 'sym4';
+            var s = Matrix.colon(1, 5);
+            s.display();
+            var wt = Matrix.dwt(s, name, 0);
+            wt[0].get([0, -1]).transpose().display();
+            wt[1].get([0, -1]).transpose().display();
+            filter1D = filter1DPer;
+        };
+        var test0 = function () {
+            filter1D = filter1DPer;
+            var name = 'sym2';
+            var s = Matrix.colon(1, 5);
+            var even = Math.floor(s.numel() / 2) === s.numel() / 2;
+            var f = Matrix.wfilters(name)
+            var l = f[0].numel();
+            s.transpose().display();
+            var wt = Matrix.dwt(s, name, 0);
+            wt[0].get([0, -1]).transpose().display();
+            wt[1].get([0, -1]).transpose().display();
+            filter1D = filter1DPer;
+        };
+        var getPaddingInfos = function (K, s) {
+            var isOdd = s % 2 ? true : false;
+            var f = Math.floor, c = Math.ceil;
+            // left and right part of filter (computed on reversed filter)
+            var lk = f((K - 1) / 2),
+                rk = c((K - 1) / 2);
+            // Left and right input padding
+            var li = c(rk / 2) * 2 + lk - 1,
+                ri = isOdd ? c(lk / 2) * 2 + rk - 1 : f(lk / 2) * 2 + rk;
+            // Left and right output padding
+            var lo = c(rk / 2),
+                ro = isOdd ? c(lk / 2) : f(lk / 2);
+            return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
+        };
+        var padTest = function (isOdd) {
+            console.log("For " + (isOdd ? "odd" : "even") + " signal");
+            var data = {}, f = Math.floor, c = Math.ceil;
+            for (var K = 2; K < 20; K += 2) {
+                data[K] = getPaddingInfos(K, isOdd ? 1 : 2);
+            }
+            console.table(data, ["lk", "rk", "li", "lo", "ri", "ro"]);
+        };
+        padTest(false);
+        padTest(true);
+        var test2 = function () {
+            filter1D = filter1DSym;
+            var name = 'sym8';
+            // var s = Matrix.ones(7, 1);
+            var s = Matrix.randi([-9, 9], 5, 1);
+            var s = Matrix.colon(1, 5);
 
+            // Computation on signal length
+            var f = Matrix.wfilters(name)
+            // Filter length
+            var K = f[0].numel();
+
+
+            var dwt = function (s, name, dim) {
+
+                var wav = new Wavelet(name), fL = wav.filterL, fH = wav.filterH;
+                var size = s.getSize();
+                console.log(size, fL);
+                var p = getPaddingInfos(fL.length, s.numel());
+                size[dim] = Math.floor(size[dim] / 2) + p.ro + p.lo;
+                console.log(size);
+
+                s = Matrix.zeros(p.li, 1).cat(0, s).cat(0, Matrix.zeros(p.ri, 1));
+
+                // Create output data
+                var dL = zeros(size), dH = zeros(size);
+                var v = dL.getView().swapDimensions(0, dim);
+                var iV = s.getView().swapDimensions(0, dim);
+                
+                // H filtering from siganl to output
+                filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
+
+                
+                s.transpose().display();
+                var data = {};
+                data[K] = p;
+                console.table(data, ["lk", "rk", "li", "lo", "ri", "ro"]);
+                return [dL, dH];
+            };
+
+
+
+            var wt = dwt(s, name, 0);
+            wt[0].get([0, -1]).transpose().display();
+            wt[1].get([0, -1]).transpose().display();
+            var end = -start - 1 - (even ? 0 : 1);
+            // var iwt = Matrix.idwt(wt, name, 0);
+            // iwt.transpose().display();
+            // iwt = iwt.get([start, end]);
+            // Matrix.psnr(s, iwt).display("PSNR");
+            // iwt.transpose().display();
+            filter1D = filter1DPer;
+        };
+        test2();
+    }, false);
 
 })();
