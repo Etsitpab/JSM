@@ -241,7 +241,7 @@
     };
 
     var log = function (msg, psnr, time) {
-        if (psnr < 150) {
+        if (psnr < 100) {
             console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
         } else {
             console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
@@ -261,7 +261,7 @@
         out = Matrix.idwt(wt, name, dim);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 1D decomposition/recomposition", psnr, time);
+        log("DWT 1D decomposition/reconstruction", psnr, time);
 
 
         var SQN = Math.round(Math.pow(N * N * 3, 1 / 3)) + 1;
@@ -271,7 +271,7 @@
         out = Matrix.idwt(wt, name, 1);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 1D decomposition/recomposition Odd signal", psnr, time);
+        log("DWT 1D decomposition/reconstruction Odd signal", psnr, time);
 
         s = Matrix.ones(N, N, 3).cumsum(0)["-"](1);
         Tools.tic();
@@ -279,7 +279,7 @@
         out = Matrix.idwt2(wt, name);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([0, s.size(0) - 1], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 2D decomposition/recomposition", psnr, time);
+        log("DWT 2D decomposition/reconstruction", psnr, time);
 
         wt = Matrix.dwt(s, name, 0);
         Tools.tic();
@@ -290,7 +290,7 @@
         out = Matrix.idwt([iwt1, iwt2], name, 0);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([0, s.size(0) - 1], [0, s.size(1) - 1])).getDataScalar();
-        log("DWT 2D decomposition/recomposition from DWT 1D", psnr, time);
+        log("DWT 2D decomposition/reconstruction from DWT 1D", psnr, time);
 
 
 
@@ -301,7 +301,7 @@
         rec = Matrix.waverec(dec, name, dim);
         time = Tools.toc();
         psnr = Matrix.psnr(s, rec).getDataScalar();
-        log("DWT 1D decomposition/recomposition on " + levels + " levels", psnr, time);
+        log("DWT 1D decomposition/reconstruction on " + levels + " levels", psnr, time);
 
         levels = 1;
         s = Matrix.ones(17, 1).cumsum();
@@ -310,7 +310,7 @@
         var rec = Matrix.waverec(dec, name);
         time = Tools.toc();
         psnr = Matrix.psnr(s, rec).getDataScalar();
-        log("DWT 1D decomposition/recomposition on " + levels + " levels", psnr, time);
+        log("DWT 1D decomposition/reconstruction on " + levels + " levels", psnr, time);
 
         var Nx = 11, Ny = 13;
         levels = 5;
@@ -320,16 +320,27 @@
         rec = Matrix.waverec2(dec, name);
         time = Tools.toc();
         psnr = Matrix.psnr(s, rec).getDataScalar();
-        log("DWT 2D decomposition/recomposition on " + levels + " levels", psnr, time);
+        log("DWT 2D decomposition/reconstruction on " + levels + " levels", psnr, time);
 
-        levels = 10;
+        
         s = Matrix.ones(N, N, 1).cumsum(0).cumsum(1);
+        levels = Matrix.dwtmaxlev([s.getSize(0), s.getSize(1)], name);
         Tools.tic();
         dec = Matrix.wavedec2(s, levels, name);
         rec = Matrix.waverec2(dec, name);
         time = Tools.toc();
         psnr = Matrix.psnr(s, rec).getDataScalar();
-        log("DWT 2D decomposition/recomposition on " + levels + " levels", psnr, time);
+        log("DWT 2D decomposition/reconstruction with dwtmaxlev = " + levels, psnr, time);
+        
+        s = Matrix.randi([-100, 100], Nx, Ny, 3);
+        Tools.tic();
+        dec = Matrix.wavedec2(s, 2, name);
+        rec = Matrix.upwlev2(dec, name);
+        rec = Matrix.upwlev2(rec, name);
+        rec = rec[0].reshape(rec[1].get(0, []).getData());
+        time = Tools.toc();
+        psnr = Matrix.psnr(s, rec).getDataScalar();
+        log("DWT 2D upwlev2", psnr, time);
     };
 
     Matrix._benchmarkFourier = function (N) {
@@ -342,7 +353,7 @@
         out = Matrix.ifft(fft);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out).getDataScalar();
-        log("FFT 1D decomposition/recomposition", psnr, time);
+        log("FFT 1D decomposition/reconstruction", psnr, time);
 
         s = Matrix.randi(9, N, N);
         Tools.tic();
@@ -350,7 +361,7 @@
         out = Matrix.ifft2(fft);
         time = Tools.toc();
         psnr = Matrix.psnr(s, out).getDataScalar();
-        log("FFT 2D decomposition/recomposition", psnr, time);
+        log("FFT 2D decomposition/reconstruction", psnr, time);
 
         s = Matrix.complex(Matrix.randi(9, N, N), Matrix.randi(9, N, N));
         Tools.tic();
