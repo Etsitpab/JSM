@@ -9,6 +9,7 @@
 var IMAGE, VIDEO, IS_VIDEO;
 var TIMER;
 var FILTERS;
+var CLICKED;
 
 // Shortcut for 'getElementById'
 function $(str) {
@@ -303,4 +304,8 @@ function init() {
     makeDropArea($('dropZone'));
     configureTabKey($('shaderCode'), 4);
     $('inputFile').onchange = fileSelectionCallback;
+    document.ondblclick = function (evt) {
+        CLICKED = evt.target;
+        console.log(CLICKED);
+    };
 }

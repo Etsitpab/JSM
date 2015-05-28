@@ -120,18 +120,20 @@ GLEffect.prototype.vertexShaderCode = (function() {
 
 /* ********* PUBLIC METHODS ********* */
 
-// TODO: handle WebGLTexture as input/output
+// TODO: handle FB as input/output + doc about it
 // TODO: several images?
 /** Apply the effect.
  *  Note that the canvas is repainted each time the effect is run.
  * @param {Image} image
  *  The input image / video / canvas.
- * @return {HTMLCanvasElement}
- *  The canvas, in which the result is stored.
+ * @param [output]
+ * @return {HTMLCanvasElement | WebGLFramebuffer}
+ *  The canvas or framebuffer in which the result is stored.
  */
-GLEffect.prototype.run = function (image) {
+GLEffect.prototype.run = function (image, output) {
     'use strict';
 
+    // Hangle single or multiple images
     var imageList;
     var isArray = image instanceof Array;
     if (!this.uImageLength) {
@@ -146,13 +148,21 @@ GLEffect.prototype.run = function (image) {
         image = image[0];
     }
 
+    // Initialize the context
     var ctx = this.getContext();
     var canvas = this.getCanvas();
     ctx.useProgram(this.program);
+    ctx.clearColor(0.0, 0.0, 0.0, 1.0);
 
-    canvas.width = image.width;    // TODO: how to do this with textures?
-    canvas.height = image.height;  // TODO: check all image size
-    ctx.viewport(0, 0, canvas.width, canvas.height);
+    // Initialize output
+    if (output) {
+        output = this._bindFramebuffer(output[0], output[1]);
+    } else {
+        output = canvas;
+        output.width = image.width;
+        output.height = image.height;  // TODO: check all image size
+    }
+    ctx.viewport(0, 0, output.width, output.height);
 
     if (!imageList) {
         this._bindTexture(image);
@@ -166,9 +176,9 @@ GLEffect.prototype.run = function (image) {
         ctx.uniform1iv(ctx.getUniformLocation(this.program, 'uImage'), new Int32Array(tab));
     }
 
-    ctx.clearColor(0.0, 0.0, 0.0, 1.0);
     this._run();
-    return this.getCanvas();
+    ctx.bindFramebuffer(ctx.FRAMEBUFFER, null);
+    return output;
 };
 
 /** Set the value of an uniform parameter of the effect.
@@ -432,7 +442,7 @@ GLEffect.prototype._createSetters = function (actions) {
     return uniformSetters;
 };
 
-/** Import an image in the GPU.
+/** Bind a texture, create it if needed.
  * @param {WebGLTexture | Image} image
  *  A texture, or an image / video / canvas element.
  * @param {Number} [slot = 0]
@@ -446,23 +456,30 @@ GLEffect.prototype._bindTexture = function (image, slot) {
     var ctx = this.getContext();
     ctx.activeTexture(ctx.TEXTURE0 + (slot || 0));
 
+    // If framebuffer, get its texture
+    if (image instanceof WebGLFramebuffer) {
+        image = image.texture;
+    }
+
     // If existing texture, only bind
     if (image instanceof WebGLTexture) {
         ctx.bindTexture(ctx.TEXTURE_2D, image);
         return image;
     }
 
-    // If new, create it
+    // If not existing, create it
     var noFlip = (image instanceof HTMLCanvasElement);
     var texture = ctx.createTexture();
     ctx.bindTexture(ctx.TEXTURE_2D, texture);
 
-    // Load it
-    ctx.pixelStorei(ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    if (!noFlip) {
-        ctx.pixelStorei(ctx.UNPACK_FLIP_Y_WEBGL, true);
+    // If image, load it
+    if (image) {
+        ctx.pixelStorei(ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        if (!noFlip) {
+            ctx.pixelStorei(ctx.UNPACK_FLIP_Y_WEBGL, true);
+        }
+        ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, ctx.RGBA, ctx.UNSIGNED_BYTE, image);
     }
-    ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, ctx.RGBA, ctx.UNSIGNED_BYTE, image);
 
     // Set its parameters
     ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);
@@ -471,6 +488,27 @@ GLEffect.prototype._bindTexture = function (image, slot) {
     ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
 
     return texture;
+};
+
+/** Bind a Framebuffer object (and create it).
+ * @param {Number} width
+ * @param {Number} height
+ * @return {WebGLFramebuffer}
+ * @private
+ */
+GLEffect.prototype._bindFramebuffer = function (width, height) {
+    'use strict';
+    var ctx = this.getContext();
+    var texture = this._bindTexture();
+    ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, width, height, 0, ctx.RGBA, ctx.UNSIGNED_BYTE, null);
+    var fb = ctx.createFramebuffer();
+    ctx.bindFramebuffer(ctx.FRAMEBUFFER, fb);
+    ctx.framebufferTexture2D(ctx.FRAMEBUFFER, ctx.COLOR_ATTACHMENT0, ctx.TEXTURE_2D, texture, 0);
+    fb.width = width;
+    fb.height = height;
+    fb.texture = texture;
+    fb.context = context;
+    return fb;
 };
 
 /** Set up the memory and run the shader. @private */
@@ -487,6 +525,7 @@ GLEffect.prototype._run = function () {
     this._createAttribute('aVertexPosition', 2, [1, 1, -1, 1, 1, -1, -1, -1]);
     this._createAttribute('aTexturePosition', 2, [1, 1, 0, 1, 1, 0, 0, 0]);
 
+    ctx.disable(ctx.DEPTH_TEST);
     ctx.clear(ctx.COLOR_BUFFER_BIT);
     ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, numItems);
 };
