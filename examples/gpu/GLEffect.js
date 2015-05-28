@@ -1,5 +1,5 @@
 /*jslint vars: true, nomen: true, browser: true, plusplus: true */
-/*global Float32Array, Int32Array, WebGLTexture, HTMLCanvasElement */
+/*global Float32Array, Int32Array, WebGLTexture, WebGLFramebuffer, HTMLCanvasElement */
 
 /** This class runs real-time effects.
  * They are written in GLSL (GL Shading Language) and run on the GPU using OpenGL.
@@ -127,6 +127,7 @@ GLEffect.prototype.vertexShaderCode = (function() {
  * @param {Image} image
  *  The input image / video / canvas.
  * @param [output]
+ *  NOT DOCUMENTED YET
  * @return {HTMLCanvasElement | WebGLFramebuffer}
  *  The canvas or framebuffer in which the result is stored.
  */
@@ -149,35 +150,35 @@ GLEffect.prototype.run = function (image, output) {
     }
 
     // Initialize the context
-    var ctx = this.getContext();
+    var gl = this.getContext();
     var canvas = this.getCanvas();
-    ctx.useProgram(this.program);
-    ctx.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.useProgram(this.program);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
     // Initialize output
     if (output) {
-        output = this._bindFramebuffer(output[0], output[1]);
+        output = this._bindFramebuffer(image.width, image.height);
     } else {
         output = canvas;
         output.width = image.width;
         output.height = image.height;  // TODO: check all image size
     }
-    ctx.viewport(0, 0, output.width, output.height);
+    gl.viewport(0, 0, output.width, output.height);
 
     if (!imageList) {
         this._bindTexture(image);
-        ctx.uniform1i(ctx.getUniformLocation(this.program, 'uImage'), 0);
+        gl.uniform1i(gl.getUniformLocation(this.program, 'uImage'), 0);
     } else {
         var k, tab = [];
         for (k = 0; k < this.uImageLength; k++) {
             this._bindTexture(imageList[k], k);
             tab.push(k);
         }
-        ctx.uniform1iv(ctx.getUniformLocation(this.program, 'uImage'), new Int32Array(tab));
+        gl.uniform1iv(gl.getUniformLocation(this.program, 'uImage'), new Int32Array(tab));
     }
 
     this._run();
-    ctx.bindFramebuffer(ctx.FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return output;
 };
 
@@ -216,6 +217,18 @@ GLEffect.prototype.getContext = function () {
     return this.context;
 };
 
+/** Check for compatibility with FLOAT textures.
+ * @return {Boolean}
+ */
+GLEffect.prototype.isFloatCompatible = function () {
+    'use strict';
+    var ext, gl = this.getContext();
+    try {
+        ext = gl.getExtension('OES_texture_float');
+    } catch (ignore) {}
+    return Boolean(ext);
+};
+
 /** Get a list of the effect's parameters.
  * @return {Array}
  *  List of the parameters which can be changed.
@@ -244,13 +257,13 @@ GLEffect.prototype.getParametersList = function () {
 GLEffect.prototype._createContext = function () {
     'use strict';
     var canvas = this.canvas;
-    var ctx = null;
+    var gl = null;
     try {
-        ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     } catch (e) {
-        ctx = null;
+        gl = null;
     }
-    return ctx;
+    return gl;
 };
 
 /** Create an attribute array.
@@ -266,17 +279,17 @@ GLEffect.prototype._createContext = function () {
  */
 GLEffect.prototype._createAttribute = function (name, itemSize, dataArray) {
     'use strict';
-    var ctx = this.getContext();
-    var attribute = ctx.getAttribLocation(this.program, name);
+    var gl = this.getContext();
+    var attribute = gl.getAttribLocation(this.program, name);
     if (attribute === -1) {
         return null;
     }
-    ctx.enableVertexAttribArray(attribute);
+    gl.enableVertexAttribArray(attribute);
 
-    var buffer = ctx.createBuffer();
-    ctx.bindBuffer(ctx.ARRAY_BUFFER, buffer);
-    ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array(dataArray), ctx.STATIC_DRAW);
-    ctx.vertexAttribPointer(attribute, itemSize, ctx.FLOAT, false, 0, 0);
+    var buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dataArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(attribute, itemSize, gl.FLOAT, false, 0, 0);
     return buffer;
 };
 
@@ -293,13 +306,13 @@ GLEffect.prototype._createAttribute = function (name, itemSize, dataArray) {
  */
 GLEffect.prototype._compileShader = function (sourceCode, isVertexShader) {
     'use strict';
-    var ctx = this.getContext();
-    var shaderType = isVertexShader ? ctx.VERTEX_SHADER : ctx.FRAGMENT_SHADER;
-    var shader = ctx.createShader(shaderType);
-    ctx.shaderSource(shader, sourceCode);
-    ctx.compileShader(shader);
-    if (!ctx.getShaderParameter(shader, ctx.COMPILE_STATUS)) {
-        throw new Error('Shader compilation -- ' + ctx.getShaderInfoLog(shader));
+    var gl = this.getContext();
+    var shaderType = isVertexShader ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER;
+    var shader = gl.createShader(shaderType);
+    gl.shaderSource(shader, sourceCode);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        throw new Error('Shader compilation -- ' + gl.getShaderInfoLog(shader));
     }
     return shader;
 };
@@ -315,12 +328,12 @@ GLEffect.prototype._compileShader = function (sourceCode, isVertexShader) {
  */
 GLEffect.prototype._createProgram = function (vertexShader, fragmentShader) {
     'use strict';
-    var ctx = this.getContext();
-    var program = ctx.createProgram();
-    ctx.attachShader(program, vertexShader);
-    ctx.attachShader(program, fragmentShader);
-    ctx.linkProgram(program);
-    if (!ctx.getProgramParameter(program, ctx.LINK_STATUS)) {
+    var gl = this.getContext();
+    var program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         throw new Error('Could not link shaders');
     }
     return program;
@@ -453,8 +466,8 @@ GLEffect.prototype._createSetters = function (actions) {
  */
 GLEffect.prototype._bindTexture = function (image, slot) {
     'use strict';
-    var ctx = this.getContext();
-    ctx.activeTexture(ctx.TEXTURE0 + (slot || 0));
+    var gl = this.getContext();
+    gl.activeTexture(gl.TEXTURE0 + (slot || 0));
 
     // If framebuffer, get its texture
     if (image instanceof WebGLFramebuffer) {
@@ -463,29 +476,29 @@ GLEffect.prototype._bindTexture = function (image, slot) {
 
     // If existing texture, only bind
     if (image instanceof WebGLTexture) {
-        ctx.bindTexture(ctx.TEXTURE_2D, image);
+        gl.bindTexture(gl.TEXTURE_2D, image);
         return image;
     }
 
     // If not existing, create it
     var noFlip = (image instanceof HTMLCanvasElement);
-    var texture = ctx.createTexture();
-    ctx.bindTexture(ctx.TEXTURE_2D, texture);
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
 
     // If image, load it
     if (image) {
-        ctx.pixelStorei(ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
         if (!noFlip) {
-            ctx.pixelStorei(ctx.UNPACK_FLIP_Y_WEBGL, true);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         }
-        ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, ctx.RGBA, ctx.UNSIGNED_BYTE, image);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     }
 
     // Set its parameters
-    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);
-    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.NEAREST);
-    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);
-    ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     return texture;
 };
@@ -498,16 +511,16 @@ GLEffect.prototype._bindTexture = function (image, slot) {
  */
 GLEffect.prototype._bindFramebuffer = function (width, height) {
     'use strict';
-    var ctx = this.getContext();
+    var gl = this.getContext();
     var texture = this._bindTexture();
-    ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, width, height, 0, ctx.RGBA, ctx.UNSIGNED_BYTE, null);
-    var fb = ctx.createFramebuffer();
-    ctx.bindFramebuffer(ctx.FRAMEBUFFER, fb);
-    ctx.framebufferTexture2D(ctx.FRAMEBUFFER, ctx.COLOR_ATTACHMENT0, ctx.TEXTURE_2D, texture, 0);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    var fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
     fb.width = width;
     fb.height = height;
     fb.texture = texture;
-    fb.context = context;
+    fb.context = gl;
     return fb;
 };
 
@@ -515,7 +528,7 @@ GLEffect.prototype._bindFramebuffer = function (width, height) {
 GLEffect.prototype._run = function () {
     'use strict';
     var cv = this.getCanvas();
-    var ctx = this.getContext();
+    var gl = this.getContext();
 
     this.setParameter('uSize', [cv.width, cv.height]);
     this.setParameter('uPixel', [1 / cv.width, 1 / cv.height]);
@@ -525,7 +538,7 @@ GLEffect.prototype._run = function () {
     this._createAttribute('aVertexPosition', 2, [1, 1, -1, 1, 1, -1, -1, -1]);
     this._createAttribute('aTexturePosition', 2, [1, 1, 0, 1, 1, 0, 0, 0]);
 
-    ctx.disable(ctx.DEPTH_TEST);
-    ctx.clear(ctx.COLOR_BUFFER_BIT);
-    ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, numItems);
+    gl.disable(gl.DEPTH_TEST);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, numItems);
 };
