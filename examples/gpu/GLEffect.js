@@ -120,8 +120,43 @@ GLEffect.prototype.vertexShaderCode = (function() {
 
 /* ********* PUBLIC METHODS ********* */
 
+// TODO: storage order problem, image is flipped
+/** Create and fill a canvas from a Framebuffer.
+ *  The Framebuffer must be obtained by GLEffect.run (to hangle the context).
+ * @param {WebGLFramebuffer} framebuffer
+ * @return {HTMLCanvasElement}
+ */
+GLEffect.framebufferToCanvas = function (framebuffer) {
+    'use strict';
+
+    // Setup the FB
+    var fb = framebuffer;
+    var gl = fb.context;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+
+    // Create the canvas
+    var canvas = document.createElement('canvas');
+    canvas.width = fb.width;
+    canvas.height = fb.height;
+
+    // Copy the content
+    var ctx2d = canvas.getContext('2d');
+    if (!ctx2d) {
+        canvas = null;
+    } else {
+        var imdata = ctx2d.createImageData(fb.width, fb.height);
+        var pixels = new Uint8Array(4 * fb.width * fb.height);
+        gl.readPixels(0, 0, fb.width, fb.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+        imdata.data.set(new Uint8ClampedArray(pixels));
+        ctx2d.putImageData(imdata, 0, 0);
+    }
+
+    // Terminate
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return canvas;
+};
+
 // TODO: handle FB as input/output + doc about it
-// TODO: several images?
 /** Apply the effect.
  *  Note that the canvas is repainted each time the effect is run.
  * @param {Image} image
