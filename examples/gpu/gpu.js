@@ -1,6 +1,6 @@
 /*global GLEffect, Image, FileReader */
 /*jslint vars: true, nomen: true, browser: true, plusplus: true */
-/*exported init, viewFilter, compileFilter */
+/*exported init */
 
 'use strict';
 
@@ -19,23 +19,28 @@ function $(str) {
 // Create and run the GLEffect
 function runFilters() {
     var start = new Date().getTime();
-    var image = IS_VIDEO ? VIDEO : IMAGE;
-    if (!image) {
+    var input = IS_VIDEO ? VIDEO : IMAGE;
+    if (!input) {
         return;
     }
+    var image = new GLEffect.Image();
+    image.load(input);
     var k;
     for (k = 0; k < FILTERS.length; k++) {
-        image = FILTERS[k].run(image);
+        if (!FILTERS[k].ui_disabled) {
+            image = FILTERS[k].run(image);
+        }
     }
+    image.toCanvas($('outputCanvas'));
     var end = new Date().getTime();
-    $('outputStatus').value = 'Run in ' + (end - start) + 'ms';  // Load image + apply filters
+    $('outputStatus').value = 'Run in ' + (end - start) + 'ms';  // Load image + apply filters + export
 }
 
 
 /********** DATA LOADING FUNCTIONS **********/
 
 // Reset input to 1x1 pixel
-function resetInputs() {
+function resetInputImages() {
     var image = $('inputImage');
     image.width = '1px';
     image.height = '1px';
@@ -57,7 +62,7 @@ function processVideoFrame() {
 function loadImageFromUrl() {
     var im = new Image();
     im.onload = function () {
-        resetInputs();
+        resetInputImages();
         IS_VIDEO = false;
         IMAGE = im;
         var img = $('inputImage');
@@ -80,7 +85,7 @@ function loadVideoFromUrl() {
         }
     };
     video.onloadedmetadata = function () {
-        resetInputs();
+        resetInputImages();
         video.width = video.videoWidth;
         video.height = video.videoHeight;
     };
@@ -179,20 +184,14 @@ function removeTrailingSpaces(str) {
 // Refresh the list of filters
 function refreshFilterList() {
     $('filterDetails').style.display = 'none';
-    var outdiv = $('outputArea');
     var filtersList = $('filterList');
     var paramList = $('paramList');
-    removeAllChildren(outdiv);
     removeAllChildren(filtersList);
     removeAllChildren(paramList);
     var n, filter, name, group, opt, params;
     for (n = 0; n < FILTERS.length; n++) {
         filter = FILTERS[n];
         name = filter.ui_name || 'Default';
-        // output canvas
-        if (!filter.ui_nodisplay) {
-            outdiv.appendChild(filter.getCanvas());
-        }
         // filters list
         opt = document.createElement('option');
         opt.appendChild(document.createTextNode(name));
@@ -216,8 +215,18 @@ function refreshFilterList() {
     }
 }
 
+// Enable / disable the selected filter
+function toggleSelectedFilter(checkbox) {
+    var filter = getSelectedFilter();
+    if (!filter) {
+        return;
+    }
+    filter.ui_disabled = !checkbox.checked;
+    runFilters();
+}
+
 // Compile the selected filter
-function compileFilter() {
+function compileSelectedFilter() {
     var filter = null;
     try {
         filter = new GLEffect($('shaderCode').value);
@@ -226,7 +235,6 @@ function compileFilter() {
         throw e;
     }
     filter.ui_name = $('shaderName').value;
-    filter.ui_nodisplay = !$('shaderDisplay').checked;
     var id = $('filterList').selectedIndex;
     if (id < 0) {
         FILTERS.push(filter);
@@ -245,15 +253,24 @@ function appendNewFilter() {
     refreshFilterList();
 }
 
+// Delete the selected filter
+function deleteSelectedFilter() {
+    var n =  $('filterList').selectedIndex;
+    if (n >= 0) {
+        FILTERS.splice(n, 1);
+        refreshFilterList();
+    }
+}
+
 // Display or hide the filter informations
-function viewFilter(doView) {
+function expandSelectedFilter(doView) {
     var filter = getSelectedFilter();
     if (doView && filter) {
         // View
         $('filterDetails').style.display = '';
         $('shaderName').value = filter.ui_name || 'Default';
         $('shaderCode').value = removeTrailingSpaces(filter.sourceCode);
-        $('shaderDisplay').checked = !filter.ui_nodisplay;
+        $('shaderEnabled').checked = !filter.ui_disabled;
     } else {
         // Hide
         $('filterDetails').style.display = 'none';
@@ -264,34 +281,57 @@ function viewFilter(doView) {
     }
 }
 
-// Display a filter parameter
-function setParam() {
+// Get the selected parameter and its filter index, or null if no selected
+function getSelectedParameter() {
+    // return {'name': str, 'filterIndex': n}
     var list = $('paramList');
-    var data = $('paramValue');
     var index = list.selectedIndex;
     if (index < 0) {
-        return;
+        return null;
     }
     var opt = list.options[index];
     var n = opt.parentElement.id.match(/\d+$/)[0];
+    return {'name': opt.value, 'filterIndex': n};
+}
+
+// Display the value of the selected parameter
+function displaySelectedParam() {
+    var param = getSelectedParameter();
+    if (param) {
+        var value = FILTERS[param.filterIndex].parameters[param.name];
+        var str = (value !== undefined) ? JSON.stringify(value) : '';
+        $('paramValue').value = str;
+    }
+}
+
+// Set the selected parameter
+function updateSelectedParam() {
+    var param = getSelectedParameter();
+    if (!param) {
+        return;
+    }
+    var list = $('paramList');
+    var index = list.selectedIndex;
+    var data = $('paramValue');
     var value;
     try {
         value = eval(data.value);
     } catch (e) {
-        alert('Invalid parameter value');
+        window.alert('Invalid parameter value');
         return;
     }
-    FILTERS[n].setParameter(opt.value, eval(data.value));
+    FILTERS[param.filterIndex].setParameter(param.name, value);
     refreshFilterList();
     list.selectedIndex = index;
     data.focus();
+    displaySelectedParam();
     runFilters();
 }
 
-// Handle event on 'setParam' field
-function setParamKeydown(evt) {
+// Handle event on 'updateParam' field
+function handleParamKeydown(evt) {
     if (evt.keyCode === 13) {
-        setParam();
+        updateSelectedParam();
     }
 }
 
@@ -300,12 +340,12 @@ function setParamKeydown(evt) {
 
 // Initialize the demo
 function init() {
-    appendNewFilter();
-    makeDropArea($('dropZone'));
     configureTabKey($('shaderCode'), 4);
+    makeDropArea($('dropZone'));
     $('inputFile').onchange = fileSelectionCallback;
     document.ondblclick = function (evt) {
         CLICKED = evt.target;
         console.log(CLICKED);
     };
+    appendNewFilter();
 }

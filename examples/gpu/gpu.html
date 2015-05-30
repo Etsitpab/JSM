@@ -3,7 +3,7 @@
   <head>
     <title>GPU Processing</title>
 
-    <script type="text/javascript" src="GLEffect.js"></script>
+    <script type="text/javascript" src="GLEffect.class.js"></script>
     <script type="text/javascript" src="gpu.js"></script>
 
     <style>
@@ -17,11 +17,6 @@
   <body onload="init()">
 
     <div id="content">
-
-      <!-- MISC MESSAGE -->
-      <p>
-        TO DO: handle <em>WebGL: INVALID_OPERATION: bindTexture: object not from this context</em>
-      </p>
 
       <!-- INPUT IMAGE/VIDEO -->
       <fieldset id="dropZone">
@@ -41,7 +36,7 @@
             <!-- filters list -->
             <td>
               Active&nbsp;filters:<br/>
-              <select id="filterList" size="5" style="min-width: 7em" onchange="viewFilter(true)"
+              <select id="filterList" size="5" style="min-width: 7em" onchange="expandSelectedFilter(true)"
                   title="List of active filter (click to edit)">
                 <option>Loading...</option>
               </select><br/>
@@ -50,24 +45,24 @@
             <!-- filter details -->
             <td id="filterDetails" style="display: none; padding-left: 20px">
               <label>Name: <input type="text" id="shaderName" title="Name of the filter"/></label>
-              <input type="checkbox" id="shaderDisplay"
-                  title="Display the result of this filter"/>
-              <input type="button" value="Compile" onclick="compileFilter()" style="font-weight: bold"
+              <input type="button" value="Compile" onclick="compileSelectedFilter()" style="font-weight: bold"
                   title="Recompile the filter to apply any changes"/>
-              <input type="button" value="Close" onclick="viewFilter(false)"
+              <input type="checkbox" id="shaderEnabled" onclick="toggleSelectedFilter(this)"
+                  title="Enable / disable the filter">
+              <input type="button" value="Close" onclick="expandSelectedFilter(false)"
                   title="Close the filter's details without saving"/>
-              <input type="button" value="Delete" onclick="deleteFilter()"
+              <input type="button" value="Delete" onclick="deleteSelectedFilter()"
                   title="Delete this filter"/><br/>
               <textarea cols="60" rows="12" id="shaderCode"></textarea>
             </td>
             <!-- parameters list -->
             <td>
               Parameters:<br/>
-              <select id="paramList" size="5" style="min-width:10em"
+              <select id="paramList" size="5" style="min-width:10em" onclick="displaySelectedParam()"
                   title="List of editable parameters (click to edit)">
                 <option>Loading...</option>
               </select><br/>
-              <input type="text" id="paramValue" style="width:10em" onkeydown="setParamKeydown(event)"/>
+              <input type="text" id="paramValue" style="width:10em" onkeydown="handleParamKeydown(event)"/>
             </td>
           </tr>
         </table>
@@ -76,7 +71,7 @@
       <fieldset>
         <legend>Output</legend>
         <input type="text" id="outputStatus" size="20" readonly="readonly" title="Filtering time"/><br/>
-        <div id="outputArea">&nbsp;</div>
+        <canvas id="outputCanvas" width="1px" height="1px"></canvas>
       </fieldset>
     </div>
 
