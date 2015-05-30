@@ -100,22 +100,31 @@ function GLEffect(sourceCode) {
 
 /** Apply the effect to an image.
  * @param {GLEffect.Image | Array} image
- * @param {GLEffect.Image} [output = new GLEffect.Image()]
- *  Will be filled with the result. Cannot be the same object as the input image.
+ * @param {Object} [opts = {}]
+ *  - `width` : Number<br/>
+ *      Width of the output.
+ *  - `height` : Number<br/>
+ *      Height of the output image.
+ *  - `output` : GLEffect.Image<br/>
+ *      Will be filled with the resulting image.
  * @return {GLEffect.Image}
  */
-GLEffect.prototype.run = function (image, output) {
+GLEffect.prototype.run = function (image, opts) {
     'use strict';
     var input = image;
-    if (input === output) {
-        throw new Error('Cannot run the effect on place: input and output must be different objects.');
-    }
+    var output = GLEffect._readOpt(opts, 'output') || new GLEffect.Image();
     if (!(input instanceof GLEffect.Image)) {
         input = new GLEffect.Image();
         input.load(image);
     }
-    output = output || new GLEffect.Image();
-    output.resize(input.width, input.height);
+    if (input === output) {
+        throw new Error('Cannot run the effect on place: input and output must be different objects.');
+    }
+    output.resize(
+        GLEffect._readOpt(opts, 'width', input.width),
+        GLEffect._readOpt(opts, 'height', input.height)
+    );
+    GLEffect._readOpt(opts);
 
     // Setup GL context
     var gl = this._context;
@@ -123,7 +132,7 @@ GLEffect.prototype.run = function (image, output) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, output._framebuffer);
     gl.disable(gl.DEPTH_TEST);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.viewport(0, 0, input.width, input.height);
+    gl.viewport(0, 0, output.width, output.height);
 
     // Setup uniforms
     input._bind(0);
@@ -224,6 +233,38 @@ GLEffect._createContext = function (canvas) {
         gl = null;
     }
     return gl;
+};
+
+/** Read from a set of options, or check that all options were read.
+ * @param {Object} [opts]
+ *  An object containing several name/value pairs.
+ * @param {String} [name]
+ *  If specified, read and remove the value of `opts[name]`.
+ *  If omitted, check that all options of `opts` has already been read.
+ * @param {Object} [defaultValue]
+ *  Returned value if `opts[name]` is undefined.
+ * @throws {Error}
+ *  If no `name` is given and there is still unread options.
+ * @static @private
+ */
+GLEffect._readOpt = function (opts, name, defaultValue) {
+    'use strict';
+    if (name) {
+        if (opts && opts[name] !== undefined) {
+            var value = opts[name];
+            delete opts[name];
+            return value;
+        }
+        return defaultValue;
+    }
+    if (opts) {
+        var key;
+        for (key in opts) {
+            if (opts.hasOwnProperty(key)) {
+                throw new Error('Unknown option: ' + key);
+            }
+        }
+    }
 };
 
 
@@ -388,6 +429,7 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
  * @param {Object} attributeArrays
  * @return {Object}
  *  A function (with no argument) which enables and binds all the attributes.
+ * @private
  */
 GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
     'use strict';
