@@ -111,6 +111,7 @@ function GLEffect(sourceCode) {
  */
 GLEffect.prototype.run = function (image, opts) {
     'use strict';
+    opts = GLEffect._cloneOpts(opts);
     var input = image;
     var output = GLEffect._readOpt(opts, 'output') || new GLEffect.Image();
     if (!(input instanceof GLEffect.Image)) {
@@ -236,6 +237,8 @@ GLEffect._createContext = function (canvas) {
 };
 
 /** Read from a set of options, or check that all options were read.
+ *
+ * **Warning**: the `opts` object should be cloned using GLEffect._cloneOpts before usage .
  * @param {Object} [opts]
  *  An object containing several name/value pairs.
  * @param {String} [name]
@@ -265,6 +268,23 @@ GLEffect._readOpt = function (opts, name, defaultValue) {
             }
         }
     }
+};
+
+/** Clone a set of options. Should be called once before calling GLEffect._readOpt.
+ * @param {Object} opts
+ * @return {Object}
+ *  A copy of `opts`.
+ * @static @private */
+GLEffect._cloneOpts = function (opts) {
+    'use strict';
+    var cpy = {};
+    var key;
+    for (key in opts) {
+        if (opts.hasOwnProperty(key)) {
+            cpy[key] = opts[key];
+        }
+    }
+    return cpy;
 };
 
 

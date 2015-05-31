@@ -17,7 +17,7 @@ function $(str) {
 }
 
 // Create and run the GLEffect
-function runFilters() {
+function runEffects() {
     var start = new Date().getTime();
     var input = IS_VIDEO ? VIDEO : IMAGE;
     if (!input) {
@@ -28,7 +28,7 @@ function runFilters() {
     var k;
     for (k = 0; k < FILTERS.length; k++) {
         if (!FILTERS[k].ui_disabled) {
-            image = FILTERS[k].run(image);
+            image = FILTERS[k].run(image, FILTERS[k].ui_opts);
         }
     }
     image.toCanvas($('outputCanvas'));
@@ -51,7 +51,7 @@ function resetInputImages() {
 
 // Callback function: process a frame of the VIDEO
 function processVideoFrame() {
-    runFilters();
+    runEffects();
     if (VIDEO.paused && TIMER) {
         clearInterval(TIMER);
         TIMER = null;
@@ -70,7 +70,7 @@ function loadImageFromUrl() {
         img.height = im.height;
         img.src = im.src;
         // MATRIX = Matrix.imread(image).im2double();
-        runFilters();
+        runEffects();
     };
     im.src = this;
 }
@@ -121,20 +121,24 @@ function fileSelectionCallback() {
 
 // Allow this element to be dropped on
 function makeDropArea(elmt) {
-    elmt.ondragover = function (evt) {
-        elmt.style.border = '2px dotted black';
-        evt.preventDefault();
-        evt.stopPropagation();
-    };
+    var minHeight = '200px';
     elmt.ondrop = function (evt) {
         evt.preventDefault();
         fileSelectionCallback.call(evt.dataTransfer);
     };
+    elmt.ondragover = function (evt) {
+        elmt.style.border = '2px dotted black';
+        elmt.style.minHeight = minHeight;
+        evt.preventDefault();
+        evt.stopPropagation();
+    };
     document.ondragover = function () {
-        elmt.style.border = '2px dotted gray';
+        elmt.style.border = '2px dotted lightgray';
+        elmt.style.minHeight = minHeight;
     };
     document.ondrop = function() {
         elmt.style.border = '';
+        elmt.style.minHeight = '';
     };
 }
 
@@ -222,7 +226,7 @@ function toggleSelectedFilter(checkbox) {
         return;
     }
     filter.ui_disabled = !checkbox.checked;
-    runFilters();
+    runEffects();
 }
 
 // Compile the selected filter
@@ -234,7 +238,15 @@ function compileSelectedFilter() {
         window.alert('Compilation failed---see console for more details');
         throw e;
     }
+    var opts = null;
+    try {
+        opts = JSON.parse($('shaderOpts').value || '{}');
+    } catch (e) {
+        window.alert('Cannot parse options, they are ignored.\n' + e.toString());
+        opts = {};
+    }
     filter.ui_name = $('shaderName').value;
+    filter.ui_opts = opts;
     var id = $('filterList').selectedIndex;
     if (id < 0) {
         FILTERS.push(filter);
@@ -242,7 +254,7 @@ function compileSelectedFilter() {
         FILTERS[id] = filter;
     }
     refreshFilterList();
-    runFilters();
+    runEffects();
 }
 
 // Add a new filter in the list
@@ -269,6 +281,7 @@ function expandSelectedFilter(doView) {
         // View
         $('filterDetails').style.display = '';
         $('shaderName').value = filter.ui_name || 'Default';
+        $('shaderOpts').value = JSON.stringify(filter.ui_opts || {});
         $('shaderCode').value = removeTrailingSpaces(filter.sourceCode);
         $('shaderEnabled').checked = !filter.ui_disabled;
     } else {
@@ -325,13 +338,13 @@ function updateSelectedParam() {
     list.selectedIndex = index;
     data.focus();
     displaySelectedParam();
-    runFilters();
+    runEffects();
 }
 
 // Handle event on 'updateParam' field
-function handleParamKeydown(evt) {
+function ifEnterPressed(evt, callback) {
     if (evt.keyCode === 13) {
-        updateSelectedParam();
+        callback();
     }
 }
 
