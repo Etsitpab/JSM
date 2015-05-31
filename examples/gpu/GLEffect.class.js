@@ -188,6 +188,35 @@ GLEffect.prototype.getParametersList = function () {
 //  STATIC METHODS
 ////////////////////////////////////////////////////////////////////////////////
 
+/** Create an effect using a function syntaxe.
+ * @param {String | Array} fcnStr
+ *  The GLSL function as a string or array of strings.
+ *  Its prototype must be either:
+ *    vec3 function(vec3 color)
+ *    vec4 function(vec4 color);
+ * @static */
+GLEffect.fromFunction = function (functionStr) {
+    'use strict';
+    if (functionStr instanceof Array) {
+        functionStr = functionStr.join('\n');
+    }
+    var callStr = {
+        'vec4': 'function(color)',
+        'vec3': 'vec4(function(color.rgb), color.a)'
+    };
+    var match = functionStr.match(/vec\d/);
+    var type = match && match.pop();
+    if (!callStr[type]) {
+        throw new Error('Invalid function string: return type is incorrect.');
+    }
+    var str = GLEffect.sourceCodeHeader + functionStr + ' \n\n';
+    str += 'void main(void) {                               \n';
+    str += '    vec4 color = texture2D(uImage, vPosition);  \n';
+    str += '    gl_FragColor = ' + callStr[type] + ';       \n';
+    str += '}                                               \n';
+    return new GLEffect(str);
+};
+
 /** Check whether the GPU acceleration is supported.
  * @return {Boolean}
  * @static */
@@ -209,7 +238,7 @@ GLEffect.doesSupportFloat = function () {
 /** Get the default WebGL context.
  * @return {WebGLRenderingContext}
  *  The context, or null if not supported.
- * @private
+ * @static @private
  */
 GLEffect._getDefaultContext = function () {
     'use strict';
