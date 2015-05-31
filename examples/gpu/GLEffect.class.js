@@ -582,6 +582,8 @@ GLEffect.Image = function () {
     this.width = 0;
     /** @readonly @type {Number} */
     this.height = 0;
+    /** @readonly @type {Boolean} */
+    this.isFloat = false;
 
     /** @private @type {WebGLTexture} */
     this._texture = gl.createTexture();
@@ -604,11 +606,13 @@ GLEffect.Image = function () {
 /** Clear and resize the image.
  * @param {Number} width
  * @param {Number} height
+ * @param {Boolean} [useBytes = false]
  */
-GLEffect.Image.prototype.resize = function (width, height) {
+GLEffect.Image.prototype.resize = function (width, height, useBytes) {
     'use strict';
     var gl = this._context;
-    var type = gl.UNSIGNED_BYTE;
+    this.isFloat = Boolean(!useBytes && gl.getExtension('OES_texture_float'));
+    var type = this.isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, type, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -669,6 +673,33 @@ GLEffect.Image.prototype.toCanvas = function (outCanvas) {
     }
 
     return outCanvas;
+};
+
+/** Get the suitable data type and update `isFloat` property.
+ * @param {Boolean} [useInt]
+ *  If specified, force the type to float or integer.
+ * @return
+ *  One of the `gl.FLOAT` or `gl.UNSIGNED_BYTE` constants.
+ * @throws {Error}
+ *  If `useInt = false` and float extension is not available.
+ * @private */
+GLEffect.Image.prototype._dataType = function (useBytes) {
+    'use strict';
+    var gl = this._context;
+    if (useBytes) {
+        // forced to use BYTE
+        this.isFloat = false;
+    } else  if (gl.getExtension('OES_texture_float')) {
+        // choose FLOAT if possible
+        this.isFloat = true;
+    } else if (useBytes === undefined || useBytes === null) {
+        // auto-detection but only BYTE available
+        this.isFloat = false;
+    } else {
+        // forced to FLOAT, but not available
+        throw new Error('Cannot use float for GPU images: "OES_texture_float" extension is not supported.')
+    }
+    return this.isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
 };
 
 /** Bind the image to a WebGL slot.
