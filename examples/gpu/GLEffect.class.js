@@ -1,5 +1,5 @@
 /*jslint browser: true, vars: true, plusplus: true, nomen: true */
-/*global Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
+/*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
 
 
 /** @class GLEffect
@@ -567,8 +567,6 @@ GLEffect.prototype._context = null;
 //  SUB-CLASS
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO: Float support
-
 /** An image stored on the GPU.
  * @constructor
  *  Create an empty image.
@@ -606,13 +604,11 @@ GLEffect.Image = function () {
 /** Clear and resize the image.
  * @param {Number} width
  * @param {Number} height
- * @param {Boolean} [useBytes = false]
  */
-GLEffect.Image.prototype.resize = function (width, height, useBytes) {
+GLEffect.Image.prototype.resize = function (width, height) {
     'use strict';
     var gl = this._context;
-    this.isFloat = Boolean(!useBytes && gl.getExtension('OES_texture_float'));
-    var type = this.isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
+    var type = this._dataType();
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, type, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -626,28 +622,36 @@ GLEffect.Image.prototype.resize = function (width, height, useBytes) {
 GLEffect.Image.prototype.load = function (image) {
     'use strict';
     var gl = this._context;
+    var type = this._dataType();
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);  // flip the image
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, type, image);
     gl.bindTexture(gl.TEXTURE_2D, null);
     this.width = image.width;
     this.height = image.height;
 };
 
 /** Export the image to an array.
- * @param {Uint8Array} [outArray]
- *  Array to be filled; must be big enough.
- * @return {Uint8Array}
+ * @param {Function | Float32Array | Uint8Array} [outArray]
+ *  Array to be filled (must be big enough) or array constructor (`Float32Array` or `Uint8Array`).
+ * @return {Float32Array | Uint8Array}
  *  The pixels' values, stored as RGBA values row by row.
  *  Its size is 4 x width x height.
  */
 GLEffect.Image.prototype.toArray = function (outArray) {
     'use strict';
-    outArray = outArray || new Uint8Array(4 * this.width * this.height);
     var gl = this._context;
+    var useFloat = this.isFloat;
+    var ArrayType = useFloat ? Float32Array : Uint8Array;
+    if (outArray) {
+        ArrayType = outArray instanceof Function ? outArray : outArray.constructor;
+        useFloat = ([Float32Array, Float64Array].indexOf(ArrayType) >= 0);
+    }
+    var type = this._dataType(!useFloat);
+    outArray = (outArray instanceof ArrayType) ? outArray : new ArrayType(4 * this.width * this.height);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
-    gl.readPixels(0, 0, this.width, this.height, gl.RGBA, gl.UNSIGNED_BYTE, outArray);
+    gl.readPixels(0, 0, this.width, this.height, gl.RGBA, type, outArray);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return outArray;
 };
@@ -668,7 +672,7 @@ GLEffect.Image.prototype.toCanvas = function (outCanvas) {
         outCanvas = null;
     } else {
         var imdata = ctx2d.createImageData(this.width, this.height);
-        imdata.data.set(new Uint8ClampedArray(this.toArray()));
+        imdata.data.set(new Uint8ClampedArray(this.toArray(Uint8Array)));
         ctx2d.putImageData(imdata, 0, 0);
     }
 
@@ -681,7 +685,7 @@ GLEffect.Image.prototype.toCanvas = function (outCanvas) {
  * @return
  *  One of the `gl.FLOAT` or `gl.UNSIGNED_BYTE` constants.
  * @throws {Error}
- *  If `useInt = false` and float extension is not available.
+ *  If `useInt=false` and float extension is not available.
  * @private */
 GLEffect.Image.prototype._dataType = function (useBytes) {
     'use strict';
@@ -689,7 +693,7 @@ GLEffect.Image.prototype._dataType = function (useBytes) {
     if (useBytes) {
         // forced to use BYTE
         this.isFloat = false;
-    } else  if (gl.getExtension('OES_texture_float')) {
+    } else if (gl.getExtension('OES_texture_float')) {
         // choose FLOAT if possible
         this.isFloat = true;
     } else if (useBytes === undefined || useBytes === null) {
@@ -697,7 +701,7 @@ GLEffect.Image.prototype._dataType = function (useBytes) {
         this.isFloat = false;
     } else {
         // forced to FLOAT, but not available
-        throw new Error('Cannot use float for GPU images: "OES_texture_float" extension is not supported.')
+        throw new Error('Cannot use float for GPU images: "OES_texture_float" extension is not supported.');
     }
     return this.isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
 };
