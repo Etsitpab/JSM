@@ -192,8 +192,10 @@ GLEffect.prototype.getParametersList = function () {
  * @param {String | Array} fcnStr
  *  The GLSL function as a string or array of strings.
  *  Its prototype must be either:
- *    vec3 function(vec3 color)
- *    vec4 function(vec4 color);
+ *
+ *     vec3 function(vec3 color);  // RGB
+ *     vec4 function(vec4 color);  // RGBA
+ * @return {GLEffect}
  * @static */
 GLEffect.fromFunction = function (functionStr) {
     'use strict';
@@ -593,7 +595,7 @@ GLEffect.prototype._context = null;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-//  SUB-CLASS
+//  SUB-CLASS --- IMAGE
 ////////////////////////////////////////////////////////////////////////////////
 
 /** An image stored on the GPU.
@@ -744,4 +746,97 @@ GLEffect.Image.prototype._bind = function (slot) {
     gl.activeTexture(gl.TEXTURE0 + (slot || 0));
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.activeTexture(gl.TEXTURE0);
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+//  SUB-CLASS --- IMAGE
+////////////////////////////////////////////////////////////////////////////////
+
+// TODO: doc
+
+GLEffect.Reducer = function (jsFunction, sourceCode) {
+    'use strict';
+    this.glEffect = new GLEffect(sourceCode);
+    this.jsFunction = jsFunction;
+    this.isScalarFunction = GLEffect.Reducer._detectReturnValue(this.jsFunction);
+    return this;
+};
+
+GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr) {
+    'use strict';
+    if (glFunctionStr instanceof Array) {
+        glFunctionStr = glFunctionStr.join('\n');
+    }
+    var str = GLEffect.sourceCodeHeader + glFunctionStr + '\n\n';
+    str += 'void main(void) {                                                   \n';
+    str += '    gl_FragColor = function(                                        \n';
+    str += '        texture2D(uImage, vPosition + uPixel * vec2(-0.5, -0.5)),   \n';
+    str += '        texture2D(uImage, vPosition + uPixel * vec2(+0.5, -0.5)),   \n';
+    str += '        texture2D(uImage, vPosition + uPixel * vec2(-0.5, +0.5)),   \n';
+    str += '        texture2D(uImage, vPosition + uPixel * vec2(+0.5, +0.5))    \n';
+    str += '    );                                                              \n';
+    str += '}                                                                   \n';
+    return new GLEffect.Reducer(jsFunction, str);
+};
+
+GLEffect.Reducer._detectReturnValue = function (jsFunction) {
+    'use strict';
+    var array, scalar;
+    try {
+        array = jsFunction(new Uint8Array(4), new Uint8Array(4));
+    } catch (e) {
+        array = new Error();
+    }
+    try {
+        scalar = jsFunction(0, 0);
+    } catch (e) {
+        scalar = new Error();
+    }
+    var isArray = (array === undefined || array === null);
+    var isScalar = (typeof scalar === 'number');
+    if (isScalar === isArray) {
+        throw new Error('Cannot infer JS reduction function type.');
+    }
+    return isScalar;
+};
+
+// TODO: remove 'maxIterCPU', 'break' and 'console.log'
+GLEffect.Reducer.prototype.run = function (image, maxIterCPU) {
+    'use strict';
+    if (!(image instanceof GLEffect.Image)) {
+        var input = image;
+        image = new GLEffect.Image();
+        image.load(input);
+    }
+    var isPositiveEven = function (n) {
+        return (n > 0) && (n % 2 === 0);
+    };
+    var t = new Date().getTime();
+    while (isPositiveEven(image.width) && isPositiveEven(image.height)) {
+        if (image.width * image.height <= (maxIterCPU || 0)) {
+            break;
+        }
+        // TODO: opts = {'scale': 1/2}
+        image = this.glEffect.run(image, {'width': image.width / 2, 'height': image.height / 2});
+    }
+    console.log('GPU stopped at size ' + image.width + 'x' + image.height + ' = ' + image.width * image.height);
+    var array = image.toArray();
+    var result = new array.constructor(array.subarray(0, 4));
+    var k, n = array.length;
+    if (!this.isScalarFunction) {
+        for (k = 4; k < n; k += 4) {
+            this.jsFunction(result, array.subarray(k, k + 4));
+        }
+    } else {
+        for (k = 4; k < n; k += 4) {
+            result[0] = this.jsFunction(result[0], array[k]);
+            result[1] = this.jsFunction(result[1], array[k + 1]);
+            result[2] = this.jsFunction(result[2], array[k + 2]);
+            result[3] = this.jsFunction(result[3], array[k + 3]);
+        }
+    }
+    t = new Date().getTime() - t;
+    console.log('Run in ' + t + ' ms');
+    return result;
 };
