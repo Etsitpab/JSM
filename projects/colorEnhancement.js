@@ -66,14 +66,15 @@
         wNorm = Math.pow(wNorm, 2 * J);
         var norm;
 
+        var imMean = 0;
         for (var c = 0; c < nChannel; c++) {
             wt[c] = Matrix.wavedec2(im.get([], [], c), J, name);
             var A = Matrix.appcoef2(wt[c], name, J - 1);
             mean[c] = A.mean().getDataScalar();
             // min[c] = A.min().getDataScalar();
             // max[c] = A.max().getDataScalar();
+            imMean += mean[c] / nChannel;
         }
-        var imMean = (mean[0] + mean[1] + mean[2]) / 3;
         // var imMin = Math.min(min[0], min[1], min[2]);
         // var imMax = Math.max(max[0], max[1], max[2]);
    
