@@ -704,7 +704,7 @@
                 return sel;
             },
             symw: function (s, l, r) {
-                var length = s + l + r, sel = new Array();
+                var length = s + l + r, sel = new Uint32Array(length);
                 var i, j, j2, s2 = 2 * s;
                 i = 0;
                 for (j = l; j > 0; j--, i++) {
@@ -717,6 +717,36 @@
                 for (j = 0; j < r; j++, i++) {
                     j2 = (j + s) % (s2 - 2);
                     sel[i] = j2 >= s - 1? s2 - j2 - 2: j2;
+                }
+                return sel;
+            },
+            per: function (s, l, r) {
+                var length = s + l + r, sel = new Uint32Array(length);
+                var i, j;
+                i = 0;
+                for (j = l; j > 0; j--, i++) {
+                    sel[i] = s - j;
+                }
+                for (j = 0; j < s; j++, i++) {
+                    sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    sel[i] = j;
+                }
+                return sel;
+            },
+            nn: function (s, l, r) {
+                var length = s + l + r, sel = new Uint32Array(length);
+                var i, j, i0, ie;
+                i = 0;
+                for (j = l; j > 0; j--, i++) {
+                    sel[i] = 0;
+                }
+                for (j = 0; j < s; j++, i++) {
+                    sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    sel[i] = s - 1;
                 }
                 return sel;
             }
