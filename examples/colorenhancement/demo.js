@@ -92,7 +92,15 @@ var colEn = function () {
     };
 
     colEn.fun = function (img, p) {
-        if (p.colorspace !== "RGB") {
+        console.log(p.colorspace);
+        if (p.colorspace === "Gray") {
+            img = Matrix.applycform(img, "RGB to HSL");
+            var L = img.get([], [], 2);
+            L = L.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
+            img.set([], [], 2, L);
+            return img;
+        }
+        if(p.colorspace !== "RGB") {
             img = Matrix.applycform(img, "RGB to " + p.colorspace);
         }
         img = img.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
