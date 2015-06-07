@@ -94,11 +94,10 @@ var colEn = function () {
     colEn.fun = function (img, p) {
         console.log(p.colorspace);
         if (p.colorspace === "Gray") {
-            img = Matrix.applycform(img, "RGB to HSL");
-            var L = img.get([], [], 2);
+            img = Matrix.applycform(img, "RGB to Ohta");
+            var L = img.get([], [], 0);
             L = L.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
-            img.set([], [], 2, L);
-            return img;
+            return img.set([], [], 0, L).applycform("Ohta to RGB");
         }
         if(p.colorspace !== "RGB") {
             img = Matrix.applycform(img, "RGB to " + p.colorspace);
