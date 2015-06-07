@@ -1479,11 +1479,10 @@ function MatrixView(arg) {
             throw new Error('MatrixView.select: invalid dimension.');
         }
         sel = Tools.checkColon(sel, getSize(d));
-
         if (!isIndicesIndexed(d)) {
-            first[d] += sel[0] * step[d];
-            step[d]  *= sel[1];
-            size[d]   = Math.floor(Math.abs((sel[2] - sel[0]) / sel[1])) + 1;
+            first[d] = getFirst(d) + sel[0] * getStep(d);
+            step[d] = getStep(d) * sel[1];
+            size[d] = Math.floor(Math.abs((sel[2] - sel[0]) / sel[1])) + 1;
         } else {
             var i, ie, s, ind = indices[d], indOut = [];
             for (i = sel[0], ie = sel[2], s = sel[1]; i <= ie; i += s) {
@@ -1493,7 +1492,6 @@ function MatrixView(arg) {
             indices[d] = indOut;
             size[d] = indOut.length;
         }
-
         return this;
     }.bind(this);
 
@@ -3849,7 +3847,7 @@ if (typeof window === 'undefined') {
     Matrix.reshape = function () {
         var mat = Array.prototype.shift.apply(arguments);
         if (!(mat instanceof Matrix)) {
-            throw new Error("Matrix.set: Matrix to modify must be provided.");
+            throw new Error("Matrix.reshape: Matrix to modify must be provided.");
         }
         mat = mat.getCopy();
         return mat.reshape.apply(mat, arguments);

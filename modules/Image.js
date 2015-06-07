@@ -1632,564 +1632,11 @@
  */
 
 
-(function () {
+(function (Matrix, Matrix_prototype) {
     'use strict';
-    /* ********** WAVELET CLASS *************** */
-
-    /** Define a wavelet.
-     * @class
-     *  Provide several wavelets functions.
-     *  A wavelet can be either a common wavelet (called by its name)
-     *  or any user-defined wavelet from its recursive filters.
-     * @param {string} [name='haar']
-     *  Name of the wavelet.
-     * @return {Wavelet}
-     *  The wavelet definition (containing filters and some properties).
-     * @private
-     */
-    function Wavelet(name) {
-        var errMsg = this.constructor.name + ': ';
-
-        // Default arguments
-        if (name  === undefined) {
-            this.name = 'haar';
-        } else {
-            /** Name of the wavelet. */
-            this.name = name.toLowerCase();
-        }
-
-        // Pre-defined wavelets
-        if (Wavelet.list[this.name]) {
-            var wav = Wavelet.list[this.name];
-            var normalize = (wav.normalized !== undefined && !wav.normalized)
-                    ? function (h) { return Wavelet.filter(h, 'norm'); }
-                    : function (h) { return h; };
-            /** Low-pass recursive decomposition filter. */
-            this.filterL = normalize(wav.filterL);
-            /** Is the wavelet orthogonal? */
-            this.orthogonal = (wav.orthogonal) ? true : false;
-            if (wav.filterH) {
-                /** High-pass recursive decomposition filter. */
-                this.filterH = normalize(wav.filterH);
-            }
-            if (wav.invFilterL) {
-                /** Low-pass recursive reconstruction filter. */
-                this.invFilterL = normalize(wav.invFilterL);
-            }
-            if (wav.invFilterH) {
-                /** High-pass recursive reconstruction filter. */
-                this.invFilterH = normalize(wav.invFilterH);
-            }
-        }
-
-        // User-define wavelet
-        if (this.filterL === undefined) {
-            var errMsgFull = errMsg + "unknown wavelet '" + name + "'. \n";
-            errMsgFull += 'User-defined wavelets not implemented yet.';
-            throw new Error(errMsgFull);
-        }
-
-        // Compute complementary filter
-        var conj = function (h, offset) {
-            return Wavelet.filter(h, 'conjugate', (offset) ? -1 : 1);
-        };
-        if (!this.filterH && this.orthogonal) {
-            this.filterH = Wavelet.filter(conj(this.filterL), 'mirror');
-        }
-        if (!this.invFilterL) {
-            this.invFilterL = conj(this.filterH, true);
-        }
-        if (!this.invFilterH) {
-            this.invFilterH = conj(this.filterL, false);
-        }
-
-        // Return the object
-        return this;
-    }
-
-    /** Public List of wavelets. */
-    Wavelet.list = {
-        'haar': {
-            'orthogonal': true,
-            'normalized': false,
-            'filterL': new Float64Array([1, 1])
-        },
-        'db2': {
-            'name': 'Daubechies 2',
-            'orthogonal': true,
-            'normalized': false,
-            'filterL': new Float64Array([
-                1 + Math.sqrt(3),
-                3 + Math.sqrt(3),
-                3 - Math.sqrt(3),
-                1 - Math.sqrt(3)])
-        },
-        'db4': {
-            'name': 'Daubechies 4',
-            'orthogonal': true,
-            'filterL': new Float64Array([
-                -0.010597401784997278,
-                0.032883011666982945,
-                0.030841381835986965,
-                -0.18703481171888114,
-                -0.027983769416983849,
-                0.63088076792959036,
-                0.71484657055254153,
-                0.23037781330885523
-            ])
-        },
-        'db8': {
-            'name': 'Daubechies 8',
-            'orthogonal': true,
-            'filterL': new Float64Array([
-                -0.00011747678400228192,
-                0.00067544940599855677,
-                -0.00039174037299597711,
-                -0.0048703529930106603,
-                0.0087460940470156547,
-                0.013981027917015516,
-                -0.044088253931064719,
-                -0.017369301002022108,
-                0.12874742662018601,
-                0.00047248457399797254,
-                -0.28401554296242809,
-                -0.015829105256023893,
-                0.58535468365486909,
-                0.67563073629801285,
-                0.31287159091446592,
-                0.054415842243081609
-            ])
-        },
-        /* Symlets*/
-        'sym2': {
-            'name': 'Symlets 2',
-            'orthogonal': true,
-            'filterL': new Float64Array([
-                -0.12940952255092145,
-                0.22414386804185735,
-                0.83651630373746899,
-                0.48296291314469025
-            ])
-        },
-        'sym4': {
-            'name': 'Symlets 4',
-            'orthogonal': true,
-            'filterL': new Float64Array([
-                -0.075765714789273325,
-                -0.02963552764599851,
-                0.49761866763201545,
-                0.80373875180591614,
-                0.29785779560527736,
-                -0.099219543576847216,
-                -0.012603967262037833,
-                0.032223100604042702
-            ])
-        },
-        'sym8': {
-            'name': 'Symlets 8',
-            'orthogonal': true,
-            'filterL': ([
-                -0.0033824159510061256,
-                -0.00054213233179114812,
-                0.031695087811492981,
-                0.0076074873249176054,
-                -0.14329423835080971,
-                -0.061273359067658524,
-                0.48135965125837221,
-                0.77718575170052351,
-                0.3644418948353314,
-                -0.051945838107709037,
-                -0.027219029917056003,
-                0.049137179673607506,
-                0.0038087520138906151,
-                -0.014952258337048231,
-                -0.0003029205147213668,
-                0.0018899503327594609
-            ])
-        },
-        /* Coiflets */
-        'coif1': {
-            'name': 'Coiflets 1',
-            'orthogonal': true,
-            'filterL': new Float64Array([
-                -0.01565572813546454,
-                -0.072732619512853897,
-                0.38486484686420286,
-                0.85257202021225542,
-                0.33789766245780922,
-                -0.072732619512853897
-            ])
-        },
-        'coif2': {
-            'name': 'Coiflets 2',
-            'orthogonal': true,
-            'filterL': new Float64Array([
-                -0.00072054944536451221,
-                -0.0018232088707029932,
-                0.0056114348193944995,
-                0.023680171946334084,
-                -0.059434418646456898,
-                -0.076488599078306393,
-                0.41700518442169254,
-                0.81272363544554227,
-                0.38611006682116222,
-                -0.067372554721963018,
-                -0.041464936781759151,
-                0.016387336463522112
-            ])
-        },
-        'coif4': {
-            'name': 'Coiflets 4',
-            'orthogonal': true,
-            'filterL': new Float64Array([
-                -1.7849850030882614e-06,
-                -3.2596802368833675e-06,
-                3.1229875865345646e-05,
-                6.2339034461007128e-05,
-                -0.00025997455248771324,
-                -0.00058902075624433831,
-                0.0012665619292989445,
-                0.0037514361572784571,
-                -0.0056582866866107199,
-                -0.015211731527946259,
-                0.025082261844864097,
-                0.039334427123337491,
-                -0.096220442033987982,
-                -0.066627474263425038,
-                0.4343860564914685,
-                0.78223893092049901,
-                0.41530840703043026,
-                -0.056077313316754807,
-                -0.081266699680878754,
-                0.026682300156053072,
-                0.016068943964776348,
-                -0.0073461663276420935,
-                -0.0016294920126017326,
-                0.00089231366858231456
-            ])
-        },
-        /* Bi-orthogonal */
-        'bi13': {
-            'name': 'Biorthogonal 1-3',
-            'orthogonal': false,
-            'filterL': new Float64Array([
-                -0.088388347648318447,
-                0.088388347648318447,
-                0.70710678118654757,
-                0.70710678118654757,
-                0.088388347648318447,
-                -0.088388347648318447
-            ]),
-            'filterH': new Float64Array([
-                -0.70710678118654757,
-                0.70710678118654757
-            ])
-        },
-        'bi31': {
-            'name': 'Biorthogonal 3-1',
-            'orthogonal': false,
-            'filterL': new Float64Array([
-                -0.35355339059327379,
-                1.0606601717798214,
-                1.0606601717798214,
-                -0.35355339059327379
-            ]),
-            'filterH': new Float64Array([
-                -0.17677669529663689,
-                0.53033008588991071,
-                -0.53033008588991071,
-                0.17677669529663689
-            ])
-        },
-        'bi68': {
-            'name': 'Biorthogonal 6-8',
-            'orthogonal': false,
-            'filterL': new Float64Array([
-                0.0,
-                0.0019088317364812906,
-                -0.0019142861290887667,
-                -0.016990639867602342,
-                0.01193456527972926,
-                0.04973290349094079,
-                -0.077263173167204144,
-                -0.09405920349573646,
-                0.42079628460982682,
-                0.82592299745840225,
-                0.42079628460982682,
-                -0.09405920349573646,
-                -0.077263173167204144,
-                0.04973290349094079,
-                0.01193456527972926,
-                -0.016990639867602342,
-                -0.0019142861290887667,
-                0.0019088317364812906
-            ]),
-            'filterH': new Float64Array([
-                0.0,
-                0.014426282505624435,
-                -0.014467504896790148,
-                -0.078722001062628819,
-                0.040367979030339923,
-                0.41784910915027457,
-                -0.75890772945365415,
-                0.41784910915027457,
-                0.040367979030339923,
-                -0.078722001062628819,
-                -0.014467504896790148,
-                0.014426282505624435,
-                0.0,
-                0.0
-            ])
-        },
-        'bi97': {
-            'name': 'Biorthogonal 9-7',
-            'orthogonal': false,
-            'filterL': new Float64Array([
-                0.0,
-                0.02674875741080976,
-                -0.01686411844287495,
-                -0.07822326652898785,
-                0.2668641184428723,
-                0.6029490182363579,
-                0.2668641184428723,
-                -0.07822326652898785,
-                -0.01686411844287495,
-                0.02674875741080976
-            ]),
-            'filterH': new Float64Array([
-                0.0,
-                -0.09127176311424948,
-                0.05754352622849957,
-                0.5912717631142470,
-                -1.115087052456994,
-                0.5912717631142470,
-                0.05754352622849957,
-                -0.09127176311424948,
-                0.0,
-                0.0
-            ])
-        }
-    };
-
-    /** Perform an operation on a filter.
-     * @param {Number[]} h
-     *  A filter.
-     * @param {String} action
-     *  - 'rescale': multiply the filter by a constant.
-     *  - 'normalize': normalize the filter (L2 norm).
-     *  - 'conjugate': return the filter h[0], -h[1], .., h[n]*(-1)^n.
-     *  - 'mirror': return the filter h[n-1] .. h[0].
-     * @param {Number} [factor=1]
-     *  Multiplicative constant.
-     * @return {Number[]}
-     *  A transformed filter.
-     */
-    Wavelet.filter = function (h, action, factor) {
-        var errMsg = 'Wavelet.filter: ';
-        if (factor === undefined || factor === 0) {
-            factor = 1;
-        }
-        if (typeof factor !== 'number') {
-            throw new Error(errMsg + "argument 'factor' must be a number");
-        }
-        if (typeof action !== 'string') {
-            throw new Error(errMsg + "argument 'action' must be a string");
-        }
-        action = action.toLowerCase().substr(0, 3);
-
-        var k;
-        var N = h.length;
-        var out = [];
-        var sign = 1, dsign = 1;
-        if (action === 'mir') {
-            for (k = 0; k < N; k++) {
-                out[k] = factor * h[N - 1 - k];
-            }
-            return out;
-        }
-        if (action === 'nor') {
-            var sum2 = 0;
-            for (k = 0; k < N; k++) {
-                sum2 += h[k] * h[k];
-            }
-            factor = (!sum2) ? 1 : 1 / Math.sqrt(sum2);
-        } else if (action === 'con') {
-            dsign = -1;
-        } else if (action !== 'res') {
-            throw new Error(errMsg + 'unknown action');
-        }
-
-        for (k = 0; k < N; k++, sign *= dsign) {
-            out[k] = factor * sign * h[k];
-        }
-
-        return out;
-    };
-
-    /** @class Matrix */
-
-    /** Returns wavelet filters.
-     * Currently implemented filters are :
-     *
-     * + "haar" ;
-     * + "db1", "db2", "db4", "db8" ;
-     * + "sym2", "sym4", "sym8" ;
-     * + "coif1", "coif2", "coif4" ;
-     * + "bi13", "bi31", "bi68", "bi97" ;
-     *
-     * @param{String} name
-     *  Name of the filters.
-     * @param{String} [type]
-     *  Can be either :
-     *
-     * + "d" for decomposition filters ;
-     * + "r" for recomposition filters ;
-     * + "l" for low-pass filters ;
-     * + "h" for high-pass filters ;
-     * @return{Array}
-     */
-    Matrix.wfilters = function (name, type) {
-        var wav = new Wavelet(name);
-        var dl = Matrix.toMatrix(wav.filterL),
-            dh = Matrix.toMatrix(wav.filterH),
-            rl = Matrix.toMatrix(wav.invFilterL),
-            rh = Matrix.toMatrix(wav.invFilterH);
-        switch (type) {
-        case 'd':
-            return [dl, dh];
-        case 'r':
-            return [rl, rh];
-        case 'l':
-            return [dl, rl];
-        case 'h':
-            return [dh, rh];
-        case undefined:
-            return [dl, dh, rl, rh];
-        default:
-            throw new Error("Matrix.wfilters: wrong type argument.");
-        }
-    };
-
-    /*
-        for (y = ys, ny = c(ys + K / 2), oy = oys; y < ny; y += dy, oy += ody) {
-            for (k = 0, s = y + o, sum = 0; k < K; k++, s -= kdy) {
-                sTmp = s;
-                while (sTmp < ys) {
-                    sTmp += nydy;
-                }
-                while (sTmp >= ly) {
-                    sTmp -= nydy;
-                }
-                sum += kernel[k] * id[sTmp];
-            }
-            if (add) {
-                od[oy] += sum;
-            } else  {
-                od[oy] = sum;
-            }
-        }
-        for (ny = ly - o; y < ny; y += dy, oy += ody) {
-            for (k = 0, s = y + o, sum = 0; k < K; k++, s -= kdy) {
-                sum += kernel[k] * id[s];
-            }
-            if (add) {
-                od[oy] += sum;
-            } else  {
-                od[oy] = sum;
-            }
-        }
-        for (; y < ly; y += dy, oy += ody) {
-            console.log(y);
-            for (k = 0, s = y + o, sum = 0; k < K; k++, s -= kdy) {
-                sTmp = s;
-                while (sTmp < ys) {
-                    sTmp += nydy;
-                }
-                while (sTmp >= ly) {
-                    sTmp -= nydy;
-                }
-                sum += kernel[k] * id[sTmp];
-            }
-            if (add) {
-                od[oy] += sum;
-            } else  {
-                od[oy] = sum;
-            }
-         }*/
-    /*
-    var filter = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
-        // 1. ARGUMENTS
-        var ce = Math.ceil, fl = Math.floor;
-
-        var K = kernelL.length;
-        origin = (origin === 'cl' ? fl : ce)((K - 1) / 2);
-
-        // 2. Filtering
-        var cs = vI.getFirst(2), ocs = vO.getFirst(2);
-        var xs = vI.getFirst(1), oxs = vO.getFirst(1);
-        var ys = vI.getFirst(0), dy = vI.getStep(0);
-        var ly = vI.getEnd(0), ny = vI.getSize(0);
-        var dc = vI.getStep(2), odc = vO.getStep(2);
-        var dx = vI.getStep(1), odx = vO.getStep(1);
-        var oys = vO.getFirst(0), ody = vO.getStep(0);
-        var idL = inL.getData(),  idH = inH.getData(),
-            odL = outL.getData(), odH = outH.getData();
-
-        var lc = vI.getEnd(2);
-        var lx = vI.getEnd(1);
-
-        var c, oc, o_x;
-        var _x, nx, yx;
-        var y, oy;
-        var k, s, sTmp, sumL, sumH;
-
-        var nydy = ny * dy;
-        var o = origin * dy;
-        var kdy = dy;
-        dy *= sub;
-        for (c = 0, oc = 0; c < lc; c += dc, oc += odc) {
-            for (_x = c + xs, nx = c + lx, o_x = oc + oxs; _x < nx; _x += dx, o_x += odx) {
-                var yx0 = ys + _x, nyx = ly + _x;
-                for (y = _x + ys, oy = o_x + oys; y < nyx; y += dy, oy += ody) {
-                    for (k = 0, s = y + o, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
-                        sTmp = s;
-                        while (sTmp < yx0) {
-                            sTmp += nydy;
-                        }
-                        while (sTmp >= nyx) {
-                            sTmp -= nydy;
-                        }
-                        sumL += kernelL[k] * idL[sTmp];
-                        sumH += kernelH[k] * idH[sTmp];
-                    }
-                    odL[oy] += sumL;
-                    odH[oy] += sumH;
-                }
-            }
-        }
-    };
- */
-    /*
-     for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
-     for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
-     sTmp = s;
-     while (sTmp < yx0) {
-     sTmp += ly;
-     }
-     while (sTmp >= nyx) {
-     sTmp -= ly;
-     }
-     if (isOdd && sTmp === nyx - kdy) {
-     sTmp -= kdy; 
-     }
-     sumL += kernelL[k] * idL[sTmp];
-     sumH += kernelH[k] * idH[sTmp];
-     }
-     odL[oy] += sumL;
-     odH[oy] += sumH;
-     }*/
     
-    var filter1D = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    /** @class Matrix */
+    var filter1DPer = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
@@ -2210,6 +1657,59 @@
             odH[oy] += sumH;
         }
     };
+    var filter1DSym = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+        var y, oy, k, s, sumL, sumH, sTmp;
+        y0 += K - orig - 1;
+        ny -= orig; // + (isOdd ? 1 : 0)
+        for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
+            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+                sumL += kernelL[k] * idL[s];
+                sumH += kernelH[k] * idH[s];
+            }
+            odL[oy] += sumL;
+            odH[oy] += sumH;
+        }
+    };
+    var filter1DSymDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+        var y, oy, k, s, sumL, sumH, sTmp;
+        y0 += K - orig - 1;
+        ny -= orig; // + (isOdd ? 1 : 0)
+        for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
+            var sig = [], fil = [];
+            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+                sig.push(s);
+                fil.push(k);
+                sumL += kernelL[k] * idL[s];
+                sumH += kernelH[k] * idH[s];
+            }
+            console.log(oy, sig, y, ny);
+            odL[oy] += sumL;
+            odH[oy] += sumH;
+        }
+    };
+    var filter1D, dwtmode;
+    Matrix.dwtmode = function (mode) {
+        if (mode === undefined) {
+            return dwtmode;
+        }
+        mode = mode.toLowerCase();
+        switch (mode) {
+        case "per":
+            filter1D = filter1DPer;
+            break;
+        case "sym":
+        case "symw":
+        case "zpd":
+        case "nn":
+            filter1D = filter1DSym;
+            break;
+        default:
+            throw new Error("Matrix.dwtmode: invalid mode " + mode + "."); 
+        }
+        dwtmode = mode;
+    };
+    Matrix.dwtmode("per");
+    
     var filterND = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
 
         var K = kernelL.length;
@@ -2240,44 +1740,84 @@
 
     var zeros = Matrix.zeros;
     
+    var getPaddingInfos = function (K, s) {
+        var isOdd = s % 2 ? true : false;
+        var f = Math.floor, c = Math.ceil;
+        // left and right part of filter (computed on reversed filter)
+        var lk = f((K - 1) / 2),
+            rk = c((K - 1) / 2);
+        // Left and right input padding
+        var li = c(rk / 2) * 2 + lk - 1,
+            ri = isOdd ? c(lk / 2) * 2 + rk - 1 : f(lk / 2) * 2 + rk;
+        // Left and right output padding
+        var lo = c(rk / 2),
+            ro = isOdd ? c(lk / 2) : f(lk / 2);
+        return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
+    };
+    /*
+    var padTest = function (isOdd) {
+        console.log("For " + (isOdd ? "odd" : "even") + " signal");
+        var data = {}, f = Math.floor, c = Math.ceil;
+        for (var K = 2; K < 20; K += 2) {
+            data[K] = getPaddingInfos(K, isOdd ? 1 : 2);
+        }
+        console.table(data, ["lk", "rk", "li", "lo", "ri", "ro"]);
+    };
+     */
     var dwt = function (s, name, dim) {
-        var wav = new Wavelet(name), fL = wav.filterL, fH = wav.filterH;
+        var wav = Matrix.wfilters(name, 'd');
+        var fL = wav[0].getData(), fH = wav[1].getData();
         var size = s.getSize();
         size[dim] = Math.ceil(size[dim] / 2);
-
+        if (dwtmode !== 'per') {
+            var p = getPaddingInfos(fL.length, s.numel());
+            size[dim] += p.ro + p.lo - 1;
+            s = s.paddim(dwtmode, dim, [p.li, p.ri]);
+        }
         // Create output data
         var dL = zeros(size), dH = zeros(size);
         var v = dL.getView().swapDimensions(0, dim);
         var iV = s.getView().swapDimensions(0, dim);
-
-        // H filtering from siganl to output
+        // H filtering from signal to output
         filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
+        // s.transpose().display("signal padded");
         return [dL, dH];
     };
-    var idwt = function (bands, name, dim) {
-        var wav = new Wavelet(name);
-        var fL = wav.invFilterL, fH = wav.invFilterH;
-        var size = bands[0].getSize();
-        size[dim] = size[dim] * 2;
-        var L = zeros(size), H = zeros(size);
 
-        var v = L.getView().selectDimension(dim, [0, 2, -1]);
+    var idwt = function (bands, name, dim) {
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+
+        if (dwtmode !== 'per') {
+            var p = getPaddingInfos(fL.length, bands[0].numel());
+            bands[0] = bands[0].paddim(dwtmode, dim, [0, 1]);
+            bands[1] = bands[1].paddim(dwtmode, dim, [0, 1]);
+        }
+        var size = bands[0].getSize();
+        size[dim] *= 2; 
+        var L = zeros(size), H = zeros(size);
+        var start = dwtmode === 'per' ? 0 : 1;
+        var v = L.getView().selectDimension(dim, [start, 2, -1]);
         bands[0].extractViewTo(v, L);
         bands[1].extractViewTo(v, H);
         v.restore().swapDimensions(0, dim);
-
+        
         // Out array
+        if (dwtmode !== 'per') {
+            size[dim] -= p.rk + p.lk + 1; // +1 is due to padding
+        }
         var out = zeros(size);
         var vO = out.getView().swapDimensions(0, dim);
-
+        
         // Process scale
         filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
         return out;
     };
 
+    
     var dwt2 = function (im, name) {
-        var wav = new Wavelet(name);
-        var fL = wav.filterL, fH = wav.filterH;
+        var wav = Matrix.wfilters(name, 'd');
+        var fL = wav[0].getData(), fH = wav[1].getData();
         var h = im.getSize(0), w = im.getSize(1), c = im.getSize(2);
         
         // Create output image
@@ -2303,8 +1843,8 @@
         return [dA, dH, dV, dD];
     };
     var idwt2 = function (bands, name) {
-        var wav = new Wavelet(name);
-        var fL = wav.invFilterL, fH = wav.invFilterH;
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
         var h = bands[0].getSize(0), w = bands[0].getSize(1), c = bands[0].getSize(2);
         var dL = zeros(2 * h, w, c), dH = zeros(2 * h, w, c);
         var bL = zeros(2 * h, 2 * w, c), bH = zeros(2 * h, 2 * w, c);
@@ -2344,7 +1884,7 @@
         return dwt(im, name, dim);
     };
     /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
-     *
+     *n
      * __See also :__
      * {@link Matrix#dwt},
      * {@link Matrix#idwt2}.
@@ -2395,7 +1935,7 @@
     Matrix.idwt2 = function (bands, name) {
         return idwt2(bands, name);
     };
-
+    
     /** Perform a DWT (Discrete Wavelet Transform)
      * on each vector presents on a given Matrix dimension.
      *
@@ -2496,49 +2036,61 @@
 
     
     var createStruct = function (s, n) {
-        var sdx = new Array(n + 2);
-        var sdy = new Array(n + 2);
-        var sdc = new Array(n + 2);
-        sdy[n + 1] = s.getSize(0);
-        sdx[n + 1] = s.getSize(1);
-        sdc[n + 1] = s.getSize(2);
+        var xSizes = new Array(n + 2);
+        var ySizes = new Array(n + 2);
+        var cSizes = new Array(n + 2);
+        ySizes[n + 1] = s.getSize(0);
+        xSizes[n + 1] = s.getSize(1);
+        cSizes[n + 1] = s.getSize(2);
         var l;
         for (l = n; l >= 1; l--) {
-            sdy[l] = Math.ceil(sdy[l + 1] / 2);
-            sdx[l] = Math.ceil(sdx[l + 1] / 2);
-            sdc[l] = sdc[l + 1];
+            ySizes[l] = Math.ceil(ySizes[l + 1] / 2);
+            xSizes[l] = Math.ceil(xSizes[l + 1] / 2);
+            cSizes[l] = cSizes[l + 1];
         }
-        sdy[0] = sdy[1];
-        sdx[0] = sdx[1];
-        sdc[0] = sdc[1];
-        return Matrix.toMatrix([sdy, sdx, sdc])
+        ySizes[0] = ySizes[1];
+        xSizes[0] = xSizes[1];
+        cSizes[0] = cSizes[1];
+        return Matrix.toMatrix([ySizes, xSizes, cSizes])
     };
 
     var getSubbandsCoordinates = function (lc) {
-        var sdy = lc.get([], 0).getData();
-        var sdx = lc.get([], 1).getData();
-        var sdc = lc.get([], 2).getData();
+        var ySizes = lc.get([], 0).getData(),
+            xSizes = lc.get([], 1).getData(),
+            cSizes = lc.get([], 2).getData();
 
-        var outSize = sdx[0] * sdy[0] * sdc[0];
-        var cSize = [0, outSize];
+        var outSize = xSizes[0] * ySizes[0] * cSizes[0];
+        var bands = [0, outSize], subSizes = [];
         
-        var l, n = sdy.length - 2;
-        for (l = 2; l < n + 2; l++) {
-            var subBandSize = sdy[l - 1] * sdx[l - 1] * sdc[l - 1];
+        var j, J = ySizes.length - 2;
+        for (j = 1; j < J + 1; j++) {
+            subSizes.push([ySizes[j], xSizes[j], cSizes[j]]);
+            var subBandSize = ySizes[j] * xSizes[j] * cSizes[j];
             for (var b = 0; b < 3; b++) {
                 outSize += subBandSize;
-                cSize.push(outSize)
+                bands.push(outSize)
             }
         }
         return {
-            "cSize": cSize,
+            "bands": bands,
             "outSize": outSize,
-            "sdy": sdy,
-            "sdx": sdx,
-            "sdc": sdc,
-            "n": n
+            "subSizes": subSizes,
+            "ySizes": ySizes,
+            "xSizes": xSizes,
+            "cSizes": cSizes,
+            "J": J
         };
     };
+    
+    // Function used to resize approximation coefficient matrix
+    // to its original size after reconstruction.
+    var resizeMatrix = function (A, ds, l) {
+        if (A.getSize(0) !== ds.ySizes[l + 1] || A.getSize(1) !== ds.xSizes[l + 1]) {
+            A = A.get([0, ds.ySizes[l + 1] - 1], [0, ds.xSizes[l + 1] - 1], [])
+        }
+        return A;
+    };
+    
     /** Perform a 2D DWT (Discrete Wavelet Transform)
      *
      * __See also :__
@@ -2555,22 +2107,19 @@
      *  while the seconds contains the sizes of each subbands.
      * @matlike
      */
-    Matrix.wavedec2 = function (s, n, name) {
-        var sizes = createStruct(s, n);
+    Matrix.wavedec2 = function (input, n, name) {
+        var sizes = createStruct(input, n);
         var ds = getSubbandsCoordinates(sizes);
         var out = new Float64Array(ds.outSize);
-        var matIn = s, dL, dH;
-        var l;
-        for (l = n; l >= 1; l--) {
-            var wt = dwt2(matIn, name);
-            var s = 1 + 3 * (l - 1);
-            out.subarray(ds.cSize[s], ds.cSize[s + 1]).set(wt[1].getData());
-            out.subarray(ds.cSize[s + 1], ds.cSize[s + 2]).set(wt[2].getData());
-            out.subarray(ds.cSize[s + 2], ds.cSize[s + 3]).set(wt[3].getData());
-            matIn = wt[0];
+        for (var l = n - 1, s = 3 * l; l >= 0; l--, s -= 3) {
+            var wt = dwt2(input, name);
+            out.subarray(ds.bands[s + 1], ds.bands[s + 2]).set(wt[1].getData());
+            out.subarray(ds.bands[s + 2], ds.bands[s + 3]).set(wt[2].getData());
+            out.subarray(ds.bands[s + 3], ds.bands[s + 4]).set(wt[3].getData());
+            input = wt[0];
         }
-        out.subarray(ds.cSize[0], ds.cSize[1]).set(wt[0].getData());
-        return [new Matrix([ds.outSize], out), sizes];
+        out.subarray(ds.bands[0], ds.bands[1]).set(wt[0].getData());
+        return [new Matrix([out.length], out), sizes];
     };
     /** Reconstruct the signal from a 2D DWT (Discrete Wavelet Transform).
      *
@@ -2588,25 +2137,15 @@
      * @matlike
      */
     Matrix.waverec2 = function (lc, name) {
-        var ds = getSubbandsCoordinates(lc[1]);
-        var data = lc[0].getData();
-        var subSize = [ds.sdy[0], ds.sdx[0], ds.sdc[0]];
+        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
         var A, H, V, D;
-        A = new Matrix(subSize, data.subarray(ds.cSize[0], ds.cSize[1]))
-        var l, n = ds.n;
-        for (l = 1; l < n + 1; l++) {
-            if (A.getSize(0) !== ds.sdy[l] || A.getSize(1) !== ds.sdx[l]) {
-                A = A.get([0, ds.sdy[l] - 1], [0, ds.sdx[l] - 1], [])
-            }
-            var s = 1 + 3 * (l - 1);
-            subSize = [ds.sdy[l], ds.sdx[l], ds.sdc[l]];
-            H = new Matrix(subSize, data.subarray(ds.cSize[s], ds.cSize[s + 1]));
-            V = new Matrix(subSize, data.subarray(ds.cSize[s + 1], ds.cSize[s + 2]));
-            D = new Matrix(subSize, data.subarray(ds.cSize[s + 2], ds.cSize[s + 3]));
+        A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
+        for (var l = 0, s = 0, J = ds.J; l < J; l++, s += 3) {
+            H = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 1], ds.bands[s + 2]));
+            V = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 2], ds.bands[s + 3]));
+            D = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 3], ds.bands[s + 4]));
             A = idwt2([A, H, V, D], name);
-        }
-        if (A.getSize(0) !== ds.sdy[l] || A.getSize(1) !== ds.sdx[l]) {
-            A = A.get([0, ds.sdy[l] - 1], [0, ds.sdx[l] - 1], [])
+            A = resizeMatrix(A, ds, l + 1);
         }
         return A;
     };
@@ -2630,36 +2169,31 @@
      * @matlike
      */
     Matrix.upwlev2 = function (lc, name) {
-        var sdx = lc[1].get([], 1).getData();
-        // If there no possible reconstruction
-        if (sdx.length === 2) {
-            return [new Matrix(), new Matrix(), Matrix.reshape(lc[0], lc[1].get(0, []).getData())];
+        if (lc[1].getSize(0) === 2) {
+            return [new Matrix(), new Matrix()];
         }
 
         var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
-        var subSize = [ds.sdy[0], ds.sdx[0], ds.sdc[0]];
-        var Am = new Matrix(subSize, data.subarray(ds.cSize[0], ds.cSize[1]))
-        subSize = [ds.sdy[1], ds.sdx[1], ds.sdc[1]];
-        var H = new Matrix(subSize, data.subarray(ds.cSize[1], ds.cSize[2]));
-        var V = new Matrix(subSize, data.subarray(ds.cSize[2], ds.cSize[3]));
-        var D = new Matrix(subSize, data.subarray(ds.cSize[3], ds.cSize[4]));
+        var Am = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
+        var H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
+        var V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
+        var D = new Matrix(ds.subSizes[0], data.subarray(ds.bands[3], ds.bands[4]));
         var A = idwt2([Am, H, V, D], name);
-        
-        if (A.getSize(0) !== ds.sdy[1] || A.getSize(1) !== ds.sdx[1]) {
-            A = A.get([0, ds.sdy[2] - 1], [0, ds.sdx[2] - 1], []);
-        }
+        A = resizeMatrix(A, ds, 1);
 
         var sizes = lc[1].get([1, -1]);
         sizes.set(0, [], sizes.get(1, []));
 
-        var out = new Float64Array(A.numel() + ds.cSize[ds.cSize.length - 1] - ds.cSize[4]);
-        out.subarray(0, A.numel()).set(A.getData());
-        out.subarray(A.numel(), A.numel() + ds.cSize[ds.cSize.length - 1] - ds.cSize[4]).set(data.subarray(ds.cSize[4]));
+        var Asize = A.numel(), remaining = data.length - ds.bands[4];
+        var out = new Float64Array(Asize + remaining);
+        out.subarray(0, Asize).set(A.getData());
+        out.subarray(Asize).set(data.subarray(ds.bands[4]));
         return [new Matrix([out.length], out), sizes, Am];
     };
 
     /** Returns the coefficients corresponding to the approximation subband
      * at a given level.
+
      *
      * __See also :__
      * {@link Matrix#detcoef2},
@@ -2687,7 +2221,6 @@
             J = lc[1].size(0) - 2;
         }
         var sizes = lc[1].get([1, -1]).prod(1).getData();
-        var outSize = sizes[0];
         var data = lc[0].getData();
         var size = lc[1].get(0).getData();
         return new Matrix(size, data.subarray(0, sizes[0]));
@@ -2714,36 +2247,67 @@
      * @matlike
      */
     Matrix.detcoef2 = function (type, lc, j) {
-        var sizes = lc[1].get([1, -1]).prod(1).getData();
-        var J = lc[1].size(0) - 2;
-        var outSize = sizes[0], cSize = [0, outSize];
-        var n;
-        for (n = 0; n < J; n++) {
-            for (var b = 0; b < 3; b++) {
-                outSize += sizes[n];
-                cSize.push(outSize)
-            }
-        }
-        var data = lc[0].getData();
-        var scale = J - (j + 1);
-        var size = lc[1].get([scale + 1], []).getData();
-        var band = 1 + scale * 3; 
-        if (type === 'h') {
-            var start = cSize[band], end = cSize[band + 1];
-        } else if (type === 'v') {
-            var start = cSize[band + 1], end = cSize[band + 2];
-        } else if (type === 'd') {
-            var start = cSize[band + 2], end = cSize[band + 3];
-        } else if (type === 'all') {
+        if (type === 'all') {
             return [
                 Matrix.detcoef2('h', lc, j),
                 Matrix.detcoef2('v', lc, j),
                 Matrix.detcoef2('d', lc, j)
             ];
         }
-        return new Matrix(size, data.subarray(start, end));
+        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
+        var scale = ds.J - (j + 1);
+        var size = lc[1].get([scale + 1], []).getData();
+        var band = 1 + scale * 3;
+        if (type === 'v') {
+            band += 1;
+        } else if (type === 'd') {
+            band += 2;
+        } else if (type !== 'h') {
+            throw new Error("Matrix.detcoef2: Wrong type argument");
+        }
+        return new Matrix(size, data.subarray(ds.bands[band], ds.bands[band + 1]));
     };
 
+    /** Reconstruct a signal from a given subband. 
+     * To be implemented efficiently.
+     */
+    Matrix.wrcoef2 = function (type, lc, name, N) {
+        var ds = getSubbandsCoordinates(lc[1]), J = ds.J;
+        for (var l = 0; l < N; l++) {
+            lc = Matrix.upwlev2(lc, name);
+        }
+
+        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
+        var A, H, V, D;
+        var Z = new Matrix(ds.subSizes[0]);
+        A = H = V = D = Z;
+        if (type === 'a') {
+            A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
+        } else if (type === 'h') {
+            H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
+        } else if (type === 'v') {
+            V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
+        } else if (type === 'd') {
+            D = new Matrix(ds.subSizes[0], data.subarray(ds.bands[3], ds.bands[4]));
+        }
+
+        var A = idwt2([A, H, V, D], name);
+        A = resizeMatrix(A, ds, 1);
+
+        var sizes = lc[1].get([1, -1]);
+        sizes.set(0, [], sizes.get(1, []));
+
+        var Asize = A.numel(), remaining = data.length - ds.bands[4];
+        var out = new Float64Array(Asize + remaining);
+        out.subarray(0, Asize).set(A.getData());
+
+        lc = [new Matrix([out.length], out), sizes, A];
+
+        for (var l = N + 1; l < J; l++) {
+            lc = Matrix.upwlev2(lc, name);
+        }
+        return lc[0].reshape(lc[1].get(0).getData());
+    };
     /** Returns the maximum level of the decomposition according 
      * to a mother wavelet name.
      *
@@ -2761,24 +2325,163 @@
      */
     Matrix.dwtmaxlev = function (s, name) {
         s = Matrix.toMatrix(s).min().getDataScalar();
-        var wav = new Wavelet(name);
-        var dl = wav.filterL.length,
-            dh = wav.filterH.length,
-            rl = wav.invFilterL.length,
-            rh = wav.invFilterH.length;
+        var wav = Matrix.wfilters(name);
+        var dl = wav[0].numel(),
+            dh = wav[1].numel(),
+            rl = wav[2].numel(),
+            rh = wav[3].numel();
         var w = Math.max(dl, dh, rl, rh);
         var maxlev = Math.floor(Math.log(s / (w - 1)) / Math.log(2));
         return maxlev;
     };
 
-    /** Reconstruct a signal from a given subband. 
-     * To be implemented.
-     */
-    Matrix.wrcoef2 = function (type, lc, name, n) {
-        
-    };
+    (function () {
+        var padIndices = {
+            sym: function (s, l, r) {
+                var length = s + l + r, sel = new Uint32Array(length);
+                var i, j, j2, s2 = 2 * s;
+                for (j = l, i = 0; j > 0; j--, i++) {
+                    j2 = (j - 1) % s2;
+                    sel[i] = j2 >= s ? s2 - j2 - 1: j2;
+                }
+                for (j = 0; j < s; j++, i++) {
+                    sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    j2 = (j + s) % s2;
+                    sel[i] = j2 >= s ? s2 - j2 - 1: j2;
+                }
+                return sel;
+            },
+            symw: function (s, l, r) {
+                var length = s + l + r, sel = new Uint32Array(length);
+                var i, j, j2, s2 = 2 * s;
+                i = 0;
+                for (j = l; j > 0; j--, i++) {
+                    j2 = (j - 1) % (s2 - 2);
+                    sel[i] = j2 >= s - 1 ? s2 - 3 - j2 : j2 + 1;
+                }
+                for (j = 0; j < s; j++, i++) {
+                    sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    j2 = (j + s) % (s2 - 2);
+                    sel[i] = j2 >= s - 1? s2 - j2 - 2: j2;
+                }
+                return sel;
+            },
+            per: function (s, l, r) {
+                var length = s + l + r, sel = new Uint32Array(length);
+                var i, j;
+                i = 0;
+                for (j = l; j > 0; j--, i++) {
+                    sel[i] = s - j;
+                }
+                for (j = 0; j < s; j++, i++) {
+                    sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    sel[i] = j;
+                }
+                return sel;
+            },
+            nn: function (s, l, r) {
+                var length = s + l + r, sel = new Uint32Array(length);
+                var i, j, i0, ie;
+                i = 0;
+                for (j = l; j > 0; j--, i++) {
+                    sel[i] = 0;
+                }
+                for (j = 0; j < s; j++, i++) {
+                    sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    sel[i] = s - 1;
+                }
+                return sel;
+            }
+        };
 
-})();
+        Matrix_prototype.paddim = function (mode, dim, s) {
+            var args = [mode];
+            for (var d = 0; d < dim; d++) {
+                args.push([]);
+            }
+            args.push(s);
+            return this.padarray.apply(this, args);
+        };
+        
+        Matrix_prototype.padarray = function () {
+            var mode = Array.prototype.shift.apply(arguments);
+            if (mode !== 'zpd') {
+                var fun = padIndices[mode];
+                if (fun === undefined) {
+                    throw new Error("Matrix.padarray: Unimplemented mode " + mode + ".");
+                }
+                for (var args = [], d = 0; d < arguments.length; d++) {
+                    var s = arguments[d], sel;
+                    if (Tools.isInteger(s)) {
+                        sel = [fun(this.getSize(d), s, s)]
+                    } else if (Tools.isArrayLike(s) && s.length === 0) {
+                        sel = [];
+                    } else {
+                        sel = [fun(this.getSize(d), s[0], s[1])]
+                    }
+                    args.push(sel);
+                }
+                return this.get.apply(this, args);
+            }
+            var args = [], size = this.getSize();
+            for (var d = 0; d < arguments.length; d++) {
+                var s = arguments[d];
+                size[d] = size[d] ? size[d] : 1;
+                if (Tools.isInteger(s)) {
+                    sel = [s, -s - 1];
+                    size[d] += 2 * s;
+                } else if (Tools.isArrayLike(s) && s.length === 0) {
+                    sel = [];
+                } else {
+                    sel = [s[0], -s[1] - 1];
+                    size[d] += s[0] + s[1];
+                }
+                args.push(sel);
+            }
+            args.push(this);
+            var out = Matrix.zeros(size);
+            return out.set.apply(out, args);
+        };
+    })();
+    
+    window.addEventListener("load", function () {
+
+        // padTest(false);
+        // padTest(true);
+
+        
+
+        var test2 = function () {
+            Matrix.dwtmode("zpd");
+            var name = 'sym4';
+            // var s = Matrix.ones(7, 1);
+            // var s = Matrix.randi([-9, 9], 5, 1);
+            var s = Matrix.colon(1, 7);
+            
+            s.transpose().display("signal");
+            var wt = dwt(s, name, 0);
+            wt[0].transpose().display("L");
+            wt[1].transpose().display("H");
+            // filter1D = filter1DSymDebug;
+
+            var iwt = idwt(wt, name, 0);
+            iwt.transpose().display("iwt");
+            // Matrix.psnr(s, iwt).display("PSNR");
+            Matrix.dwtmode("per");
+        };
+        // var sel = getIndiceSymw(6, 10, 11);
+        // console.log(sel, sel.length);
+        test2();
+    }, false);
+})(Matrix, Matrix.prototype);
 /*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -3066,33 +2769,56 @@
         return Y.transpose();
     };
 
-    /** This function moves the zero-frequency of the fft of a 
-     * signal to the center of the array.
-     *
-     * @param {Integer} [dimension] It defines the dimension 
-     *  along which the signal is rearranged. Otherwise, the 
-     *  operation is done along all dimension.
-     *
-     * __See also :__
-     * {@link Matrix#fft},
-     * {@link Matrix#fft2}.
-     *
-     * @chainable
-     */
-    Matrix.prototype.fftshift = function (dim) {
-        var size = this.getSize();
-        if (Tools.isSet(dim)) {
-            if (!Tools.isInteger(dim, 0)) {
-                throw new Error("Matrix.fftshift: Dimension must be a positive integer");
+    (function () {
+        var shift = function (fft, dim, fun) {
+            var size = fft.getSize();
+            if (Tools.isSet(dim)) {
+                if (!Tools.isInteger(dim, 0)) {
+                    throw new Error("Matrix.fftshift: Dimension must be a positive integer");
+                }
+                return this.circshift(fun(size[dim] / 2), dim);
             }
-            return this.circshift(Math.floor(size[dim] / 2), dim);
-        }
-        for (var i = 0, ie = size.length; i < ie ; i++) {
-            size[i] = Math.floor(size[i] / 2)
-        }
-        return this.circshift(size);
-     };
+            for (var i = 0, ie = size.length; i < ie ; i++) {
+                size[i] = fun(size[i] / 2)
+            }
+            return fft.circshift(size);
+        };
+        /** This function moves the zero-frequency of the fft of a 
+         * signal to the center of the array.
+         *
+         * @param {Integer} [dimension] It defines the dimension 
+         *  along which the signal is rearranged. Otherwise, the 
+         *  operation is done along all dimension.
+         *
+         * __See also :__
+         * {@link Matrix#ifftshift},
+         * {@link Matrix#fft},
+         * {@link Matrix#fft2}.
+         *
+         * @chainable
+         */
+        Matrix.prototype.fftshift = function (dim) {
+            return shift(this, dim, Math.floor);
+        };
 
+        /** This function inverts the action of fftshift.
+         *
+         * @param {Integer} [dimension] It defines the dimension 
+         *  along which the signal is rearranged. Otherwise, the 
+         *  operation is done along all dimension.
+         *
+         * __See also :__
+         * {@link Matrix#fftshift},
+         * {@link Matrix#fft},
+         * {@link Matrix#fft2}.
+         *
+         * @chainable
+         */
+        Matrix.prototype.ifftshift = function (dim) {
+            return shift(this, dim, Math.ceil);
+        };
+    })();
+    
     /** Compute the inverse FFT of a vector.
      *
      * __See also :__
@@ -3124,6 +2850,599 @@
     };
 
 })(Matrix, Matrix.prototype);
+/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author Baptiste Mazin     <baptiste.mazin@telecom-paristech.fr>
+ * @author Guillaume Tartavel <guillaume.tartavel@telecom-paristech.fr>
+ */
+
+(function (Matrix) {
+    /** Define a wavelet.
+     * @class
+     *  Provide several wavelets functions.
+     *  A wavelet can be either a common wavelet (called by its name)
+     *  or any user-defined wavelet from its recursive filters.
+     * @param {string} [name='haar']
+     *  Name of the wavelet.
+     * @return {Wavelet}
+     *  The wavelet definition (containing filters and some properties).
+     * @private
+     */
+    function Wavelet(name) {
+        var errMsg = this.constructor.name + ': ';
+
+        // Default arguments
+        if (name  === undefined) {
+            this.name = 'haar';
+        } else {
+            /** Name of the wavelet. */
+            this.name = name.toLowerCase();
+        }
+
+        // Pre-defined wavelets
+        if (Wavelet.list[this.name]) {
+            var wav = Wavelet.list[this.name];
+            var normalize = (wav.normalized !== undefined && !wav.normalized)
+                    ? function (h) { return Wavelet.filter(h, 'norm'); }
+                : function (h) { return h; };
+            /** Low-pass recursive decomposition filter. */
+            this.filterL = normalize(wav.filterL);
+            /** Is the wavelet orthogonal? */
+            this.orthogonal = (wav.orthogonal) ? true : false;
+            if (wav.filterH) {
+                /** High-pass recursive decomposition filter. */
+                this.filterH = normalize(wav.filterH);
+            }
+            if (wav.invFilterL) {
+                /** Low-pass recursive reconstruction filter. */
+                this.invFilterL = normalize(wav.invFilterL);
+            }
+            if (wav.invFilterH) {
+                /** High-pass recursive reconstruction filter. */
+                this.invFilterH = normalize(wav.invFilterH);
+            }
+        }
+
+        // User-define wavelet
+        if (this.filterL === undefined) {
+            var errMsgFull = errMsg + "unknown wavelet '" + name + "'. \n";
+            errMsgFull += 'User-defined wavelets not implemented yet.';
+            throw new Error(errMsgFull);
+        }
+
+        // Compute complementary filter
+        var conj = function (h, offset) {
+            return Wavelet.filter(h, 'conjugate', (offset) ? -1 : 1);
+        };
+        if (!this.filterH && this.orthogonal) {
+            this.filterH = Wavelet.filter(conj(this.filterL), 'mirror');
+        }
+        if (!this.invFilterL) {
+            this.invFilterL = conj(this.filterH, true);
+        }
+        if (!this.invFilterH) {
+            this.invFilterH = conj(this.filterL, false);
+        }
+
+        // Return the object
+        return this;
+    }
+
+    /** List of wavelets. */
+    Wavelet.list = {
+        'haar': {
+            'orthogonal': true,
+            'normalized': false,
+            'filterL': new Float64Array([1, 1])
+        },
+        // Daubechies
+        'db2': {
+            'name': 'Daubechies 2',
+            'orthogonal': true,
+            'normalized': false,
+            'filterL': new Float64Array([
+                1 + Math.sqrt(3),
+                3 + Math.sqrt(3),
+                3 - Math.sqrt(3),
+                1 - Math.sqrt(3)])
+        },
+        'db4': {
+            'name': 'Daubechies 4',
+            'orthogonal': true,
+            'filterL': new Float64Array([
+                    -0.010597401784997278,
+                0.032883011666982945,
+                0.030841381835986965,
+                    -0.18703481171888114,
+                    -0.027983769416983849,
+                0.63088076792959036,
+                0.71484657055254153,
+                0.23037781330885523
+            ])
+        },
+        'db8': {
+            'name': 'Daubechies 8',
+            'orthogonal': true,
+            'filterL': new Float64Array([
+                    -0.00011747678400228192,
+                0.00067544940599855677,
+                    -0.00039174037299597711,
+                    -0.0048703529930106603,
+                0.0087460940470156547,
+                0.013981027917015516,
+                    -0.044088253931064719,
+                    -0.017369301002022108,
+                0.12874742662018601,
+                0.00047248457399797254,
+                    -0.28401554296242809,
+                    -0.015829105256023893,
+                0.58535468365486909,
+                0.67563073629801285,
+                0.31287159091446592,
+                0.054415842243081609
+            ])
+        },
+        // Symlets
+        'sym2': {
+            'name': 'Symlets 2',
+            'orthogonal': true,
+            'filterL': new Float64Array([
+                    -0.12940952255092145,
+                0.22414386804185735,
+                0.83651630373746899,
+                0.48296291314469025
+            ])
+        },
+        'sym4': {
+            'name': 'Symlets 4',
+            'orthogonal': true,
+            'filterL': new Float64Array([
+                    -0.075765714789273325,
+                    -0.02963552764599851,
+                0.49761866763201545,
+                0.80373875180591614,
+                0.29785779560527736,
+                    -0.099219543576847216,
+                    -0.012603967262037833,
+                0.032223100604042702
+            ])
+        },
+        'sym8': {
+            'name': 'Symlets 8',
+            'orthogonal': true,
+            'filterL': ([
+                    -0.0033824159510061256,
+                    -0.00054213233179114812,
+                0.031695087811492981,
+                0.0076074873249176054,
+                    -0.14329423835080971,
+                    -0.061273359067658524,
+                0.48135965125837221,
+                0.77718575170052351,
+                0.3644418948353314,
+                    -0.051945838107709037,
+                    -0.027219029917056003,
+                0.049137179673607506,
+                0.0038087520138906151,
+                    -0.014952258337048231,
+                    -0.0003029205147213668,
+                0.0018899503327594609
+            ])
+        },
+        // Coiflets
+        'coif1': {
+            'name': 'Coiflets 1',
+            'orthogonal': true,
+            'filterL': new Float64Array([
+                    -0.01565572813546454,
+                    -0.072732619512853897,
+                0.38486484686420286,
+                0.85257202021225542,
+                0.33789766245780922,
+                    -0.072732619512853897
+            ])
+        },
+        'coif2': {
+            'name': 'Coiflets 2',
+            'orthogonal': true,
+            'filterL': new Float64Array([
+                    -0.00072054944536451221,
+                    -0.0018232088707029932,
+                0.0056114348193944995,
+                0.023680171946334084,
+                    -0.059434418646456898,
+                    -0.076488599078306393,
+                0.41700518442169254,
+                0.81272363544554227,
+                0.38611006682116222,
+                    -0.067372554721963018,
+                    -0.041464936781759151,
+                0.016387336463522112
+            ])
+        },
+        'coif4': {
+            'name': 'Coiflets 4',
+            'orthogonal': true,
+            'filterL': new Float64Array([
+                    -1.7849850030882614e-06,
+                    -3.2596802368833675e-06,
+                3.1229875865345646e-05,
+                6.2339034461007128e-05,
+                    -0.00025997455248771324,
+                    -0.00058902075624433831,
+                0.0012665619292989445,
+                0.0037514361572784571,
+                    -0.0056582866866107199,
+                    -0.015211731527946259,
+                0.025082261844864097,
+                0.039334427123337491,
+                    -0.096220442033987982,
+                    -0.066627474263425038,
+                0.4343860564914685,
+                0.78223893092049901,
+                0.41530840703043026,
+                    -0.056077313316754807,
+                    -0.081266699680878754,
+                0.026682300156053072,
+                0.016068943964776348,
+                    -0.0073461663276420935,
+                    -0.0016294920126017326,
+                0.00089231366858231456
+            ])
+        },
+        // Bi-orthogonal
+        'bi13': {
+            'name': 'Biorthogonal 1-3',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                    -0.088388347648318447,
+                0.088388347648318447,
+                0.70710678118654757,
+                0.70710678118654757,
+                0.088388347648318447,
+                    -0.088388347648318447
+            ]),
+            'filterH': new Float64Array([
+                    -0.70710678118654757,
+                0.70710678118654757
+            ])
+        },
+        'bi31': {
+            'name': 'Biorthogonal 3-1',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                    -0.35355339059327379,
+                1.0606601717798214,
+                1.0606601717798214,
+                    -0.35355339059327379
+            ]),
+            'filterH': new Float64Array([
+                    -0.17677669529663689,
+                0.53033008588991071,
+                    -0.53033008588991071,
+                0.17677669529663689
+            ])
+        },
+        'bi68': {
+            'name': 'Biorthogonal 6-8',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                0.0,
+                0.0019088317364812906,
+                    -0.0019142861290887667,
+                    -0.016990639867602342,
+                0.01193456527972926,
+                0.04973290349094079,
+                    -0.077263173167204144,
+                    -0.09405920349573646,
+                0.42079628460982682,
+                0.82592299745840225,
+                0.42079628460982682,
+                    -0.09405920349573646,
+                    -0.077263173167204144,
+                0.04973290349094079,
+                0.01193456527972926,
+                    -0.016990639867602342,
+                    -0.0019142861290887667,
+                0.0019088317364812906
+            ]),
+            'filterH': new Float64Array([
+                0.0,
+                0.014426282505624435,
+                    -0.014467504896790148,
+                    -0.078722001062628819,
+                0.040367979030339923,
+                0.41784910915027457,
+                    -0.75890772945365415,
+                0.41784910915027457,
+                0.040367979030339923,
+                    -0.078722001062628819,
+                    -0.014467504896790148,
+                0.014426282505624435,
+                0.0,
+                0.0
+            ])
+        },
+        'bi97': {
+            'name': 'Biorthogonal 9-7',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                0.0,
+                0.02674875741080976,
+                    -0.01686411844287495,
+                    -0.07822326652898785,
+                0.2668641184428723,
+                0.6029490182363579,
+                0.2668641184428723,
+                    -0.07822326652898785,
+                    -0.01686411844287495,
+                0.02674875741080976
+            ]),
+            'filterH': new Float64Array([
+                0.0,
+                    -0.09127176311424948,
+                0.05754352622849957,
+                0.5912717631142470,
+                    -1.115087052456994,
+                0.5912717631142470,
+                0.05754352622849957,
+                    -0.09127176311424948,
+                0.0,
+                0.0
+            ])
+        },
+        // Reverse bi-orthogonal
+        'rbio13': {
+            'name': 'Reverse biorthogonal 1-3',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                0.0,
+                0.0,
+                0.7071067811865476,
+                0.7071067811865476,
+                0.0,
+                0.0,
+            ]),
+            'filterH': new Float64Array([
+                0.08838834764831845,
+                0.08838834764831845,
+                    -0.7071067811865476,
+                0.7071067811865476,
+                    -0.08838834764831845,
+                    -0.08838834764831845
+            ])
+        },
+        'rbio31': {
+            'name': 'Reverse biorthogonal 3-1',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                0.1767766952966369,
+                0.5303300858899107,
+                0.5303300858899107,
+                0.1767766952966369
+            ]),
+            'filterH': new Float64Array([
+                0.3535533905932738,
+                1.0606601717798214,
+                    -1.0606601717798214,
+                    -0.3535533905932738
+            ])
+        },
+        'rbio33': {
+            'name': 'Reverse biorthogonal 3-3',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                0.0,
+                0.0,
+                0.1767766952966369,
+                0.5303300858899107,
+                0.5303300858899107,
+                0.1767766952966369,
+                0.0,
+                0.0
+            ]),
+            'filterH': new Float64Array([
+                    -0.06629126073623884,
+                    -0.19887378220871652,
+                0.15467960838455727,
+                0.9943689110435825,
+                    -0.9943689110435825,
+                    -0.15467960838455727,
+                0.19887378220871652,
+                0.06629126073623884
+            ])
+        },
+        'rbio35': {
+            'name': 'Reverse biorthogonal 3-5',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1767766952966369,
+                0.5303300858899107,
+                0.5303300858899107,
+                0.1767766952966369,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]),
+            'filterH': new Float64Array([
+                0.013810679320049757,
+                0.04143203796014927,
+                    -0.052480581416189075,
+                    -0.26792717880896527,
+                0.07181553246425874,
+                0.966747552403483,
+                    -0.966747552403483,
+                    -0.07181553246425874,
+                0.26792717880896527,
+                0.052480581416189075,
+                    -0.04143203796014927,
+                    -0.013810679320049757
+            ])
+        },
+        'rbio39': {
+            'name': 'Reverse biorthogonal 3-9',
+            'orthogonal': false,
+            'filterL': new Float64Array([
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1767766952966369,
+                0.5303300858899107,
+                0.5303300858899107,
+                0.1767766952966369,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]),
+            'filterH': new Float64Array([
+                0.000679744372783699,
+                0.002039233118351097,
+                    -0.005060319219611981,
+                    -0.020618912641105536,
+                0.014112787930175846,
+                0.09913478249423216,
+                    -0.012300136269419315,
+                    -0.32019196836077857,
+                    -0.0020500227115698858,
+                0.9421257006782068,
+                    -0.9421257006782068,
+                0.0020500227115698858,
+                0.32019196836077857,
+                0.012300136269419315,
+                    -0.09913478249423216,
+                    -0.014112787930175846,
+                0.020618912641105536,
+                0.005060319219611981,
+                    -0.002039233118351097,
+                    -0.000679744372783699
+            ])
+        }
+    };
+
+    /** Perform an operation on a filter.
+     * @param {Number[]} h
+     *  A filter.
+     * @param {String} action
+     *  - 'rescale': multiply the filter by a constant.
+     *  - 'normalize': normalize the filter (L2 norm).
+     *  - 'conjugate': return the filter h[0], -h[1], .., h[n]*(-1)^n.
+     *  - 'mirror': return the filter h[n-1] .. h[0].
+     * @param {Number} [factor=1]
+     *  Multiplicative constant.
+     * @return {Number[]}
+     *  A transformed filter.
+     */
+    Wavelet.filter = function (h, action, factor) {
+        var errMsg = 'Wavelet.filter: ';
+        if (factor === undefined || factor === 0) {
+            factor = 1;
+        }
+        if (typeof factor !== 'number') {
+            throw new Error(errMsg + "argument 'factor' must be a number");
+        }
+        if (typeof action !== 'string') {
+            throw new Error(errMsg + "argument 'action' must be a string");
+        }
+        action = action.toLowerCase().substr(0, 3);
+
+        var k;
+        var N = h.length;
+        var out = [];
+        var sign = 1, dsign = 1;
+        if (action === 'mir') {
+            for (k = 0; k < N; k++) {
+                out[k] = factor * h[N - 1 - k];
+            }
+            return out;
+        }
+        if (action === 'nor') {
+            var sum2 = 0;
+            for (k = 0; k < N; k++) {
+                sum2 += h[k] * h[k];
+            }
+            factor = (!sum2) ? 1 : 1 / Math.sqrt(sum2);
+        } else if (action === 'con') {
+            dsign = -1;
+        } else if (action !== 'res') {
+            throw new Error(errMsg + 'unknown action');
+        }
+
+        for (k = 0; k < N; k++, sign *= dsign) {
+            out[k] = factor * sign * h[k];
+        }
+
+        return out;
+    };
+    /** Returns wavelet filters.
+     * Currently implemented filters are :
+     *
+     * + "haar" ;
+     * + "db1", "db2", "db4", "db8" ;
+     * + "sym2", "sym4", "sym8" ;
+     * + "coif1", "coif2", "coif4" ;
+     * + "bi13", "bi31", "bi68", "bi97" ;
+     *
+     * @param{String} name
+     *  Name of the filters.
+     * @param{String} [type]
+     *  Can be either :
+     *
+     * + "d" for decomposition filters ;
+     * + "r" for recomposition filters ;
+     * + "l" for low-pass filters ;
+     * + "h" for high-pass filters.
+     * @return{Array}
+     */
+    Matrix.wfilters = function (name, type) {
+        var wav = new Wavelet(name);
+        var dl = Matrix.toMatrix(wav.filterL),
+            dh = Matrix.toMatrix(wav.filterH),
+            rl = Matrix.toMatrix(wav.invFilterL),
+            rh = Matrix.toMatrix(wav.invFilterH);
+        switch (type) {
+        case 'd':
+            return [dl, dh];
+        case 'r':
+            return [rl, rh];
+        case 'l':
+            return [dl, rl];
+        case 'h':
+            return [dh, rh];
+        case undefined:
+            return [dl, dh, rl, rh];
+        default:
+            throw new Error("Matrix.wfilters: wrong type argument.");
+        }
+    };
+
+})(Matrix);
 /*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
