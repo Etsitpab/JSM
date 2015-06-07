@@ -45,16 +45,12 @@
     var filter1DSym = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         y0 += K - orig - 1;
-        ny -= orig;
+        ny -= orig; // + (isOdd ? 1 : 0)
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
-            // var sig = [], fil = [];
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
-                // sig.push(s);
-                // fil.push(k);
                 sumL += kernelL[k] * idL[s];
                 sumH += kernelH[k] * idH[s];
             }
-            // console.log(oy, sig);
             odL[oy] += sumL;
             odH[oy] += sumH;
         }
@@ -62,7 +58,7 @@
     var filter1DSymDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         y0 += K - orig - 1;
-        ny -= orig + (isOdd ? 1 : 0);
+        ny -= orig; // + (isOdd ? 1 : 0)
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
             var sig = [], fil = [];
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
@@ -89,6 +85,7 @@
         case "sym":
         case "symw":
         case "zpd":
+        case "nn":
             filter1D = filter1DSym;
             break;
         default:
@@ -128,43 +125,81 @@
 
     var zeros = Matrix.zeros;
     
+    var getPaddingInfos = function (K, s) {
+        var isOdd = s % 2 ? true : false;
+        var f = Math.floor, c = Math.ceil;
+        // left and right part of filter (computed on reversed filter)
+        var lk = f((K - 1) / 2),
+            rk = c((K - 1) / 2);
+        // Left and right input padding
+        var li = c(rk / 2) * 2 + lk - 1,
+            ri = isOdd ? c(lk / 2) * 2 + rk - 1 : f(lk / 2) * 2 + rk;
+        // Left and right output padding
+        var lo = c(rk / 2),
+            ro = isOdd ? c(lk / 2) : f(lk / 2);
+        return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
+    };
+    /*
+    var padTest = function (isOdd) {
+        console.log("For " + (isOdd ? "odd" : "even") + " signal");
+        var data = {}, f = Math.floor, c = Math.ceil;
+        for (var K = 2; K < 20; K += 2) {
+            data[K] = getPaddingInfos(K, isOdd ? 1 : 2);
+        }
+        console.table(data, ["lk", "rk", "li", "lo", "ri", "ro"]);
+    };
+     */
     var dwt = function (s, name, dim) {
         var wav = Matrix.wfilters(name, 'd');
         var fL = wav[0].getData(), fH = wav[1].getData();
         var size = s.getSize();
         size[dim] = Math.ceil(size[dim] / 2);
-
+        if (dwtmode !== 'per') {
+            var p = getPaddingInfos(fL.length, s.numel());
+            size[dim] += p.ro + p.lo - 1;
+            s = s.paddim(dwtmode, dim, [p.li, p.ri]);
+        }
         // Create output data
         var dL = zeros(size), dH = zeros(size);
         var v = dL.getView().swapDimensions(0, dim);
         var iV = s.getView().swapDimensions(0, dim);
-
         // H filtering from signal to output
         filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
+        // s.transpose().display("signal padded");
         return [dL, dH];
     };
+
     var idwt = function (bands, name, dim) {
         var wav = Matrix.wfilters(name, 'r');
         var fL = wav[0].getData(), fH = wav[1].getData();
 
+        if (dwtmode !== 'per') {
+            var p = getPaddingInfos(fL.length, bands[0].numel());
+            bands[0] = bands[0].paddim(dwtmode, dim, [0, 1]);
+            bands[1] = bands[1].paddim(dwtmode, dim, [0, 1]);
+        }
         var size = bands[0].getSize();
-        size[dim] = size[dim] * 2;
+        size[dim] *= 2; 
         var L = zeros(size), H = zeros(size);
-
-        var v = L.getView().selectDimension(dim, [0, 2, -1]);
+        var start = dwtmode === 'per' ? 0 : 1;
+        var v = L.getView().selectDimension(dim, [start, 2, -1]);
         bands[0].extractViewTo(v, L);
         bands[1].extractViewTo(v, H);
         v.restore().swapDimensions(0, dim);
-
+        
         // Out array
+        if (dwtmode !== 'per') {
+            size[dim] -= p.rk + p.lk + 1; // +1 is due to padding
+        }
         var out = zeros(size);
         var vO = out.getView().swapDimensions(0, dim);
-
+        
         // Process scale
         filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
         return out;
     };
 
+    
     var dwt2 = function (im, name) {
         var wav = Matrix.wfilters(name, 'd');
         var fL = wav[0].getData(), fH = wav[1].getData();
@@ -803,81 +838,18 @@
     })();
     
     window.addEventListener("load", function () {
-        var getPaddingInfos = function (K, s) {
-            var isOdd = s % 2 ? true : false;
-            var f = Math.floor, c = Math.ceil;
-            // left and right part of filter (computed on reversed filter)
-            var lk = f((K - 1) / 2),
-                rk = c((K - 1) / 2);
-            // Left and right input padding
-            var li = c(rk / 2) * 2 + lk - 1,
-                ri = isOdd ? c(lk / 2) * 2 + rk - 1 : f(lk / 2) * 2 + rk;
-            // Left and right output padding
-            var lo = c(rk / 2),
-                ro = isOdd ? c(lk / 2) : f(lk / 2);
-            return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
-        };
-        var padTest = function (isOdd) {
-            console.log("For " + (isOdd ? "odd" : "even") + " signal");
-            var data = {}, f = Math.floor, c = Math.ceil;
-            for (var K = 2; K < 20; K += 2) {
-                data[K] = getPaddingInfos(K, isOdd ? 1 : 2);
-            }
-            console.table(data, ["lk", "rk", "li", "lo", "ri", "ro"]);
-        };
+
         // padTest(false);
         // padTest(true);
-        
-        var dwt = function (s, name, dim) {
-            var wav = Matrix.wfilters(name, 'd');
-            var fL = wav[0].getData(), fH = wav[1].getData();
-            var size = s.getSize();
-            var p = getPaddingInfos(fL.length, s.numel());
-            size[dim] = Math.floor(size[dim] / 2) + p.ro + p.lo;
-            s = s.paddim(dwtmode, dim, [p.li, p.ri]);
-            
-            // Create output data
-            var dL = zeros(size), dH = zeros(size);
-            var v = dL.getView().swapDimensions(0, dim);
-            var iV = s.getView().swapDimensions(0, dim);
-            // H filtering from signal to output
-            filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
-            // s.transpose().display("signal padded");
-            return [dL, dH];
-        };
-        
-        var idwt = function (bands, name, dim) {
-            var wav = Matrix.wfilters(name, 'r');
-            var fL = wav[0].getData(), fH = wav[1].getData();
 
-            var p = getPaddingInfos(fL.length, bands[0].numel());
-            bands[0] = bands[0].paddim(dwtmode, dim, [0, 1]);
-            bands[1] = bands[1].paddim(dwtmode, dim, [0, 1]);
-            var size = bands[0].getSize();
-            size[dim] *= 2; 
-            var L = zeros(size), H = zeros(size);
-            var v = L.getView().selectDimension(dim, [1, 2, -1]);
-            bands[0].extractViewTo(v, L);
-            bands[1].extractViewTo(v, H);
-            L.transpose().display("L padded");
-            H.transpose().display("H padded");
-            v.restore().swapDimensions(0, dim);
-            
-            // Out array
-            size[dim] -= p.rk + p.lk + 1; // +1 due to padding
-            var out = zeros(size);
-            var vO = out.getView().swapDimensions(0, dim);
-                
-            // Process scale
-            filterND(L, H, v, fL, fH, 'cr', 1, out, out, vO);
-            return out;
-        };
+        
+
         var test2 = function () {
             Matrix.dwtmode("zpd");
             var name = 'sym4';
             // var s = Matrix.ones(7, 1);
             // var s = Matrix.randi([-9, 9], 5, 1);
-            var s = Matrix.colon(1, 5);
+            var s = Matrix.colon(1, 7);
             
             s.transpose().display("signal");
             var wt = dwt(s, name, 0);
