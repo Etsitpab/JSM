@@ -71,13 +71,9 @@
             wt[c] = Matrix.wavedec2(im.get([], [], c), J, name);
             var A = Matrix.appcoef2(wt[c], name, J - 1);
             mean[c] = A.mean().getDataScalar();
-            min[c] = A.min().getDataScalar();
-            max[c] = A.max().getDataScalar();
             imMean += mean[c] / nChannel;
         }
-        var imMin = Math.min(min[0], min[1], min[2]);
-        var imMax = Math.max(max[0], max[1], max[2]);
-   
+  
         for (var c = 0; c < nChannel; c++) {
             var A = Matrix.appcoef2(wt[c], name, J - 1);
             if (average === "image") {
@@ -87,18 +83,27 @@
             } else if (average === "half") {
                 norm = wNorm * 0.5; 
             }
-            // A["-="](imMin)["*="](wNorm / (imMax - imMin));
-            // A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
             A["*="](1 - alpha)["+="](norm * alpha);
+            min[c] = A.min().getDataScalar();
+            max[c] = A.max().getDataScalar();
+            // A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
+            // min[c] = A.min().getDataScalar();
+            // max[c] = A.max().getDataScalar();
         }
-
+        var imMin = Math.min(min[0], min[1], min[2]);
+        var imMax = Math.max(max[0], max[1], max[2]);
+        for (var c = 0; c < nChannel; c++) {
+            var A = Matrix.appcoef2(wt[c], name, J - 1);
+            A["-="](imMin)["*="](wNorm / (imMax - imMin));
+            
+        }
         for (var c = 0; c < nChannel; c++) {
             for (var j = J - 1; j >= 0; j--) { 
                 var d = wt[c][0].getData();
                 var sb = wt[c][1].value([0, 0]) * wt[c][1].value([0, 1]);
                 A = d.subarray(0, sb);
+                processCoeffs(d.subarray(1 * sb, 2 * sb), A, K, w, gamma);
                 processCoeffs(d.subarray(2 * sb, 3 * sb), A, K, w, gamma);
-                processCoeffs(d.subarray(sb, 2 * sb), A, K, w, gamma);
                 processCoeffs(d.subarray(3 * sb, 4 * sb), A, K, w, gamma);
                 wt[c] = Matrix.upwlev2(wt[c], name);
             }
@@ -128,8 +133,8 @@
                 var d = wt[0].getData();
                 var sb = wt[1].value([0, 0]) * wt[1].value([0, 1]);
                 A = d.subarray(0, sb);
+                processCoeffs(d.subarray(1 * sb, 2 * sb), A, K, w, gamma);
                 processCoeffs(d.subarray(2 * sb, 3 * sb), A, K, w, gamma);
-                processCoeffs(d.subarray(sb, 2 * sb), A, K, w, gamma);
                 processCoeffs(d.subarray(3 * sb, 4 * sb), A, K, w, gamma);
                 wt = Matrix.upwlev2(wt, name);
             }
