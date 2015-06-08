@@ -44,7 +44,7 @@
     };
     var filter1DSym = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
-        y0 += K - orig - 1;
+        y0 += (K - 1) * kdy - orig;
         ny -= orig; // + (isOdd ? 1 : 0)
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
@@ -57,8 +57,11 @@
     };
     var filter1DSymDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
-        y0 += K - orig - 1;
-        ny -= orig; // + (isOdd ? 1 : 0)
+        console.log("y0", y0, "ny", ny, "dy", dy, "oys", oys, "ody", ody);
+        console.log("orig", orig, "K", K, "Kdy", kdy);
+        y0 += (K - 1) * kdy - orig;
+        ny -= orig;// + (isOdd ? 1 : 0)
+        console.log("y0", y0, "ny", ny);
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
             var sig = [], fil = [];
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
@@ -71,6 +74,7 @@
             odL[oy] += sumL;
             odH[oy] += sumH;
         }
+        console.log("");
     };
     var filter1D, dwtmode;
     Matrix.dwtmode = function (mode) {
@@ -155,7 +159,7 @@
         var size = s.getSize();
         size[dim] = Math.ceil(size[dim] / 2);
         if (dwtmode !== 'per') {
-            var p = getPaddingInfos(fL.length, s.numel());
+            var p = getPaddingInfos(fL.length, size[dim]);
             size[dim] += p.ro + p.lo - 1;
             s = s.paddim(dwtmode, dim, [p.li, p.ri]);
         }
@@ -174,7 +178,7 @@
         var fL = wav[0].getData(), fH = wav[1].getData();
 
         if (dwtmode !== 'per') {
-            var p = getPaddingInfos(fL.length, bands[0].numel());
+            var p = getPaddingInfos(fL.length, bands[0].getSize(dim));
             bands[0] = bands[0].paddim(dwtmode, dim, [0, 1]);
             bands[1] = bands[1].paddim(dwtmode, dim, [0, 1]);
         }
@@ -207,6 +211,48 @@
         
         // Create output image
         var hw = Math.ceil(w / 2), hh = Math.ceil(h / 2);
+        if (dwtmode !== 'per') {
+            var ph = getPaddingInfos(fL.length, h);
+            hh += ph.ro + ph.lo - 1;
+            im = im.padarray(dwtmode, [ph.li, ph.ri]);
+        }
+        
+        // Buffer image
+        var bL = zeros(hh, w, c), bH = zeros(hh, w, c);
+        var vB = bL.getView();
+
+        // H filtering from image to buffer
+        var vI = im.getView();
+        filterND(im, im, vI, fL, fH, 'cr', 2, bL, bH, vB);
+        if (dwtmode !== 'per') {
+            bL.display();
+            bH.display();
+            var pw = getPaddingInfos(fL.length, w);
+            hw += pw.ro + pw.lo - 1;
+            bL = bL.padarray(dwtmode, [], [pw.li, pw.ri]);
+            bH = bH.padarray(dwtmode, [], [pw.li, pw.ri]);
+            vB = bL.getView();
+        }
+
+        // V filtering from buffer to data
+        var dA = zeros(hh, hw, c), dV = zeros(hh, hw, c),
+            dH = zeros(hh, hw, c), dD = zeros(hh, hw, c);
+
+        var v = dA.getView().swapDimensions(0, 1);
+
+        vB.swapDimensions(0, 1);
+        filterND(bL, bL, vB, fL, fH, 'cr', 2, dA, dH, v);
+        filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
+        return [dA, dH, dV, dD];
+    };
+    /*
+    var dwt2 = function (im, name) {
+        var wav = Matrix.wfilters(name, 'd');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+        var h = im.getSize(0), w = im.getSize(1), c = im.getSize(2);
+        
+        // Create output image
+        var hw = Math.ceil(w / 2), hh = Math.ceil(h / 2);
         
         // Buffer image
         var bL = zeros(hh, w, c), bH = zeros(hh, w, c);
@@ -227,23 +273,74 @@
         filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
         return [dA, dH, dV, dD];
     };
+     */
+    /*
+    var idwt = function (bands, name, dim) {
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+
+        if (dwtmode !== 'per') {
+            var p = getPaddingInfos(fL.length, bands[0].numel());
+            bands[0] = bands[0].paddim(dwtmode, dim, [0, 1]);
+            bands[1] = bands[1].paddim(dwtmode, dim, [0, 1]);
+        }
+        var size = bands[0].getSize();
+        size[dim] *= 2; 
+        var L = zeros(size), H = zeros(size);
+        var start = dwtmode === 'per' ? 0 : 1;
+        var v = L.getView().selectDimension(dim, [start, 2, -1]);
+        bands[0].extractViewTo(v, L);
+        bands[1].extractViewTo(v, H);
+        v.restore().swapDimensions(0, dim);
+        
+        // Out array
+        if (dwtmode !== 'per') {
+            size[dim] -= p.rk + p.lk + 1; // +1 is due to padding
+        }
+        var out = zeros(size);
+        var vO = out.getView().swapDimensions(0, dim);
+        
+        // Process scale
+        filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
+        return out;
+    };
+    */
     var idwt2 = function (bands, name) {
         var wav = Matrix.wfilters(name, 'r');
         var fL = wav[0].getData(), fH = wav[1].getData();
-        var h = bands[0].getSize(0), w = bands[0].getSize(1), c = bands[0].getSize(2);
-        var dL = zeros(2 * h, w, c), dH = zeros(2 * h, w, c);
-        var bL = zeros(2 * h, 2 * w, c), bH = zeros(2 * h, 2 * w, c);
-        var out = zeros(2 * h, 2 * w, c);
-        var dV = dL.getView(), B = bL.getView();
-        var O = out.getView().swapDimensions(0, 1);
+        var oh = 0, ow = 0;
+        if (dwtmode !== 'per') {
+            var ph = getPaddingInfos(fL.length, bands[0].getSize(0));
+            var pw = getPaddingInfos(fL.length, bands[0].getSize(1));
+            bands[0] = bands[0].paddim(dwtmode, [0, 1], [0, 1]);
+            bands[1] = bands[1].paddim(dwtmode, [0, 1], [0, 1]);
+            bands[2] = bands[2].paddim(dwtmode, [0, 1], [0, 1]);
+            bands[3] = bands[3].paddim(dwtmode, [0, 1], [0, 1]);
+            oh = ph.rk + ph.lk + 1;
+            ow = pw.rk + pw.lk + 1;
+        }
 
-        B.select([], [0, 2, -1]);
-        dL.set([0, 2, -1], bands[0]);
-        dH.set([0, 2, -1], bands[2]);
+        var h = bands[0].getSize(0), w = bands[0].getSize(1), c = bands[0].getSize(2);
+        var dL = zeros(2 * h, w, c),
+            dH = zeros(2 * h, w, c);
+        var bL = zeros(2 * h - oh, 2 * w, c),
+            bH = zeros(2 * h - oh, 2 * w, c);
+        var dV = dL.getView(),
+            B = bL.getView();
+
+        var start = dwtmode === 'per' ? 0 : 1;
+        B.select([], [start, 2, -1]);
+
+        dL.set([start, 2, -1], bands[0]);
+        dH.set([start, 2, -1], bands[2]);
         filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B);
-        dL.set([0, 2, -1], [], bands[1]);
-        dH.set([0, 2, -1], [], bands[3]);
+
+        dL.set([start, 2, -1], [], bands[1]);
+        dH.set([start, 2, -1], [], bands[3]);
         filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B);
+
+        var out = zeros(2 * h - oh, 2 * w - ow, c);
+        var O = out.getView().swapDimensions(0, 1);
         B.restore().swapDimensions(0, 1);
         filterND(bL, bH, B, fL, fH, 'cl', 1, out, out, O);
         return out;
@@ -849,21 +946,48 @@
             var name = 'sym4';
             // var s = Matrix.ones(7, 1);
             // var s = Matrix.randi([-9, 9], 5, 1);
-            var s = Matrix.colon(1, 7);
+            //var s = Matrix.colon(1, 7).transpose();
+            var s = Matrix.ones(5).cumsum(0).cumsum(1);
             
-            s.transpose().display("signal");
+            s.display("signal");
             var wt = dwt(s, name, 0);
+            wt[0].display("L");
+            wt[1].display("H");
+
+            // filter1D = filter1DSymDebug;
+            var wt = dwt(s, name, 1);
             wt[0].transpose().display("L");
             wt[1].transpose().display("H");
             // filter1D = filter1DSymDebug;
 
-            var iwt = idwt(wt, name, 0);
+            // var iwt = idwt(wt, name, 0);
+            // iwt.transpose().display("iwt");
+            // Matrix.psnr(s, iwt).display("PSNR");
+            Matrix.dwtmode("per");
+        };
+
+        var test3 = function () {
+            Matrix.dwtmode("zpd");
+            var name = 'sym4';
+            var im = Matrix.ones(5).cumsum(0).cumsum(1);
+            
+            im.display("image");
+            var wt = dwt2(im, name, 0);
+            wt[0].transpose().display("LL");
+            wt[1].transpose().display("LH");
+            wt[2].transpose().display("HL");
+            wt[3].transpose().display("HH");
+            // filter1D = filter1DSymDebug;
+
+            var iwt = idwt2(wt, name, 0);
             iwt.transpose().display("iwt");
             // Matrix.psnr(s, iwt).display("PSNR");
             Matrix.dwtmode("per");
         };
+
         // var sel = getIndiceSymw(6, 10, 11);
         // console.log(sel, sel.length);
         test2();
+        test3();
     }, false);
 })(Matrix, Matrix.prototype);
