@@ -1,4 +1,4 @@
-/*global GLEffect, Image, FileReader */
+/*global GLEffect, FileReader */
 /*jslint vars: true, nomen: true, browser: true, plusplus: true */
 /*exported init */
 

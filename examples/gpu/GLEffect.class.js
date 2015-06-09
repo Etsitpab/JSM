@@ -28,7 +28,7 @@
  * * `uSize`, which provides the size of the image, in pixels.
  * * `uImage`, which refers to the (array of) processed image(s).
  *
- * As an example, the value of the top-right neighbor of the current pixels is:
+ * As an example, the value of the bottom-right neighbor of the current pixels is:
  *
  *      vec4 neighbor = texture2D(uImage, vPosition + uPixel);  // GLSL code
  *
@@ -99,8 +99,10 @@ function GLEffect(sourceCode) {
 // TODO: handle arrays of images
 
 /** Apply the effect to an image.
- * @param {GLEffect.Image | Array} image
+ * @param {GLEffect.Image | Array} image(s)
  * @param {Object} [opts = {}]
+ *  - `scale`: Number<br/>
+ *      Size ratio of output / input.
  *  - `width` : Number<br/>
  *      Width of the output.
  *  - `height` : Number<br/>
@@ -121,10 +123,20 @@ GLEffect.prototype.run = function (image, opts) {
     if (input === output) {
         throw new Error('Cannot run the effect on place: input and output must be different objects.');
     }
-    output.resize(
-        GLEffect._readOpt(opts, 'width', input.width),
-        GLEffect._readOpt(opts, 'height', input.height)
-    );
+    var scale = GLEffect._readOpt(opts, 'scale');
+    if (!scale) {
+        output.resize(
+            GLEffect._readOpt(opts, 'width', input.width),
+            GLEffect._readOpt(opts, 'height', input.height)
+        );
+    } else if (!GLEffect._readOpt(opts, 'width') && !GLEffect._readOpt(opts, 'height')) {
+        output.resize(
+            Math.round(scale * input.width),
+            Math.round(scale * input.height)
+        );
+    } else {
+        throw new Error('Conflict between opts: "scale" cannot be used with "width" nor "height".');
+    }
     GLEffect._readOpt(opts);
 
     // Setup GL context
@@ -184,10 +196,13 @@ GLEffect.prototype.getParametersList = function () {
     return list;
 };
 
+// TODO: _initOutput(input, opts);  // including multi-images
+
 ////////////////////////////////////////////////////////////////////////////////
 //  STATIC METHODS
 ////////////////////////////////////////////////////////////////////////////////
 
+// TODO: allow vec3[] and vec4[] arguments
 /** Create an effect using a function syntaxe.
  * @param {String | Array} fcnStr
  *  The GLSL function as a string or array of strings.
@@ -611,8 +626,6 @@ GLEffect.Image = function () {
     this.width = 0;
     /** @readonly @type {Number} */
     this.height = 0;
-    /** @readonly @type {Boolean} */
-    this.isFloat = false;
 
     /** @private @type {WebGLTexture} */
     this._texture = gl.createTexture();
@@ -640,6 +653,7 @@ GLEffect.Image.prototype.resize = function (width, height) {
     'use strict';
     var gl = this._context;
     var type = this._dataType();
+    this.type = type;
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, type, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -654,6 +668,7 @@ GLEffect.Image.prototype.load = function (image) {
     'use strict';
     var gl = this._context;
     var type = this._dataType();
+    this.type = type;
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);  // flip the image
@@ -673,13 +688,13 @@ GLEffect.Image.prototype.load = function (image) {
 GLEffect.Image.prototype.toArray = function (outArray) {
     'use strict';
     var gl = this._context;
-    var useFloat = this.isFloat;
-    var ArrayType = useFloat ? Float32Array : Uint8Array;
+    var type = this._dataType();
+    var ArrayType = (type === gl.FLOAT) ? Float32Array : Uint8Array;
     if (outArray) {
         ArrayType = outArray instanceof Function ? outArray : outArray.constructor;
-        useFloat = ([Float32Array, Float64Array].indexOf(ArrayType) >= 0);
+        var useBytes = ([Float32Array, Float64Array].indexOf(ArrayType) < 0);
+        type = this._dataType(useBytes);
     }
-    var type = this._dataType(!useFloat);
     outArray = (outArray instanceof ArrayType) ? outArray : new ArrayType(4 * this.width * this.height);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
     gl.readPixels(0, 0, this.width, this.height, gl.RGBA, type, outArray);
@@ -710,7 +725,7 @@ GLEffect.Image.prototype.toCanvas = function (outCanvas) {
     return outCanvas;
 };
 
-/** Get the suitable data type and update `isFloat` property.
+/** Get the suitable data type.
  * @param {Boolean} [useInt]
  *  If specified, force the type to float or integer.
  * @return
@@ -721,20 +736,21 @@ GLEffect.Image.prototype.toCanvas = function (outCanvas) {
 GLEffect.Image.prototype._dataType = function (useBytes) {
     'use strict';
     var gl = this._context;
+    var isFloat;
     if (useBytes) {
         // forced to use BYTE
-        this.isFloat = false;
+        isFloat = false;
     } else if (gl.getExtension('OES_texture_float')) {
         // choose FLOAT if possible
-        this.isFloat = true;
+        isFloat = true;
     } else if (useBytes === undefined || useBytes === null) {
         // auto-detection but only BYTE available
-        this.isFloat = false;
+        isFloat = false;
     } else {
         // forced to FLOAT, but not available
         throw new Error('Cannot use float for GPU images: "OES_texture_float" extension is not supported.');
     }
-    return this.isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
+    return isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
 };
 
 /** Bind the image to a WebGL slot.
@@ -753,16 +769,41 @@ GLEffect.Image.prototype._bind = function (slot) {
 //  SUB-CLASS --- IMAGE
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO: doc
-
+// TODO: doc samples
+/** Compute a scalar value from an image (such as norm or sum).
+ * @constructor
+ *  Create a new Reducer.
+ * @param {Function} jsFunction
+ *  See: GLEffect.Reducer.fromFunctions
+ * @param {String} sourceCode
+ *  GLSL source code.
+ * @private */
 GLEffect.Reducer = function (jsFunction, sourceCode) {
     'use strict';
+    /** The GLSL reduction effect. @type {GLEffect} @private */
     this.glEffect = new GLEffect(sourceCode);
+    /** The JS reduction function. @type {Function} @private */
     this.jsFunction = jsFunction;
+    /** Type of the JS function. @type {Boolean} @private */
     this.isScalarFunction = GLEffect.Reducer._detectReturnValue(this.jsFunction);
     return this;
 };
 
+// TODO: doc arguments
+/** Create a Reducer.
+ * @param {Function} jsFunction
+ *  Javascript reduction function.
+ *  Its prototype must be:
+ *
+ *     <Number> jsFunction(<Number>, <Number>);      // Return the result
+ *       <void> jsFunction(<Array>, <const Array>);  // On place (Array = RGBA)
+ * @param {String | Array} glFunctionStr
+ *  The GLSL function as a string or array of strings.
+ *  Its prototype must be:
+ *
+ *     vec4 function(vec4, vec4, vec4, vec4);  // merge UL+UR+LL+LR pixels
+ * @return {GLEffect.Reducer}
+ * @static */
 GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr) {
     'use strict';
     if (glFunctionStr instanceof Array) {
@@ -780,6 +821,12 @@ GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr) {
     return new GLEffect.Reducer(jsFunction, str);
 };
 
+/** Check whether the JS reduction function takes numbers or arrays as argument.
+ * @return {Boolean}
+ *  `true` iff scalar function (see: GLEffect.Reducer.fromFunctions).
+ * @throws {Error}
+ *  If function return value is incoherent.
+ * @static @private */
 GLEffect.Reducer._detectReturnValue = function (jsFunction) {
     'use strict';
     var array, scalar;
@@ -801,9 +848,15 @@ GLEffect.Reducer._detectReturnValue = function (jsFunction) {
     return isScalar;
 };
 
-// TODO: remove 'maxIterCPU', 'break' and 'console.log'
-GLEffect.Reducer.prototype.run = function (image, maxIterCPU) {
+/** Apply the reduction to an image.
+ * @param {Image} image
+ * @return {Number}
+ */
+GLEffect.Reducer.prototype.run = function (image, opts) {
     'use strict';
+    opts = GLEffect._cloneOpts(opts);
+    var maxIterCPU = GLEffect._readOpt(opts, 'maxIterCPU', 1024);
+    GLEffect._readOpt(opts);
     if (!(image instanceof GLEffect.Image)) {
         var input = image;
         image = new GLEffect.Image();
@@ -812,17 +865,14 @@ GLEffect.Reducer.prototype.run = function (image, maxIterCPU) {
     var isPositiveEven = function (n) {
         return (n > 0) && (n % 2 === 0);
     };
-    var t = new Date().getTime();
-    while (isPositiveEven(image.width) && isPositiveEven(image.height)) {
-        if (image.width * image.height <= (maxIterCPU || 0)) {
-            break;
-        }
-        // TODO: opts = {'scale': 1/2}
-        image = this.glEffect.run(image, {'width': image.width / 2, 'height': image.height / 2});
+    var isBigEnough = function (im) {
+        return (im.width * im.height > maxIterCPU);
+    };
+    while (isBigEnough(image) && isPositiveEven(image.width) && isPositiveEven(image.height)) {
+        image = this.glEffect.run(image, {'scale': 1 / 2});
     }
-    console.log('GPU stopped at size ' + image.width + 'x' + image.height + ' = ' + image.width * image.height);
     var array = image.toArray();
-    var result = new array.constructor(array.subarray(0, 4));
+    var result = new Float64Array(array.subarray(0, 4));
     var k, n = array.length;
     if (!this.isScalarFunction) {
         for (k = 4; k < n; k += 4) {
@@ -836,7 +886,5 @@ GLEffect.Reducer.prototype.run = function (image, maxIterCPU) {
             result[3] = this.jsFunction(result[3], array[k + 3]);
         }
     }
-    t = new Date().getTime() - t;
-    console.log('Run in ' + t + ' ms');
     return result;
 };
