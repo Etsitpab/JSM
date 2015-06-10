@@ -70,7 +70,7 @@ function GLEffect(sourceCode) {
     this._setters = this._createUniformSetters({
         'uImage': function (uniform) {
             if (uniform.name.substr(-3) === '[0]') {
-                that.uImageLength = uniform.size;
+                that._uImageLength = uniform.size;
             }
         }
     });
@@ -107,54 +107,29 @@ function GLEffect(sourceCode) {
  *      Width of the output.
  *  - `height` : Number<br/>
  *      Height of the output image.
- *  - `output` : GLEffect.Image<br/>
- *      Will be filled with the resulting image.
  * @return {GLEffect.Image}
  */
 GLEffect.prototype.run = function (image, opts) {
     'use strict';
     opts = GLEffect._cloneOpts(opts);
-    var input = image;
-    var output = GLEffect._readOpt(opts, 'output') || new GLEffect.Image();
-    if (!(input instanceof GLEffect.Image)) {
-        input = new GLEffect.Image();
-        input.load(image);
-    }
-    if (input === output) {
-        throw new Error('Cannot run the effect on place: input and output must be different objects.');
-    }
-    var scale = GLEffect._readOpt(opts, 'scale');
-    if (!scale) {
-        output.resize(
-            GLEffect._readOpt(opts, 'width', input.width),
-            GLEffect._readOpt(opts, 'height', input.height)
-        );
-    } else if (!GLEffect._readOpt(opts, 'width') && !GLEffect._readOpt(opts, 'height')) {
-        output.resize(
-            Math.round(scale * input.width),
-            Math.round(scale * input.height)
-        );
-    } else {
-        throw new Error('Conflict between opts: "scale" cannot be used with "width" nor "height".');
-    }
+    var output = this._initOutput(image, opts);
     GLEffect._readOpt(opts);
 
     // Setup GL context
     var gl = this._context;
     gl.useProgram(this._program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, output._framebuffer);
     gl.disable(gl.DEPTH_TEST);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.viewport(0, 0, output.width, output.height);
 
     // Setup uniforms
-    input._bind(0);
-    gl.uniform1i(gl.getUniformLocation(this._program, 'uImage'), 0);  // TODO: setParameter
+    var input = this._setupImages(image);
     this.setParameter('uSize', [input.width, input.height], false);
     this.setParameter('uPixel', [1 / input.width, 1 / input.height], false);
 
     // Render
     this._bindAttributes();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, output._framebuffer);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, this._vertexCount);
 
@@ -195,8 +170,6 @@ GLEffect.prototype.getParametersList = function () {
     }
     return list;
 };
-
-// TODO: _initOutput(input, opts);  // including multi-images
 
 ////////////////////////////////////////////////////////////////////////////////
 //  STATIC METHODS
@@ -542,6 +515,101 @@ GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
     };
 };
 
+/** Initialize the input and output images.
+ * @param {Image | Array} input
+ *  Input image(s).
+ * @param {Object} opts
+ *  The `opts` parameters of GLEffect.run
+ * @return {GLEffect.Image}
+ *  The output image, initialized.
+ * @throws {Error}
+ *  In case of invalid input type or dimensions.
+ * @private */
+GLEffect.prototype._initOutput = function (input, opts) {
+    'use strict';
+    var outsize = input;
+    var getSize = GLEffect._readOpt(opts, 'getSize');
+    var scale = GLEffect._readOpt(opts, 'scale');
+
+    if (!this._uImageLength) {  // SINGLE IMAGE
+        if (input instanceof Array) {
+            throw new Error('Expected a single image as input.');
+        }
+        if (getSize instanceof Function) {
+            outsize = getSize(input);
+            if (!outsize) {
+                throw new Error('Invalid images dimensions.');
+            }
+        }
+    } else {  // ARRAY OF IMAGES
+        if (!(input instanceof Array) || input.length !== this._uImageLength) {
+            throw new Error('Invalid number of input images.');
+        }
+        outsize = input[0];
+        if (getSize instanceof Function) {
+            outsize = getSize(input);
+            if (!outsize) {
+                throw new Error('Invalid images dimensions.');
+            }
+        } else if (!getSize) {
+            var k, n = input.length;
+            for (k = 0; k < n; ++k) {
+                if (!input[k]) {
+                    throw new Error('Invalid images');
+                }
+                if (input[k].width !== outsize.width || input[k].height !== outsize.height) {
+                    throw new Error('Invalid images dimensions.');
+                }
+            }
+        }
+    }
+
+    // Create output image with given dimensions
+    var output = new GLEffect.Image();
+    if (!scale) {
+        output.resize(
+            GLEffect._readOpt(opts, 'width', outsize.width),
+            GLEffect._readOpt(opts, 'height', outsize.height)
+        );
+    } else if (!GLEffect._readOpt(opts, 'width') && !GLEffect._readOpt(opts, 'height')) {
+        output.resize(
+            Math.round(scale * outsize.width),
+            Math.round(scale * outsize.height)
+        );
+    } else {
+        throw new Error('Conflict between opts: "scale" cannot be used with "width" nor "height".');
+    }
+    return output;
+};
+
+/** Setup the input images as attributes.
+ * @param {Image | Array} input
+ * @return {GLEffect.Image}
+ *  The first image.
+ * @private */
+GLEffect.prototype._setupImages = function (input) {
+    'use strict';
+    var im;
+    var gl = this._context;
+    var getImage = function (img) {
+        return (img instanceof GLEffect.Image) ? img : new GLEffect.Image(img);
+    };
+    if (!(input instanceof Array)) {
+        im = getImage(input);
+        im._bind(0);
+        gl.uniform1i(gl.getUniformLocation(this._program, 'uImage'), 0);   // TODO: setParameter
+    } else {
+        var k, n = input.length;
+        var array = new Int32Array(n);
+        for (k = n - 1; k >= 0; --k) {
+            array[k] = k;
+            im = getImage(input[k]);
+            im._bind(k);
+        }
+        gl.uniform1iv(gl.getUniformLocation(this._program, 'uImage'), array);
+    }
+    return im;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 //  STATIC ATTRIBUTES
@@ -615,9 +683,11 @@ GLEffect.prototype._context = null;
 
 /** An image stored on the GPU.
  * @constructor
- *  Create an empty image.
+ *  Create an image (empty or loaded).
+ * @param {Image} image
+ *  Image to be loaded, see GLEffect.Image.load
  */
-GLEffect.Image = function () {
+GLEffect.Image = function (image) {
     'use strict';
     var gl = GLEffect._getDefaultContext();
     /** @private @type {WebGLRenderingContext} */
@@ -642,6 +712,9 @@ GLEffect.Image = function () {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._texture, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
+    if (image) {
+        this.load(image);
+    }
     return this;
 };
 
@@ -789,6 +862,46 @@ GLEffect.Reducer = function (jsFunction, sourceCode) {
     return this;
 };
 
+/** Apply the reduction to an image.
+ * @param {Image} image
+ * @return {Number}
+ */
+GLEffect.Reducer.prototype.run = function (image, opts) {
+    'use strict';
+    opts = GLEffect._cloneOpts(opts);
+    var maxIterCPU = GLEffect._readOpt(opts, 'maxIterCPU', 1024);
+    GLEffect._readOpt(opts);
+    if (!(image instanceof GLEffect.Image)) {
+        var input = image;
+        image = new GLEffect.Image(input);
+    }
+    var isPositiveEven = function (n) {
+        return (n > 0) && (n % 2 === 0);
+    };
+    var isBigEnough = function (im) {
+        return (im.width * im.height > maxIterCPU);
+    };
+    while (isBigEnough(image) && isPositiveEven(image.width) && isPositiveEven(image.height)) {
+        image = this.glEffect.run(image, {'scale': 1 / 2});
+    }
+    var array = image.toArray();
+    var result = new Float64Array(array.subarray(0, 4));
+    var k, n = array.length;
+    if (!this.isScalarFunction) {
+        for (k = 4; k < n; k += 4) {
+            this.jsFunction(result, array.subarray(k, k + 4));
+        }
+    } else {
+        for (k = 4; k < n; k += 4) {
+            result[0] = this.jsFunction(result[0], array[k]);
+            result[1] = this.jsFunction(result[1], array[k + 1]);
+            result[2] = this.jsFunction(result[2], array[k + 2]);
+            result[3] = this.jsFunction(result[3], array[k + 3]);
+        }
+    }
+    return result;
+};
+
 // TODO: doc arguments
 /** Create a Reducer.
  * @param {Function} jsFunction
@@ -846,45 +959,4 @@ GLEffect.Reducer._detectReturnValue = function (jsFunction) {
         throw new Error('Cannot infer JS reduction function type.');
     }
     return isScalar;
-};
-
-/** Apply the reduction to an image.
- * @param {Image} image
- * @return {Number}
- */
-GLEffect.Reducer.prototype.run = function (image, opts) {
-    'use strict';
-    opts = GLEffect._cloneOpts(opts);
-    var maxIterCPU = GLEffect._readOpt(opts, 'maxIterCPU', 1024);
-    GLEffect._readOpt(opts);
-    if (!(image instanceof GLEffect.Image)) {
-        var input = image;
-        image = new GLEffect.Image();
-        image.load(input);
-    }
-    var isPositiveEven = function (n) {
-        return (n > 0) && (n % 2 === 0);
-    };
-    var isBigEnough = function (im) {
-        return (im.width * im.height > maxIterCPU);
-    };
-    while (isBigEnough(image) && isPositiveEven(image.width) && isPositiveEven(image.height)) {
-        image = this.glEffect.run(image, {'scale': 1 / 2});
-    }
-    var array = image.toArray();
-    var result = new Float64Array(array.subarray(0, 4));
-    var k, n = array.length;
-    if (!this.isScalarFunction) {
-        for (k = 4; k < n; k += 4) {
-            this.jsFunction(result, array.subarray(k, k + 4));
-        }
-    } else {
-        for (k = 4; k < n; k += 4) {
-            result[0] = this.jsFunction(result[0], array[k]);
-            result[1] = this.jsFunction(result[1], array[k + 1]);
-            result[2] = this.jsFunction(result[2], array[k + 2]);
-            result[3] = this.jsFunction(result[3], array[k + 3]);
-        }
-    }
-    return result;
 };

@@ -69,8 +69,7 @@ function display(str, ref, t, value) {
 // Create and run the GLEffect
 function runEffect() {
     var sum = imageSum(IMAGE);
-    var im = new GLEffect.Image();
-    im.load(IMAGE);
+    var im = new GLEffect.Image(IMAGE);
     console.log('--- Precision ---')
     display('Manual, Float32', sum, theTime(),
         255 * sumAll(toFloatArray(im.toArray(Uint8Array), Float32Array)));
