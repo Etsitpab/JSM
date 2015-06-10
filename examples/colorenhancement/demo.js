@@ -12,6 +12,7 @@ var stretchLuminance = function (im) {
     var e = ld.length;
     for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
         var cst = ld[r] <= 0 ? 0 : lsd[r] / ld[r];
+        cst = cst > 1 ? 1 : cst;
         od[r] *= cst;
         od[g] *= cst;
         od[b] *= cst;
