@@ -2,6 +2,8 @@
 /*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
 
 
+// TODO: finish the doc + simplify it using 'fromFunction'
+
 /** @class GLEffect
  * Apply real-time effects on images using the GPU.
  * They are written in GLSL (GL Shading Language) and run on the GPU using OpenGL.
@@ -53,7 +55,7 @@ function GLEffect(sourceCode) {
         return null;
     }
     if (sourceCode) {
-        this.sourceCode = sourceCode;
+        this.sourceCode = (sourceCode instanceof Array) ? sourceCode.join('\n') : sourceCode;
     }
 
     var vShader = this._compileShader(GLEffect._vertexShaderCode, true);
@@ -95,8 +97,6 @@ function GLEffect(sourceCode) {
 ////////////////////////////////////////////////////////////////////////////////
 //  MEMBER METHODS
 ////////////////////////////////////////////////////////////////////////////////
-
-// TODO: handle arrays of images
 
 /** Apply the effect to an image.
  * @param {GLEffect.Image | Array} image(s)
@@ -175,35 +175,86 @@ GLEffect.prototype.getParametersList = function () {
 //  STATIC METHODS
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO: allow vec3[] and vec4[] arguments
 /** Create an effect using a function syntaxe.
  * @param {String | Array} fcnStr
  *  The GLSL function as a string or array of strings.
  *  Its prototype must be either:
  *
- *     vec3 function(vec3 color);  // RGB
- *     vec4 function(vec4 color);  // RGBA
+ *     vec3 function(vec3 color, ...);  // RGB
+ *     vec4 function(vec4 color, ...);  // RGBA
  * @return {GLEffect}
  * @static */
-GLEffect.fromFunction = function (functionStr) {
+GLEffect.fromFunction = function (functionStr, argCount, argType) {
     'use strict';
     if (functionStr instanceof Array) {
         functionStr = functionStr.join('\n');
     }
-    var callStr = {
-        'vec4': 'function(color)',
-        'vec3': 'vec4(function(color.rgb), color.a)'
-    };
-    var match = functionStr.match(/vec\d/);
-    var type = match && match.pop();
-    if (!callStr[type]) {
-        throw new Error('Invalid function string: return type is incorrect.');
+
+    // Infer prototype
+    argCount = (argCount !== undefined) ? argCount : null;
+    if (argCount === null || argType) {
+        var getVecType = function(str) {
+            var match = str.match(/\bvec\d\b/g);
+            return match && (match.length === 1) && match.pop();
+        };
+        var splitted = functionStr.match(/^([\s\S]*?)function\s*\(([\s\S]*?)\)/);
+        if (splitted.length !== 3) {
+            throw new Error('Cannot infer function prototype.');
+        }
+
+        // Infer argument type
+        argType = argType || getVecType(splitted[1]);
+        if (!argType) {
+            throw new Error('Cannot infer output type.');
+        }
+
+        // Infer argument count
+        if (argCount === null) {
+            var types = (splitted[2].trim().length) ? splitted[2].split(',').map(getVecType) : [];
+            var checkType = function (str) {
+                return str === argType;
+            };
+            if (!types.every(checkType)) {
+                throw new Error('Input(s) and output types mismatch.');
+            }
+            argCount = types.length;
+        }
     }
-    var str = GLEffect.sourceCodeHeader + functionStr + ' \n\n';
+
+    // Check arguments
+    if (['vec3', 'vec4'].indexOf(argType) < 0) {
+        throw new Error('Invalid arguments type, must be "vec3" or "vec4".');
+    }
+    if (argCount < 1) {
+        throw new Error('The function must have at least one argument.');
+    }
+
+    // Create code strings
+    var protoArgs = new [].constructor(argCount + 1).join(argType + ', ');
+    protoArgs = protoArgs.substr(0, protoArgs.length - 2);
+    var prototype = argType + ' function(' + protoArgs + ');';
+    var fragColor = {'vec4': 'color', 'vec3': 'vec4(color.rgb, 1.0)'}[argType];
+    var ext = {'vec4': '', 'vec3': '.rgb'}[argType];
+    var getImage = function (k) {
+        var imExt = (argCount === 1) ? '' : '[' + k + ']';
+        return 'uImage' + imExt;
+    };
+    var k, argList = [], argIndent = '        ';
+    for (k = 0; k < argCount; ++k) {
+        argList.push(argIndent + 'texture2D(' + getImage(k) + ', vPosition)' + ext);
+    }
+
+    // Create the source code
+    var str = GLEffect.sourceCodeHeader;
+    str = (argCount === 1) ? str : str.replace('uImage', 'uImage[' + argCount + ']');
+    str += prototype + '  // User function prototype \n\n';
     str += 'void main(void) {                               \n';
-    str += '    vec4 color = texture2D(uImage, vPosition);  \n';
-    str += '    gl_FragColor = ' + callStr[type] + ';       \n';
-    str += '}                                               \n';
+    str += '    ' + argType + ' color = function(           \n';
+    str += argList.join(',\n') + '\n';
+    str += '    );                                          \n';
+    str += '    gl_FragColor = ' + fragColor + ';           \n';
+    str += '}                                             \n\n';
+    str += functionStr + '\n';
     return new GLEffect(str);
 };
 
@@ -621,10 +672,10 @@ GLEffect.sourceCodeHeader =  (function() {
     'use strict';
     var str = '';
     str += 'precision mediump float;                                        \n';
-    str += 'varying vec2 vPosition;    // Pixel position (0..1)             \n';
+    str += 'varying vec2 vPosition;  // Pixel position (0..1)               \n';
     str += '                                                                \n';
-    str += 'uniform vec2 uPixel;       // Pixel size                        \n';
-    str += 'uniform ivec2 uSize;       // Image size                        \n';
+    str += 'uniform vec2 uPixel;     // Pixel size                          \n';
+    str += 'uniform ivec2 uSize;     // Image size                          \n';
     str += 'uniform sampler2D uImage;  // Input image                       \n';
     str += '                                                                \n';
     return str;
@@ -842,7 +893,6 @@ GLEffect.Image.prototype._bind = function (slot) {
 //  SUB-CLASS --- IMAGE
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO: doc samples
 /** Compute a scalar value from an image (such as norm or sum).
  * @constructor
  *  Create a new Reducer.
@@ -902,7 +952,7 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
     return result;
 };
 
-// TODO: doc arguments
+// TODO: pre- and post- effects
 /** Create a Reducer.
  * @param {Function} jsFunction
  *  Javascript reduction function.
