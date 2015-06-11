@@ -886,39 +886,74 @@
         // padTest(false);
         // padTest(true);
 
-        var test2 = function () {
-            var name = 'sym4';
-            var modes = ["sym", "symw", "per", "zpd"];
+        var test = function () {
+            var names = ['sym8'];
+            var modes = ["sym", "symw", "per", "zpd", "nn"];
             var tests = {};
+            console.profile();
             for (var m in modes) {
-                Matrix.dwtmode(modes[m]);
-                for (var sz = 2; sz < 20; sz += 2) {
-                    var s = Matrix.rand(sz, sz, sz).cumsum(0).cumsum(1);
+                var mode = modes[m % modes.length];
+                var name = names[m % names.length];
+                Matrix.dwtmode(mode);
+                
+                for (var sz = 2; sz < 1025; sz *= 2) {
+                    var s = Matrix.rand(sz, sz, 3).cumsum(0).cumsum(1);
+                    
+                    Tools.tic();
                     var wt1 = dwt(s, name, 0);
                     var iwt = idwt(wt1, name, 0);
                     var wt2 = dwt(wt1[0], name, 1).concat(dwt(wt1[1], name, 1));
                     var iwt1 = idwt([wt2[0], wt2[1]], name, 1);
                     var iwt2 = idwt([wt2[2], wt2[3]], name, 1);
                     var iwt3 = idwt([iwt1, iwt2], name, 0);
+                    var time = Tools.toc();
                     
                     var n1 = Matrix.minus(iwt1, wt1[0]).norm(),
                         n2 = Matrix.minus(iwt2, wt1[1]).norm(),
                         n3 = Matrix.minus(iwt, s).norm(),
                         n4 = Matrix.minus(iwt3, s).norm();
-                    tests[sz + " " + modes[m]] = {
+                    tests[sz] = {
                         "n1": n1,
                         "n2": n2,
                         "n3": n3, 
                         "n4": n4, 
-                        "status": (n1 + n2 + n3 + n4) / 4 < 1e8 ? "ok": "NOK" 
+                        "status": (n1 + n2 + n3 + n4) / 4 < 1e8 ? "ok": "NOK",
+                        "time": time
                     };
                 }
+                console.log(mode, name);
+                console.table(tests, ["status", "time", "n1", "n2", "n3", "n4"]);
             }
-            console.table(tests, ["status", "n1", "n2", "n3", "n4"]);
+            console.profileEnd();
 
             Matrix.dwtmode("per");
         };
-
+        var test2 = function () {
+            var name = 'bi97';
+            var mode = "sym";
+            var sz = 3;
+            Matrix.dwtmode(mode);
+            var s = Matrix.ones(sz, sz, 1).cumsum(0).cumsum(1);
+            s.display();
+            var wt1 = dwt(s, name, 0);
+            wt1[0].display("L");
+            wt1[1].display("H");
+            var iwt = idwt(wt1, name, 0);
+            iwt.display("iwt");
+            
+            var wt2 = dwt(wt1[0], name, 1).concat(dwt(wt1[1], name, 1));
+            var iwt1 = idwt([wt2[0], wt2[1]], name, 1);
+            var iwt2 = idwt([wt2[2], wt2[3]], name, 1);
+            var iwt3 = idwt([iwt1, iwt2], name, 0);
+            iwt3.display();
+            var time = Tools.toc();
+            
+            var n1 = Matrix.minus(iwt1, wt1[0]).norm(),
+                n2 = Matrix.minus(iwt2, wt1[1]).norm(),
+                n3 = Matrix.minus(iwt, s).norm(),
+                n4 = Matrix.minus(iwt3, s).norm();
+            Matrix.dwtmode("per");
+        };
         var test3 = function () {
             var name = 'sym4';
             var im = Matrix.ones(3).cumsum(0).cumsum(1);
@@ -941,6 +976,7 @@
 
         // var sel = getIndiceSymw(6, 10, 11);
         // console.log(sel, sel.length);
+        // test();
         test2();
         // test3();
     }, false);
