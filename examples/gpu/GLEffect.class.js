@@ -54,9 +54,9 @@ function GLEffect(sourceCode) {
     if (!this._context) {
         return null;
     }
-    if (sourceCode) {
-        this.sourceCode = (sourceCode instanceof Array) ? sourceCode.join('\n') : sourceCode;
-    }
+
+    /** @readonly @type {String} */
+    this.sourceCode = sourceCode;
 
     var vShader = this._compileShader(GLEffect._vertexShaderCode, true);
     var fShader = this._compileShader(this.sourceCode, false);
@@ -176,8 +176,8 @@ GLEffect.prototype.getParametersList = function () {
 ////////////////////////////////////////////////////////////////////////////////
 
 /** Create an effect using a function syntaxe.
- * @param {String | Array} fcnStr
- *  The GLSL function as a string or array of strings.
+ * @param {String} fcnStr
+ *  The GLSL function as a string.
  *  Its prototype must be either:
  *
  *     vec3 function(vec3 color, ...);  // RGB
@@ -186,9 +186,6 @@ GLEffect.prototype.getParametersList = function () {
  * @static */
 GLEffect.fromFunction = function (functionStr, argCount, argType) {
     'use strict';
-    if (functionStr instanceof Array) {
-        functionStr = functionStr.join('\n');
-    }
 
     // Infer prototype
     argCount = (argCount !== undefined) ? argCount : null;
@@ -960,8 +957,8 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
  *
  *     <Number> jsFunction(<Number>, <Number>);      // Return the result
  *       <void> jsFunction(<Array>, <const Array>);  // On place (Array = RGBA)
- * @param {String | Array} glFunctionStr
- *  The GLSL function as a string or array of strings.
+ * @param {String} glFunctionStr
+ *  The GLSL function as a string.
  *  Its prototype must be:
  *
  *     vec4 function(vec4, vec4, vec4, vec4);  // merge UL+UR+LL+LR pixels
@@ -969,9 +966,6 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
  * @static */
 GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr) {
     'use strict';
-    if (glFunctionStr instanceof Array) {
-        glFunctionStr = glFunctionStr.join('\n');
-    }
     var str = GLEffect.sourceCodeHeader + glFunctionStr + '\n\n';
     str += 'void main(void) {                                                   \n';
     str += '    gl_FragColor = function(                                        \n';

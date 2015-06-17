@@ -6,9 +6,8 @@
 
 
 // Global variables
-var REDUCER;
-var IMAGE;
-var CLICKED;
+var REDUCER, GRAYIFYER, MIXER;
+var IMAGE, TIME;
 
 // Shortcut for 'getElementById'
 function $(str) {
@@ -53,14 +52,15 @@ function imageSum(im) {
 }
 
 // The time, in ms
-function theTime() {
-    return new Date().getTime();
+function tic() {
+    var former = TIME;
+    TIME = new Date().getTime();
+    return TIME - former;
 }
 
 // Relative error
-function display(str, ref, t, value) {
-    t = theTime() - t;
-    console.log('[' + t + 'ms] ' + str);
+function display(str, ref, value) {
+    console.log('[' + tic() + 'ms] ' + str);
     if (ref) {
         console.log(Math.abs(value / ref - 1));
     }
@@ -70,25 +70,42 @@ function display(str, ref, t, value) {
 function runEffect() {
     var sum = imageSum(IMAGE);
     var im = new GLEffect.Image(IMAGE);
-    console.log('--- Precision ---')
-    display('Manual, Float32', sum, theTime(),
+    var gray = GRAYIFYER.run(im);
+    var canvas = im.toCanvas();
+
+    var container = $('content');
+    removeAllChildren(container);
+    container.appendChild(canvas);
+
+    var slider = $('slider');
+    slider.style.display = '';
+    slider.value = 0;
+    $('slider').oninput = function () {
+        MIXER.setParameter('alpha', slider.value);
+        MIXER.run([im, gray]).toCanvas(canvas);
+    };
+    tic();
+
+    console.log('--- Precision ---');
+    display('Manual, Float32', sum,
         255 * sumAll(toFloatArray(im.toArray(Uint8Array), Float32Array)));
-    display('Manual, Float64', sum, theTime(),
+    display('Manual, Float64', sum,
         255 * sumAll(toFloatArray(im.toArray(Uint8Array), Float64Array)));
-    display('GLImage, Uint8', sum, theTime(),
+    display('GLImage, Uint8', sum,
         sumAll(im.toArray(Uint8Array)));
-    display('GLImage, Float32', sum, theTime(),
+    display('GLImage, Float32', sum,
         255 * sumAll(im.toArray(Float32Array)));
-    display('Reducer, GPU', sum, theTime(),
+    display('Reducer, GPU', sum,
         255 * sumAll(REDUCER.run(im, {'maxIterCPU': 0})));
-    display('Reducer, CPU', sum, theTime(),
+    display('Reducer, CPU', sum,
         255 * sumAll(REDUCER.run(im, {'maxIterCPU': Infinity})));
-    display('Reducer, hybrid', sum, theTime(),
+    display('Reducer, hybrid', sum,
         255 * sumAll(REDUCER.run(im)));
-    console.log('--- Number of CPU operations ---')
+
+    console.log('--- Number of CPU operations ---');
     var iterCPU;
     for (iterCPU = 1; iterCPU <= im.width * im.height; iterCPU *= 2) {
-        display(iterCPU, null, theTime(),
+        display(iterCPU, null,
             255 * sumAll(REDUCER.run(im, iterCPU)));
     }
 }
@@ -98,9 +115,6 @@ function loadImageFromUrl() {
     var im = new Image();
     im.onload = function () {
         IMAGE = im;
-        var container = $('content');
-        removeAllChildren(container);
-        container.appendChild(im);
         runEffect();
     };
     im.src = this;
@@ -140,10 +154,6 @@ function makeDropArea(elmt) {
 // Initialize the demo
 function init() {
     makeDropArea(document);
-    document.ondblclick = function (evt) {
-        CLICKED = evt.target;
-        console.log(CLICKED);
-    };
     REDUCER = GLEffect.Reducer.fromFunctions(
         function (a, b) {
             return a + b;
@@ -152,6 +162,19 @@ function init() {
             'vec4 function(vec4 a, vec4 b, vec4 c, vec4 d) {',
             '    return a+b+c+d;',
             '}'
-        ]
+        ].join('\n')
     );
+    GRAYIFYER = GLEffect.fromFunction([
+        'vec3 function(vec3 color) {',
+        '   vec3 axis = vec3(0.2, 0.5, 0.3);',
+        '   float gray = dot(color, axis);',
+        '   return vec3(gray);',
+        '}'
+    ].join('\n'));
+    MIXER = GLEffect.fromFunction([
+        'uniform float alpha;',
+        'vec3 function(vec3 a, vec3 b) {',
+        '   return alpha * b + (1.0 - alpha) * a;',
+        '}'
+    ].join('\n'));
 }
