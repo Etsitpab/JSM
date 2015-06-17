@@ -7,9 +7,9 @@
 
 // Global variables
 var IMAGE, VIDEO, IS_VIDEO;
+var CLICKED, OUTPUT, OUTAUX;
 var TIMER;
 var FILTERS;
-var CLICKED;
 
 // Shortcut for 'getElementById'
 function $(str) {
@@ -352,6 +352,8 @@ function ifEnterPressed(evt, callback) {
 
 // Initialize the demo
 function init() {
+    OUTPUT = $('outputCanvas');
+    OUTAUX = $('auxCanvas');
     configureTabKey($('shaderCode'), 4);
     makeDropArea($('dropZone'));
     $('inputFile').onchange = fileSelectionCallback;

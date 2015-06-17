@@ -70,22 +70,17 @@ function display(str, ref, value) {
 function runEffect() {
     var sum = imageSum(IMAGE);
     var im = new GLEffect.Image(IMAGE);
-    var gray = GRAYIFYER.run(im);
-    var canvas = im.toCanvas();
-
-    var container = $('content');
-    removeAllChildren(container);
-    container.appendChild(canvas);
-
-    var slider = $('slider');
-    slider.style.display = '';
-    slider.value = 0;
-    $('slider').oninput = function () {
-        MIXER.setParameter('alpha', slider.value);
-        MIXER.run([im, gray]).toCanvas(canvas);
-    };
     tic();
 
+    // Check time
+    console.log('--- Number of CPU operations ---');
+    var iterCPU;
+    for (iterCPU = 1; iterCPU <= im.width * im.height; iterCPU *= 2) {
+        display(iterCPU, null,
+            255 * sumAll(REDUCER.run(im, iterCPU)));
+    }
+
+    // Check precision
     console.log('--- Precision ---');
     display('Manual, Float32', sum,
         255 * sumAll(toFloatArray(im.toArray(Uint8Array), Float32Array)));
@@ -102,12 +97,21 @@ function runEffect() {
     display('Reducer, hybrid', sum,
         255 * sumAll(REDUCER.run(im)));
 
-    console.log('--- Number of CPU operations ---');
-    var iterCPU;
-    for (iterCPU = 1; iterCPU <= im.width * im.height; iterCPU *= 2) {
-        display(iterCPU, null,
-            255 * sumAll(REDUCER.run(im, iterCPU)));
-    }
+    // Display
+    var gray = GRAYIFYER.run(im);
+    var canvas = im.toCanvas();
+
+    var container = $('content');
+    removeAllChildren(container);
+    container.appendChild(canvas);
+
+    var slider = $('slider');
+    slider.style.display = '';
+    slider.value = 0;
+    $('slider').oninput = function () {
+        MIXER.setParameter('alpha', slider.value);
+        MIXER.run([im, gray]).toCanvas(canvas);
+    };
 }
 
 // Callback function: load the image
@@ -159,8 +163,8 @@ function init() {
             return a + b;
         },
         [
-            'vec4 function(vec4 a, vec4 b, vec4 c, vec4 d) {',
-            '    return a+b+c+d;',
+            'vec4 function(vec4 a, vec4 b) {',
+            '    return a + b;',
             '}'
         ].join('\n')
     );

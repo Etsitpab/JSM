@@ -55,8 +55,10 @@ function GLEffect(sourceCode) {
         return null;
     }
 
-    /** @readonly @type {String} */
-    this.sourceCode = sourceCode;
+    if (sourceCode) {
+        /** @readonly @type {String} */
+        this.sourceCode = sourceCode;
+    }
 
     var vShader = this._compileShader(GLEffect._vertexShaderCode, true);
     var fShader = this._compileShader(this.sourceCode, false);
@@ -898,20 +900,28 @@ GLEffect.Image.prototype._bind = function (slot) {
  * @param {String} sourceCode
  *  GLSL source code.
  * @private */
-GLEffect.Reducer = function (jsFunction, sourceCode) {
+GLEffect.Reducer = function (jsFunction, sourceCode, opts) {
     'use strict';
+    opts = GLEffect._cloneOpts(opts);
     /** The GLSL reduction effect. @type {GLEffect} @private */
     this.glEffect = new GLEffect(sourceCode);
     /** The JS reduction function. @type {Function} @private */
     this.jsFunction = jsFunction;
     /** Type of the JS function. @type {Boolean} @private */
     this.isScalarFunction = GLEffect.Reducer._detectReturnValue(this.jsFunction);
+    /** Effect to be applied before reduction. @type {GLEffect} @readonly */
+    this.preEffect = GLEffect._readOpt(opts, 'pre');
+    /** Function to be applied on the reduced RGBA value. @type {Function} @readonly */
+    this.postFunction = GLEffect._readOpt(opts, 'post');
+    GLEffect._readOpt(opts);
     return this;
 };
 
 /** Apply the reduction to an image.
  * @param {Image} image
- * @return {Number}
+ * @return {Array | Object}
+ *  Return an array of length 4 with the reduced RGBA values,
+ *   or the result of the post-function on it.
  */
 GLEffect.Reducer.prototype.run = function (image, opts) {
     'use strict';
@@ -921,6 +931,9 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
     if (!(image instanceof GLEffect.Image)) {
         var input = image;
         image = new GLEffect.Image(input);
+    }
+    if (this.preEffect) {
+        image = this.preEffect.run(image);
     }
     var isPositiveEven = function (n) {
         return (n > 0) && (n % 2 === 0);
@@ -946,10 +959,9 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
             result[3] = this.jsFunction(result[3], array[k + 3]);
         }
     }
-    return result;
+    return this.postFunction ? this.postFunction(result) : result;
 };
 
-// TODO: pre- and post- effects
 /** Create a Reducer.
  * @param {Function} jsFunction
  *  Javascript reduction function.
@@ -961,21 +973,30 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
  *  The GLSL function as a string.
  *  Its prototype must be:
  *
- *     vec4 function(vec4, vec4, vec4, vec4);  // merge UL+UR+LL+LR pixels
+ *     vec4 function(vec4, vec4);  // reduction of two pixels
+ * @param {Object} [opts = {}]
+ *  - `pre`: GLEffect<br/>
+ *      A pre-effect which is applied to `image` before reduction.
+ *  - `post` : Function<br/>
+ *      A JS post-function which is applied on the reduced RGBA value.
  * @return {GLEffect.Reducer}
  * @static */
-GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr) {
+GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr, opts) {
     'use strict';
     var str = GLEffect.sourceCodeHeader + glFunctionStr + '\n\n';
     str += 'void main(void) {                                                   \n';
     str += '    gl_FragColor = function(                                        \n';
+    str += '      function(                                                     \n';
     str += '        texture2D(uImage, vPosition + uPixel * vec2(-0.5, -0.5)),   \n';
-    str += '        texture2D(uImage, vPosition + uPixel * vec2(+0.5, -0.5)),   \n';
+    str += '        texture2D(uImage, vPosition + uPixel * vec2(+0.5, -0.5))    \n';
+    str += '      ),                                                            \n';
+    str += '      function(                                                     \n';
     str += '        texture2D(uImage, vPosition + uPixel * vec2(-0.5, +0.5)),   \n';
     str += '        texture2D(uImage, vPosition + uPixel * vec2(+0.5, +0.5))    \n';
+    str += '      )                                                             \n';
     str += '    );                                                              \n';
     str += '}                                                                   \n';
-    return new GLEffect.Reducer(jsFunction, str);
+    return new GLEffect.Reducer(jsFunction, str, opts);
 };
 
 /** Check whether the JS reduction function takes numbers or arrays as argument.
