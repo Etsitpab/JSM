@@ -2,9 +2,11 @@
 /*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
 
 
-// TODO: finish the doc + simplify it using 'fromFunction'
+// TODO: documentation
+// * GLEffect: private methods + class doc
+// * GLEffect.Image, GLEffect.Reducer
 
-/** @class GLEffect
+/* @class GLEffect
  * Apply real-time effects on images using the GPU.
  * They are written in GLSL (GL Shading Language) and run on the GPU using OpenGL.
  *
@@ -40,12 +42,16 @@
 
 
 /** @constructor
- * @param {String} sourceCode
- *  The source code of the effect, written in GLSL.
+ *  Create a new effect.
+ * @param {String} [sourceCode]
+ *  The source code of the effect, written in GLSL.<br/>
+ *  _Default:_ the identity effect (output = input).<br/>
+ *  _See:_ GLEffect.fromFunction for a simple constructor.<br/>
+ *  _See:_ GLEffect.sourceCode to get an effect's source code.
  * @return {GLEffect | null}
- *  The effect, or null if WebGL is not supported.
+ *  The created effect. If WebGL is not supported, `null` is returned.
  * @throws {Error}
- *  If there is an error during the source code compilation.
+ *  If an error occurs during the source code compilation.
  */
 function GLEffect(sourceCode) {
     'use strict';
@@ -56,7 +62,6 @@ function GLEffect(sourceCode) {
     }
 
     if (sourceCode) {
-        /** @readonly @type {String} */
         this.sourceCode = sourceCode;
     }
 
@@ -65,12 +70,10 @@ function GLEffect(sourceCode) {
 
     /** @private @type {WebGLProgram} */
     this._program = this._createProgram(vShader, fShader);
-    /** Expected length of `uImage` uniform array, 0 if not an array. @private @type {Number} */
+    /** Expected length of `uImage` uniform array, or 0 if not an array. @private @type {Number} */
     this._uImageLength = 0;
 
-    /** Setters for the uniform variables.
-     *  Calling syntax: `_setters[uName](value)`
-     * @private @type {Object} */
+    /** Setters for the uniform variables.<br/> _See:_ GLEffect.setParameter @private @type {Object} */
     this._setters = this._createUniformSetters({
         'uImage': function (uniform) {
             if (uniform.name.substr(-3) === '[0]') {
@@ -82,7 +85,7 @@ function GLEffect(sourceCode) {
     /** Current values of the parameters. @readonly @type {Object} */
     this.parameters = {};
 
-    /** Number of vertices. @private @type {Number} */
+    /** Number of vertices in the WebGL program. @private @type {Number} */
     this._vertexCount = 4;
 
     /** Bind all the attributes.
@@ -100,8 +103,9 @@ function GLEffect(sourceCode) {
 //  MEMBER METHODS
 ////////////////////////////////////////////////////////////////////////////////
 
-/** Apply the effect to an image.
- * @param {GLEffect.Image | Array} image(s)
+/** Apply the effect.
+ * @param {GLEffect.Image | HTMLElement | Array} image
+ *  Input image, or array of input images (for multi-images effects).
  * @param {Object} [opts = {}]
  *  - `scale`: Number<br/>
  *      Size ratio of output / input.
@@ -109,6 +113,9 @@ function GLEffect(sourceCode) {
  *      Width of the output.
  *  - `height` : Number<br/>
  *      Height of the output image.
+ *  - `getSize`: Function<br/>
+ *      _Argument:_ the `image` argument.<br/>
+ *      _Returns:_ the size of the output image, or `false` on error.
  * @return {GLEffect.Image}
  */
 GLEffect.prototype.run = function (image, opts) {
@@ -140,9 +147,13 @@ GLEffect.prototype.run = function (image, opts) {
     return output;
 };
 
-/** Change the value of a parameter (a GLSL uniform variable).
+/** Change the value of an effect's parameter.
+ *  A parameter is an uniform variable of the source code.<br/>
+ *  _See:_ GLEffect.parameters for the current values of the parameters.
  * @param {String} name
+ *  Name of the parameter to be changed.
  * @param {Number | Array} value
+ *  New value of the parameter.
  */
 GLEffect.prototype.setParameter = function (name, value, storeIt) {
     'use strict';
@@ -157,6 +168,9 @@ GLEffect.prototype.setParameter = function (name, value, storeIt) {
 };
 
 /** Get a list of the effect's parameters.
+ *  Unused parameters are not listed.<br/>
+ *  _See:_ GLEffect.setParameter to set a parameter's value.<br/>
+ *  _See:_ GLEffect.parameters to get parameters' values.
  * @return {Array}
  *  An array containing the name of the parameters.
  */
@@ -177,14 +191,18 @@ GLEffect.prototype.getParametersList = function () {
 //  STATIC METHODS
 ////////////////////////////////////////////////////////////////////////////////
 
-/** Create an effect using a function syntaxe.
- * @param {String} fcnStr
- *  The GLSL function as a string.
- *  Its prototype must be either:
+/** Create a pixel-wise effect using a functional syntax.<br/>
+ *  _See:_ GLEffect.constructor for a manual syntax.
+ * @param {String} functionStr
+ *  The GLSL function, as a string.<br/>
+ *  _Prototype:_ the function prototype can be either:
  *
  *     vec3 function(vec3 color, ...);  // RGB
  *     vec4 function(vec4 color, ...);  // RGBA
  * @return {GLEffect}
+ *  The effect which applies `function` to each pixel of the input image(s).<br/>
+ *  If `function` has N=1 argument, GLEffect.run expects a single image as argument.<br/>
+ *  If `function` has N>1 arguments, GLEffect.run expects an array of length N.
  * @static */
 GLEffect.fromFunction = function (functionStr, argCount, argType) {
     'use strict';
@@ -246,18 +264,20 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
     // Create the source code
     var str = GLEffect.sourceCodeHeader;
     str = (argCount === 1) ? str : str.replace('uImage', 'uImage[' + argCount + ']');
-    str += prototype + '  // User function prototype \n\n';
-    str += 'void main(void) {                               \n';
-    str += '    ' + argType + ' color = function(           \n';
+    str += prototype + '  // User function prototype              \n\n';
+    str += 'void main(void) {                                       \n';
+    str += '    /* Call the user function on the current pixel */   \n';
+    str += '    ' + argType + ' color = function(                   \n';
     str += argList.join(',\n') + '\n';
-    str += '    );                                          \n';
-    str += '    gl_FragColor = ' + fragColor + ';           \n';
-    str += '}                                             \n\n';
+    str += '    );                                                  \n';
+    str += '    gl_FragColor = ' + fragColor + ';  // Output color  \n';
+    str += '}                                                     \n\n';
+    str += '/* User function */                                     \n';
     str += functionStr + '\n';
     return new GLEffect(str);
 };
 
-/** Check whether the GPU acceleration is supported.
+/** Check whether {@link GLEffect} is supported.
  * @return {Boolean}
  * @static */
 GLEffect.doesSupportGL = function () {
@@ -265,7 +285,7 @@ GLEffect.doesSupportGL = function () {
     return Boolean(GLEffect._getDefaultContext());
 };
 
-/** Check whether floating-point storage is supported by the GPU.
+/** Check whether {@link GLEffect} supports floating-point images.
  * @return {Boolean}
  * @static */
 GLEffect.doesSupportFloat = function () {
@@ -566,14 +586,14 @@ GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
 };
 
 /** Initialize the input and output images.
- * @param {Image | Array} input
+ * @param {GLEffect.Image | HTMLElement | Array} input
  *  Input image(s).
  * @param {Object} opts
- *  The `opts` parameters of GLEffect.run
+ *  The `opts` parameters of GLEffect.run.
  * @return {GLEffect.Image}
  *  The output image, initialized.
  * @throws {Error}
- *  In case of invalid input type or dimensions.
+ *  If images has invalid types or dimensions.
  * @private */
 GLEffect.prototype._initOutput = function (input, opts) {
     'use strict';
@@ -665,18 +685,16 @@ GLEffect.prototype._setupImages = function (input) {
 //  STATIC ATTRIBUTES
 ////////////////////////////////////////////////////////////////////////////////
 
-/** Header of the source code, available to avoid source code duplication.
+/** Header of the source code, available to avoid code duplication.
  * @static @readonly @type {String} */
 GLEffect.sourceCodeHeader =  (function() {
     'use strict';
     var str = '';
     str += 'precision mediump float;                                        \n';
-    str += 'varying vec2 vPosition;  // Pixel position (0..1)               \n';
-    str += '                                                                \n';
-    str += 'uniform vec2 uPixel;     // Pixel size                          \n';
-    str += 'uniform ivec2 uSize;     // Image size                          \n';
-    str += 'uniform sampler2D uImage;  // Input image                       \n';
-    str += '                                                                \n';
+    str += 'varying vec2 vPosition;    // Curent pixel position (0..1)    \n\n';
+    str += 'uniform vec2 uPixel;       // Pixel size (0..1)                 \n';
+    str += 'uniform ivec2 uSize;       // Image size (in px)                \n';
+    str += 'uniform sampler2D uImage;  // Input image                     \n\n';
     return str;
 }());
 
@@ -685,10 +703,8 @@ GLEffect._vertexShaderCode = (function() {
     'use strict';
     var str = '';
     str += 'attribute vec2 aVertexPosition;                                 \n';
-    str += 'attribute vec2 aTexturePosition;                                \n';
-    str += '                                                                \n';
-    str += 'varying vec2 vPosition;                                         \n';
-    str += '                                                                \n';
+    str += 'attribute vec2 aTexturePosition;                              \n\n';
+    str += 'varying vec2 vPosition;                                       \n\n';
     str += 'void main(void) {                                               \n';
     str += '    vPosition = aTexturePosition;                               \n';
     str += '    vec2 finalPosition = 2.0 * aVertexPosition - 1.0;           \n';
@@ -714,8 +730,8 @@ GLEffect.prototype.sourceCode = (function() {
     'use strict';
     var str = GLEffect.sourceCodeHeader;
     str += 'void main(void) {                                               \n';
-    str += '    vec4 color = texture2D(uImage, vPosition);                  \n';
-    str += '    gl_FragColor = vec4(color.rgb, color.a);                    \n';
+    str += '    vec4 color = texture2D(uImage, vPosition);  // Pixel color  \n';
+    str += '    gl_FragColor = vec4(color.rgb, color.a);    // Output color \n';
     str += '}                                                               \n';
     return str;
 }());
