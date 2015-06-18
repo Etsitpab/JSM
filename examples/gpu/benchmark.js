@@ -108,9 +108,10 @@ function runEffect() {
     var slider = $('slider');
     slider.style.display = '';
     slider.value = 0;
-    $('slider').oninput = function () {
+    slider.oninput = function () {
         MIXER.setParameter('alpha', slider.value);
         MIXER.run([im, gray]).toCanvas(canvas);
+        slider.focus();
     };
 }
 

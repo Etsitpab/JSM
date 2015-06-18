@@ -2,13 +2,11 @@
 /*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
 
 
-// TODO: documentation
-// * GLEffect: private methods + class doc
-// * GLEffect.Image, GLEffect.Reducer
+// TODO: main documentation of the classes
 
 /* @class GLEffect
  * Apply real-time effects on images using the GPU.
- * They are written in GLSL (GL Shading Language) and run on the GPU using OpenGL.
+ * They are written in GLSL (GL Shading Language) and run on the GPU.
  *
  * The default effect is 'do-nothing', leaving each pixel unchanged.
  * Its GLSL source code is available and is commented:
@@ -336,6 +334,8 @@ GLEffect._createContext = function (canvas) {
  *  If omitted, check that all options of `opts` has already been read.
  * @param {Object} [defaultValue]
  *  Returned value if `opts[name]` is undefined.
+ * @return {Object}
+ *  If an option's `name` is given, return this option's value.
  * @throws {Error}
  *  If no `name` is given and unread options remain.
  * @static @private
@@ -424,6 +424,8 @@ GLEffect.prototype._createProgram = function (vertexShader, fragmentShader) {
 };
 
 /** Create setters for the active uniform variables of the program.
+ *
+ *  Inspired by: `webgl-utils.js` from [WebGL Funcamentals](http://webglfundamentals.org/).
  * @param {Object} initFunctions
  *  Functions to be called for each uniform variable.
  *  Calling syntax:
@@ -440,6 +442,12 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
     initFunctions = initFunctions || {};
     var gl = this._context;
     var program = this._program;
+
+    // Textures management
+    var textureUnits = 0;
+    var bindPoints = {};
+    bindPoints[gl.SAMPLER_2D] = gl.TEXTURE_2D;
+    bindPoints[gl.SAMPLER_CUBE] = gl.TEXTURE_CUBE_MAP;
 
     // Function to create a setter for a given uniform
     function createSetter(uniform) {
@@ -496,7 +504,7 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
                 gl.uniform4iv(location, new Int32Array(v));
             };
         }
-        // TODO: handle matrix + handle images
+        // TODO: handle matrix
         if (type === gl.FLOAT_MAT2) {
             return function(v) {
                 gl.uniformMatrix2fv(location, false, v);
@@ -512,10 +520,34 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
                 gl.uniformMatrix4fv(location, false, v);
             };
         }
-        if (type === gl.SAMPLER_2D || type === gl.SAMPLER_CUBE) {
-            return function () {
-                throw new Error('Version Error: textures cannot be set automatically yet');
+        if ((type === gl.SAMPLER_2D || type === gl.SAMPLER_CUBE) && isArray) {
+            var unitArray = [];
+            while (unitArray.length < uniform.size) {
+                unitArray.push(textureUnits++);
+            }
+            var makeTexturesSetter = function (units) {
+                return function (tex) {
+                    gl.uniform1iv(location, units);
+                    var i;
+                    for (i = 0; i < units.length; ++i) {
+                        gl.activeTexture(gl.TEXTURE0 + units[i]);
+                        gl.bindTexture(bindPoints[type], tex[i]);
+                    }
+                    gl.activeTexture(gl.TEXTURE0);
+                };
             };
+            return makeTexturesSetter(new Int32Array(unitArray));
+        }
+        if (type === gl.SAMPLER_2D || type === gl.SAMPLER_CUBE) {
+            var makeTextureSetter = function (unit) {
+                return function (tex) {
+                    gl.uniform1i(location, unit);
+                    gl.activeTexture(gl.TEXTURE0 + unit);
+                    gl.bindTexture(bindPoints[type], tex);
+                    gl.activeTexture(gl.TEXTURE0);
+                };
+            };
+            return makeTextureSetter(textureUnits++);
         }
         throw new Error('Logic Error: unknown parameter type ' + uniform.name);
     }
@@ -675,27 +707,19 @@ GLEffect.prototype._initOutput = function (input, opts) {
  * @private */
 GLEffect.prototype._setupImages = function (input) {
     'use strict';
-    var im;
-    var gl = this._context;
-    var getImage = function (img) {
+    var asImage = function (img) {
         return (img instanceof GLEffect.Image) ? img : new GLEffect.Image(img);
     };
     if (!(input instanceof Array)) {
-        im = getImage(input);
-        im._bind(0);
-        gl.uniform1i(gl.getUniformLocation(this._program, 'uImage'), 0);   // TODO: setParameter
-    } else {
-        var k, n = input.length;
-        var array = new Int32Array(n);
-        for (k = n - 1; k >= 0; --k) {
-            array[k] = k;
-            im = getImage(input[k]);
-            im._bind(k);
-        }
-        gl.uniform1iv(gl.getUniformLocation(this._program, 'uImage'), array);
+        var image = asImage(input);
+        this.setParameter('uImage', image._texture);
+        return image;
     }
-    return im;
+    var images = input.map(asImage);
+    this.setParameter('uImage', images.map(function (im) { return im._texture; }));
+    return images[0];
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //  STATIC ATTRIBUTES
@@ -760,14 +784,19 @@ GLEffect.prototype._context = null;
 
 
 ////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
 //  SUB-CLASS --- IMAGE
 ////////////////////////////////////////////////////////////////////////////////
 
 /** An image stored on the GPU.
+ *
+ *  * This is the output type of {@link GLEffect}'s {@link GLEffect#run run method}.
+ *  * The main methods are: #toCanvas and #toArray.
  * @constructor
- *  Create an image (empty or loaded).
- * @param {Image} image
- *  Image to be loaded, see GLEffect.Image.load
+ *  Create an image.
+ * @param {HTMLElement} [image]
+ *  Image to be loaded. Can be an `img`, `canvas`, or `video` elements.
  */
 GLEffect.Image = function (image) {
     'use strict';
@@ -816,8 +845,9 @@ GLEffect.Image.prototype.resize = function (width, height) {
     this.height = height;
 };
 
-/** Load the image from an HTML element (image, canvas, video).
+/** Load the image from an HTML element (image, canvas, or video).
  * @param {HTMLElement} image
+ *  Image to be loaded.
  */
 GLEffect.Image.prototype.load = function (image) {
     'use strict';
@@ -834,11 +864,18 @@ GLEffect.Image.prototype.load = function (image) {
 };
 
 /** Export the image to an array.
- * @param {Function | Float32Array | Uint8Array} [outArray]
- *  Array to be filled (must be big enough) or array constructor (`Float32Array` or `Uint8Array`).
+ * @param {Float32Array | Uint8Array | Function} [outArray]
+ *  Can be:
+ *
+ *  * the array to be filled, which must be big enough
+ *  * an array constructor, which must be either `Float32Array` or `Uint8Array`.
  * @return {Float32Array | Uint8Array}
- *  The pixels' values, stored as RGBA values row by row.
- *  Its size is 4 x width x height.
+ *  An array containing the pixels' values, stored as RGBA values row by row.<br/>
+ *  _Length:_ `4*width*height`<br/>
+ *  _Type:_ given by `outArray` if specified, otherwise `Float32Array` if possible, else `Uint8Array`<br/>
+ *  _Range of values:_ 0..1 for `Float32Array`, 0..255 for `Uint8Array`.
+ * @throws {Error}
+ *  If a float array is requested but GLEffect does not support floating-point images.
  */
 GLEffect.Image.prototype.toArray = function (outArray) {
     'use strict';
@@ -859,8 +896,11 @@ GLEffect.Image.prototype.toArray = function (outArray) {
 
 /** Export the image to a canvas.
  * @param {HTMLCanvasElement} [outCanvas]
- * @return {HTMLCanvasElement}
- *  The resulting canvas, or null if an error occurred.
+ *  The canvas to draw the image in.
+ *  If no canvas is given, a new canvas is created.
+ * @return {HTMLCanvasElement | null}
+ *  The resulting canvas, or `null` if the canvas does not support it.<br/>
+ *  _Support failure:_ if the canvas is already used within a different context (e.g. WebGL).
  */
 GLEffect.Image.prototype.toCanvas = function (outCanvas) {
     'use strict';
@@ -881,12 +921,12 @@ GLEffect.Image.prototype.toCanvas = function (outCanvas) {
 };
 
 /** Get the suitable data type.
- * @param {Boolean} [useInt]
- *  If specified, force the type to float or integer.
- * @return
+ * @param {Boolean} [useBytes]
+ *  If specified, force the type to integers (bytes) or floats.
+ * @return {Object}
  *  One of the `gl.FLOAT` or `gl.UNSIGNED_BYTE` constants.
  * @throws {Error}
- *  If `useInt=false` and float extension is not available.
+ *  If `useBytes=false` and float extension is not available.
  * @private */
 GLEffect.Image.prototype._dataType = function (useBytes) {
     'use strict';
@@ -908,20 +948,11 @@ GLEffect.Image.prototype._dataType = function (useBytes) {
     return isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
 };
 
-/** Bind the image to a WebGL slot.
- * @param {Number} [slot = 0]
- * @private */
-GLEffect.Image.prototype._bind = function (slot) {
-    'use strict';
-    var gl = this._context;
-    gl.activeTexture(gl.TEXTURE0 + (slot || 0));
-    gl.bindTexture(gl.TEXTURE_2D, this._texture);
-    gl.activeTexture(gl.TEXTURE0);
-};
-
 
 ////////////////////////////////////////////////////////////////////////////////
-//  SUB-CLASS --- IMAGE
+
+////////////////////////////////////////////////////////////////////////////////
+//  SUB-CLASS --- REDUCER
 ////////////////////////////////////////////////////////////////////////////////
 
 /** Compute a scalar value from an image (such as norm or sum).
