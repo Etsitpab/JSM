@@ -88,8 +88,7 @@ function GLEffect(sourceCode) {
     /** Number of vertices in the WebGL program. @private @type {Number} */
     this._vertexCount = 4;
 
-    /** Bind all the attributes.
-     * @private @method */
+    /** Bind all the attributes. @private @method */
     this._bindAttributes = this._createAttributes(this._vertexCount, {
         'aVertexPosition': GLEffect._vertexPositions,
         'aTexturePosition': GLEffect._texturePositions
@@ -105,7 +104,8 @@ function GLEffect(sourceCode) {
 
 /** Apply the effect.
  * @param {GLEffect.Image | HTMLElement | Array} image
- *  Input image, or array of input images (for multi-images effects).
+ *  Input image or array of input images (for multi-images effects).
+ *  Images can be `img`, `canvas`, or `video` elements.
  * @param {Object} [opts = {}]
  *  - `scale`: Number<br/>
  *      Size ratio of output / input.
@@ -117,6 +117,8 @@ function GLEffect(sourceCode) {
  *      _Argument:_ the `image` argument.<br/>
  *      _Returns:_ the size of the output image, or `false` on error.
  * @return {GLEffect.Image}
+ * @throws {Error}
+ *  If input image(s) has invalid type or dimensions.
  */
 GLEffect.prototype.run = function (image, opts) {
     'use strict';
@@ -199,10 +201,12 @@ GLEffect.prototype.getParametersList = function () {
  *
  *     vec3 function(vec3 color, ...);  // RGB
  *     vec4 function(vec4 color, ...);  // RGBA
- * @return {GLEffect}
- *  The effect which applies `function` to each pixel of the input image(s).<br/>
- *  If `function` has N=1 argument, GLEffect.run expects a single image as argument.<br/>
+ * @return {GLEffect | null}
+ *  The effect which applies `function` to each pixel of the input image(s), or `null` if WebGL is not supported.<br/>
+ *  If `function` has a single argument, GLEffect.run expects a single image as argument.<br/>
  *  If `function` has N>1 arguments, GLEffect.run expects an array of length N.
+ * @throws {Error}
+ *  If an error occurs during the source code compilation.
  * @static */
 GLEffect.fromFunction = function (functionStr, argCount, argType) {
     'use strict';
@@ -216,13 +220,13 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
         };
         var splitted = functionStr.match(/^([\s\S]*?)function\s*\(([\s\S]*?)\)/);
         if (splitted.length !== 3) {
-            throw new Error('Cannot infer function prototype.');
+            throw new Error('Error: cannot infer GL function prototype.');
         }
 
         // Infer argument type
         argType = argType || getVecType(splitted[1]);
         if (!argType) {
-            throw new Error('Cannot infer output type.');
+            throw new Error('Error: cannot infer output type.');
         }
 
         // Infer argument count
@@ -232,7 +236,7 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
                 return str === argType;
             };
             if (!types.every(checkType)) {
-                throw new Error('Input(s) and output types mismatch.');
+                throw new Error('Argument Error: input(s) and output types mismatch.');
             }
             argCount = types.length;
         }
@@ -240,10 +244,10 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
 
     // Check arguments
     if (['vec3', 'vec4'].indexOf(argType) < 0) {
-        throw new Error('Invalid arguments type, must be "vec3" or "vec4".');
+        throw new Error('Argument Error: the function must take "vec3" or "vec4" arguments.');
     }
     if (argCount < 1) {
-        throw new Error('The function must have at least one argument.');
+        throw new Error('Argument Error: the function must take at least one argument.');
     }
 
     // Create code strings
@@ -295,11 +299,9 @@ GLEffect.doesSupportFloat = function () {
     return Boolean(ext);
 };
 
-/** Get the default WebGL context.
- * @return {WebGLRenderingContext}
- *  The context, or null if not supported.
- * @static @private
- */
+/** Get the default WebGL context (if supported).
+ * @return {WebGLRenderingContext | null}
+ * @static @private */
 GLEffect._getDefaultContext = function () {
     'use strict';
     if (!GLEffect.prototype._canvas) {
@@ -310,9 +312,9 @@ GLEffect._getDefaultContext = function () {
     return GLEffect.prototype._context;
 };
 
-/** Create a WebGL context.
+/** Create a WebGL context (if supported) from an HTML canvas.
  * @param {HTMLCanvasElement} canvas
- * @return {WebGLRenderingContext}
+ * @return {WebGLRenderingContext | null}
  * @static @private */
 GLEffect._createContext = function (canvas) {
     'use strict';
@@ -326,17 +328,16 @@ GLEffect._createContext = function (canvas) {
 };
 
 /** Read from a set of options, or check that all options were read.
- *
- * **Warning**: the `opts` object should be cloned using GLEffect._cloneOpts before usage .
  * @param {Object} [opts]
- *  An object containing several name/value pairs.
+ *  An object containing several name/value pairs.<br/>
+ *  __Warning:__ `opts` is modified, hence you may want to use GLEffect._cloneOpts first.
  * @param {String} [name]
- *  If specified, read and remove the value of `opts[name]`.
+ *  If specified, read and remove the value `opts[name]`.<br/>
  *  If omitted, check that all options of `opts` has already been read.
  * @param {Object} [defaultValue]
  *  Returned value if `opts[name]` is undefined.
  * @throws {Error}
- *  If no `name` is given and there is still unread options.
+ *  If no `name` is given and unread options remain.
  * @static @private
  */
 GLEffect._readOpt = function (opts, name, defaultValue) {
@@ -353,13 +354,14 @@ GLEffect._readOpt = function (opts, name, defaultValue) {
         var key;
         for (key in opts) {
             if (opts.hasOwnProperty(key)) {
-                throw new Error('Unknown option: ' + key);
+                throw new Error('Argument Error: unknown option ' + key);
             }
         }
     }
 };
 
-/** Clone a set of options. Should be called once before calling GLEffect._readOpt.
+/** Make a copy of a set of options.
+ *  You may want to use it before calling GLEffect._readOpt.
  * @param {Object} opts
  * @return {Object}
  *  A copy of `opts`.
@@ -386,7 +388,7 @@ GLEffect._cloneOpts = function (opts) {
  * @param {Boolean} isVertexShader
  * @return {WebGLShader}
  * @throws {Error}
- *  If there is an error during the shader compilation.
+ *  If the shader compilation fails.
  * @private */
 GLEffect.prototype._compileShader = function (sourceCode, isVertexShader) {
     'use strict';
@@ -396,7 +398,7 @@ GLEffect.prototype._compileShader = function (sourceCode, isVertexShader) {
     gl.shaderSource(shader, sourceCode);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        throw new Error('Shader compilation: ' + gl.getShaderInfoLog(shader));
+        throw new Error('Compilation Error: ' + gl.getShaderInfoLog(shader));
     }
     return shader;
 };
@@ -405,6 +407,8 @@ GLEffect.prototype._compileShader = function (sourceCode, isVertexShader) {
  * @param {WebGLShader} vertexShader
  * @param {WebGLShader} fragmentShader
  * @return {WebGLProgram}
+ * @throws {Error}
+ *  If a linker error occurs.
  * @private */
 GLEffect.prototype._createProgram = function (vertexShader, fragmentShader) {
     'use strict';
@@ -414,16 +418,22 @@ GLEffect.prototype._createProgram = function (vertexShader, fragmentShader) {
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        throw new Error('Could not link shaders');
+        throw new Error('Link Error: could not link shaders.');
     }
     return program;
 };
 
-/** Create setters for the uniform variables of the (current) program.
+/** Create setters for the active uniform variables of the program.
  * @param {Object} initFunctions
- *  Each initFunctions[name] function will be called with the corresponding uniform as parameter.
+ *  Functions to be called for each uniform variable.
+ *  Calling syntax:
+ *
+ *     initFunctions[uName](uniformInfo);
  * @return {Object}
- *  A setter for each uniform variable.
+ *  Setters for each uniform variable.
+ *  Calling syntax:
+ *
+ *     obj[uName](value);  // set uniform 'uName' to 'value'
  * @private */
 GLEffect.prototype._createUniformSetters = function (initFunctions) {
     'use strict';
@@ -486,27 +496,28 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
                 gl.uniform4iv(location, new Int32Array(v));
             };
         }
+        // TODO: handle matrix + handle images
         if (type === gl.FLOAT_MAT2) {
             return function(v) {
-                gl.uniformMatrix2fv(location, false, v);  // Reshape
+                gl.uniformMatrix2fv(location, false, v);
             };
         }
         if (type === gl.FLOAT_MAT3) {
             return function(v) {
-                gl.uniformMatrix3fv(location, false, v);  // Reshape
+                gl.uniformMatrix3fv(location, false, v);
             };
         }
         if (type === gl.FLOAT_MAT4) {
             return function(v) {
-                gl.uniformMatrix4fv(location, false, v);  // Reshape
+                gl.uniformMatrix4fv(location, false, v);
             };
         }
         if (type === gl.SAMPLER_2D || type === gl.SAMPLER_CUBE) {
             return function () {
-                throw new Error('Textures cannot be set automatically');
+                throw new Error('Version Error: textures cannot be set automatically yet');
             };
         }
-        throw new Error('Unsupported parameter: ' + uniform.name);
+        throw new Error('Logic Error: unknown parameter type ' + uniform.name);
     }
 
     // Create all the setters
@@ -535,9 +546,13 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
 
 /** Create, initialize and create a binder for the attributes of the program.
  * @param {Number} vertexCount
+ *  Number of vertex of the program.
  * @param {Object} attributeArrays
- * @return {Object}
- *  A function (with no argument) which enables and binds all the attributes.
+ *  Arrays of values for each attribute:
+ *
+ *     attributeArrays['aName'];  // array of values for attribute 'aName'
+ * @return {Function}
+ *  A function which enables and binds all the attributes.
  * @private
  */
 GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
@@ -563,7 +578,7 @@ GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
             'itemSize': Math.round(dataArray.length / vertexCount)
         };
         if (!dataArray || attrib.itemSize * vertexCount !== dataArray.length) {
-            throw new Error('Attribute array ' + attribInfo.name + ' is missing or has an invalid length');
+            throw new Error('Argument Error: attribute array ' + attribInfo.name + ' is missing or has an invalid length.');
         }
         attributes.push(attrib);
 
@@ -603,32 +618,32 @@ GLEffect.prototype._initOutput = function (input, opts) {
 
     if (!this._uImageLength) {  // SINGLE IMAGE
         if (input instanceof Array) {
-            throw new Error('Expected a single image as input.');
+            throw new Error('Argument Error: expected a single image as input.');
         }
         if (getSize instanceof Function) {
             outsize = getSize(input);
             if (!outsize) {
-                throw new Error('Invalid images dimensions.');
+                throw new Error('Argument Error: invalid image\'s dimensions.');
             }
         }
     } else {  // ARRAY OF IMAGES
         if (!(input instanceof Array) || input.length !== this._uImageLength) {
-            throw new Error('Invalid number of input images.');
+            throw new Error('Argument Error: invalid number of input images.');
         }
         outsize = input[0];
         if (getSize instanceof Function) {
             outsize = getSize(input);
             if (!outsize) {
-                throw new Error('Invalid images dimensions.');
+                throw new Error('Argument Error: invalid images\' dimensions.');
             }
         } else if (!getSize) {
             var k, n = input.length;
             for (k = 0; k < n; ++k) {
                 if (!input[k]) {
-                    throw new Error('Invalid images');
+                    throw new Error('Argument Error: invalid images.');
                 }
                 if (input[k].width !== outsize.width || input[k].height !== outsize.height) {
-                    throw new Error('Invalid images dimensions.');
+                    throw new Error('Argument Error: invalid images\' dimensions.');
                 }
             }
         }
@@ -647,13 +662,14 @@ GLEffect.prototype._initOutput = function (input, opts) {
             Math.round(scale * outsize.height)
         );
     } else {
-        throw new Error('Conflict between opts: "scale" cannot be used with "width" nor "height".');
+        throw new Error('Argument Error: option "scale" cannot be used with "width" nor "height".');
     }
     return output;
 };
 
 /** Setup the input images as attributes.
- * @param {Image | Array} input
+ * @param {Image | HTMLElement | Array} input
+ *  Input image(s).
  * @return {GLEffect.Image}
  *  The first image.
  * @private */
@@ -887,7 +903,7 @@ GLEffect.Image.prototype._dataType = function (useBytes) {
         isFloat = false;
     } else {
         // forced to FLOAT, but not available
-        throw new Error('Cannot use float for GPU images: "OES_texture_float" extension is not supported.');
+        throw new Error('Compatibility Error: "OES_texture_float" not supported: WebGL does not support floating-point.');
     }
     return isFloat ? gl.FLOAT : gl.UNSIGNED_BYTE;
 };
@@ -1037,7 +1053,7 @@ GLEffect.Reducer._detectReturnValue = function (jsFunction) {
     var isArray = (array === undefined || array === null);
     var isScalar = (typeof scalar === 'number');
     if (isScalar === isArray) {
-        throw new Error('Cannot infer JS reduction function type.');
+        throw new Error('Error: cannot infer JS reduction function prototype.');
     }
     return isScalar;
 };
