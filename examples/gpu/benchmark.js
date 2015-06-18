@@ -77,7 +77,7 @@ function runEffect() {
     var iterCPU;
     for (iterCPU = 1; iterCPU <= im.width * im.height; iterCPU *= 2) {
         display(iterCPU, null,
-            255 * sumAll(REDUCER.run(im, iterCPU)));
+            255 * sumAll(REDUCER.run(im, {'maxIterCPU': iterCPU})));
     }
 
     // Check precision

@@ -2,50 +2,44 @@
 /*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
 
 
-// TODO: main documentation of the classes
-
-/* @class GLEffect
+/** @class GLEffect
  * Apply real-time effects on images using the GPU.
  * They are written in GLSL (GL Shading Language) and run on the GPU.
  *
- * The default effect is 'do-nothing', leaving each pixel unchanged.
- * Its GLSL source code is available and is commented:
+ * ### Creating Effects
  *
- *      console.log(GLEffect.prototype.sourceCode)
+ * A simple way to create pixel-wise effects is to use the #fromFunction method.
+ * You only need to define a GLSL function called `function` which takes
+ * as parameter a pixel's color and return the resulting color of this pixel.
+ * The color type can be either `vec3` or `vec4` for RGB or RGBA values respectively.
  *
- * Here is a simple code using an effect:
+ * ### Running Effects
  *
- *     var sourceCode = ...  // the GLSL code, as a string
- *     var effect = new GLEffect(sourceCode);
- *     effect.setParameter('uStrength', 4);
- *     effect.setParameter('uLocation', [0.5, 0.5]);
- *     var filtered = effect.run(myImage);
- *     filtered.toCanvas(myCanvas);
+ * An effect is applied using its #run method on one (or several) input image(s).
  *
- * The parameters of the effects are uniform variables in the source code.
- * A few parameters are automatically set for you:
+ * Effects can depend on some parameters which are called _uniform_ variable in GLSL.
+ * The #setParameter method provides a simple way to change their values.
  *
- * * `vPosition`, which provides the normalized position of the current pixel (in `0..1`).
- * * `uPixel`, which provides the normalized size of a pixels.
- * * `uSize`, which provides the size of the image, in pixels.
- * * `uImage`, which refers to the (array of) processed image(s).
+ * ### Advanced Effects
  *
- * As an example, the value of the bottom-right neighbor of the current pixels is:
+ * To create effects which are not pixel-wise, you can use the #constructor
+ * and write your own GLSL source code.
  *
- *      vec4 neighbor = texture2D(uImage, vPosition + uPixel);  // GLSL code
+ * A few hints:
  *
- * To avoid code duplication when writing effects (in particular the former variables),
- * consider using the code snippet contained in `GLEffect.sourceCodeHeader'.
+ * * have a look at other effect's code using the #sourceCode property.
+ * * use the `vPosition` and `uPixel` to access neighboring pixel's values.
+ * * consider using #sourceCodeHeader to avoid code duplication.
  */
-
 
 /** @constructor
  *  Create a new effect.
- * @param {String} [sourceCode]
- *  The source code of the effect, written in GLSL.<br/>
- *  _Default:_ the identity effect (output = input).<br/>
+ *
  *  _See:_ GLEffect.fromFunction for a simple constructor.<br/>
  *  _See:_ GLEffect.sourceCode to get an effect's source code.
+ * @param {String} [sourceCode]
+ *  The source code of the effect, written in GLSL.<br/>
+ *  _Default:_ the identity effect (output = input).
  * @return {GLEffect | null}
  *  The created effect. If WebGL is not supported, `null` is returned.
  * @throws {Error}
@@ -730,10 +724,10 @@ GLEffect.prototype._setupImages = function (input) {
 GLEffect.sourceCodeHeader =  (function() {
     'use strict';
     var str = '';
-    str += 'precision mediump float;                                        \n';
-    str += 'varying vec2 vPosition;    // Curent pixel position (0..1)    \n\n';
-    str += 'uniform vec2 uPixel;       // Pixel size (0..1)                 \n';
-    str += 'uniform ivec2 uSize;       // Image size (in px)                \n';
+    str += 'precision mediump float;                                      \n\n';
+    str += 'varying vec2 vPosition;    // Curent pixel position (in 0..1) \n\n';
+    str += 'uniform vec2 uPixel;       // Pixel size (in 0..1)              \n';
+    str += 'uniform ivec2 uSize;       // Image size (in pixels)            \n';
     str += 'uniform sampler2D uImage;  // Input image                     \n\n';
     return str;
 }());
@@ -955,22 +949,38 @@ GLEffect.Image.prototype._dataType = function (useBytes) {
 //  SUB-CLASS --- REDUCER
 ////////////////////////////////////////////////////////////////////////////////
 
-/** Compute a scalar value from an image (such as norm or sum).
- * @constructor
+/** @class GLEffect.Reducer
+ * Apply scalar functions on images using the GPU.
+ *
+ * The principle is the following.
+ *
+ * * The image is repeatedly reduced by a factor two using the GPU.
+ * * This process stops once the image is small enough or its size is odd.
+ * * The resulting pixel's values are then reduced to a single RGBA value (using the CPU).
+ *
+ * The main ingredient is the _reduction_.
+ * It is a function which takes 2 pixels and reduces them to a single one.
+ * Check out the #fromFunctions method to create a {@link GLEffect.Reducer Reducer}
+ *  from a reduction function.
+ */
+
+/** @constructor
  *  Create a new Reducer.
  * @param {Function} jsFunction
  *  See: GLEffect.Reducer.fromFunctions
  * @param {String} sourceCode
  *  GLSL source code.
+ * @param {Object} [opts = {}]
+ *  See: GLEffect.Reducer.fromFunctions
  * @private */
 GLEffect.Reducer = function (jsFunction, sourceCode, opts) {
     'use strict';
     opts = GLEffect._cloneOpts(opts);
     /** The GLSL reduction effect. @type {GLEffect} @private */
     this.glEffect = new GLEffect(sourceCode);
-    /** The JS reduction function. @type {Function} @private */
+    /** The JS reduction function. See: GLEffect.Reducer.fromFunctions @type {Function} @private */
     this.jsFunction = jsFunction;
-    /** Type of the JS function. @type {Boolean} @private */
+    /** Type of the JS function. See: GLEffect.Reducer.fromFunctions @type {Boolean} @private */
     this.isScalarFunction = GLEffect.Reducer._detectReturnValue(this.jsFunction);
     /** Effect to be applied before reduction. @type {GLEffect} @readonly */
     this.preEffect = GLEffect._readOpt(opts, 'pre');
@@ -981,10 +991,12 @@ GLEffect.Reducer = function (jsFunction, sourceCode, opts) {
 };
 
 /** Apply the reduction to an image.
- * @param {Image} image
- * @return {Array | Object}
- *  Return an array of length 4 with the reduced RGBA values,
- *   or the result of the post-function on it.
+ * @param {GLEffect.Image | HTMLElement} image
+ *  The image to be reduced.<br/>
+ *  _Note:_ if a pre-effect was given (through `opts`), `image` might be an array of images to run the pre-effect on.
+ * @return {Array}
+ *  An array of length 4 containing the resulting RGBA value.<br/>
+ *  _Note:_ if a post-function was given (through `opts`), the result of the post-function is returned instead of the array.
  */
 GLEffect.Reducer.prototype.run = function (image, opts) {
     'use strict';
@@ -1027,26 +1039,28 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
 
 /** Create a Reducer.
  * @param {Function} jsFunction
- *  Javascript reduction function.
- *  Its prototype must be:
+ *  The Javascript reduction function.<br/>
+ *  _Prototype:_ the function prototype can be either:
  *
  *     <Number> jsFunction(<Number>, <Number>);      // Return the result
  *       <void> jsFunction(<Array>, <const Array>);  // On place (Array = RGBA)
  * @param {String} glFunctionStr
- *  The GLSL function as a string.
- *  Its prototype must be:
+ *  The GLSL reduction function, as a string.<br/>
+ *  _Prototype:_ the function prototype must be:
  *
  *     vec4 function(vec4, vec4);  // reduction of two pixels
  * @param {Object} [opts = {}]
- *  - `pre`: GLEffect<br/>
- *      A pre-effect which is applied to `image` before reduction.
+ *  - `pre`: {@link GLEffect}<br/>
+ *      A pre-effect which is applied to `image` before the reduction.
  *  - `post` : Function<br/>
- *      A JS post-function which is applied on the reduced RGBA value.
+ *      A post-function which is applied on the resulting RGBA value.<br/>
+ *      _Prototype_: `Function(Array<4>);`
  * @return {GLEffect.Reducer}
  * @static */
 GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr, opts) {
     'use strict';
-    var str = GLEffect.sourceCodeHeader + glFunctionStr + '\n\n';
+    var str = GLEffect.sourceCodeHeader;
+    str += 'vec4 function(vec4, vec4);  // Reduction function prototype       \n\n';
     str += 'void main(void) {                                                   \n';
     str += '    gl_FragColor = function(                                        \n';
     str += '      function(                                                     \n';
@@ -1058,15 +1072,17 @@ GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr, opts) {
     str += '        texture2D(uImage, vPosition + uPixel * vec2(+0.5, +0.5))    \n';
     str += '      )                                                             \n';
     str += '    );                                                              \n';
-    str += '}                                                                   \n';
+    str += '}                                                                 \n\n';
+    str += '/* Reduction function */                                            \n';
+    str += glFunctionStr;
     return new GLEffect.Reducer(jsFunction, str, opts);
 };
 
-/** Check whether the JS reduction function takes numbers or arrays as argument.
+/** Check whether the JS reduction function takes numbers or arrays as arguments.
  * @return {Boolean}
  *  `true` iff scalar function (see: GLEffect.Reducer.fromFunctions).
  * @throws {Error}
- *  If function return value is incoherent.
+ *  If the function's return value is incoherent.
  * @static @private */
 GLEffect.Reducer._detectReturnValue = function (jsFunction) {
     'use strict';
