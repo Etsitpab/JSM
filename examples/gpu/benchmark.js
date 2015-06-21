@@ -6,7 +6,7 @@
 
 
 // Global variables
-var REDUCER, GRAYIFYER, MIXER;
+var REDUCTION, GRAYIFYER, MIXER;
 var IMAGE, TIME;
 
 // Shortcut for 'getElementById'
@@ -69,7 +69,7 @@ function display(str, ref, value) {
 // Create and run the GLEffect
 function runEffect() {
     var sum = imageSum(IMAGE);
-    var im = new GLEffect.Image(IMAGE);
+    var im = new GLImage(IMAGE);
     tic();
 
     // Check time
@@ -77,7 +77,7 @@ function runEffect() {
     var iterCPU;
     for (iterCPU = 1; iterCPU <= im.width * im.height; iterCPU *= 2) {
         display(iterCPU, null,
-            255 * sumAll(REDUCER.run(im, {'maxIterCPU': iterCPU})));
+            255 * sumAll(REDUCTION.run(im, {'maxIterCPU': iterCPU})));
     }
 
     // Check precision
@@ -91,11 +91,11 @@ function runEffect() {
     display('GLImage, Float32', sum,
         255 * sumAll(im.toArray(Float32Array)));
     display('Reducer, GPU', sum,
-        255 * sumAll(REDUCER.run(im, {'maxIterCPU': 0})));
+        255 * sumAll(REDUCTION.run(im, {'maxIterCPU': 0})));
     display('Reducer, CPU', sum,
-        255 * sumAll(REDUCER.run(im, {'maxIterCPU': Infinity})));
+        255 * sumAll(REDUCTION.run(im, {'maxIterCPU': Infinity})));
     display('Reducer, hybrid', sum,
-        255 * sumAll(REDUCER.run(im)));
+        255 * sumAll(REDUCTION.run(im)));
 
     // Display
     var gray = GRAYIFYER.run(im);
@@ -159,7 +159,7 @@ function makeDropArea(elmt) {
 // Initialize the demo
 function init() {
     makeDropArea(document);
-    REDUCER = GLEffect.Reducer.fromFunctions(
+    REDUCTION = GLReduction.fromFunctions(
         function (a, b) {
             return a + b;
         },

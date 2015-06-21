@@ -2,6 +2,10 @@
 /*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
 
 
+// Forward declarations
+var GLEffect, GLImage, GLReduction;
+
+
 /** @class GLEffect
  * Apply real-time effects on images using the GPU.
  * They are written in GLSL (GL Shading Language) and run on the GPU.
@@ -95,7 +99,7 @@ function GLEffect(sourceCode) {
 ////////////////////////////////////////////////////////////////////////////////
 
 /** Apply the effect.
- * @param {GLEffect.Image | HTMLElement | Array} image
+ * @param {GLImage | HTMLElement | Array} image
  *  Input image or array of input images (for multi-images effects).
  *  Images can be `img`, `canvas`, or `video` elements.
  * @param {Object} [opts = {}]
@@ -108,7 +112,7 @@ function GLEffect(sourceCode) {
  *  - `getSize`: Function<br/>
  *      _Argument:_ the `image` argument.<br/>
  *      _Returns:_ the size of the output image, or `false` on error.
- * @return {GLEffect.Image}
+ * @return {GLImage}
  * @throws {Error}
  *  If input image(s) has invalid type or dimensions.
  */
@@ -627,11 +631,11 @@ GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
 };
 
 /** Initialize the input and output images.
- * @param {GLEffect.Image | HTMLElement | Array} input
+ * @param {GLImage | HTMLElement | Array} input
  *  Input image(s).
  * @param {Object} opts
  *  The `opts` parameters of GLEffect.run.
- * @return {GLEffect.Image}
+ * @return {GLImage}
  *  The output image, initialized.
  * @throws {Error}
  *  If images has invalid types or dimensions.
@@ -676,7 +680,7 @@ GLEffect.prototype._initOutput = function (input, opts) {
     }
 
     // Create output image with given dimensions
-    var output = new GLEffect.Image();
+    var output = new GLImage();
     if (!scale) {
         output.resize(
             GLEffect._readOpt(opts, 'width', outsize.width),
@@ -696,13 +700,13 @@ GLEffect.prototype._initOutput = function (input, opts) {
 /** Setup the input images as attributes.
  * @param {Image | HTMLElement | Array} input
  *  Input image(s).
- * @return {GLEffect.Image}
+ * @return {GLImage}
  *  The first image.
  * @private */
 GLEffect.prototype._setupImages = function (input) {
     'use strict';
     var asImage = function (img) {
-        return (img instanceof GLEffect.Image) ? img : new GLEffect.Image(img);
+        return (img instanceof GLImage) ? img : new GLImage(img);
     };
     if (!(input instanceof Array)) {
         var image = asImage(input);
@@ -780,7 +784,7 @@ GLEffect.prototype._context = null;
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
-//  SUB-CLASS --- IMAGE
+//  CLASS: GL IMAGE
 ////////////////////////////////////////////////////////////////////////////////
 
 /** An image stored on the GPU.
@@ -792,7 +796,7 @@ GLEffect.prototype._context = null;
  * @param {HTMLElement} [image]
  *  Image to be loaded. Can be an `img`, `canvas`, or `video` elements.
  */
-GLEffect.Image = function (image) {
+function GLImage(image) {
     'use strict';
     var gl = GLEffect._getDefaultContext();
     /** @private @type {WebGLRenderingContext} */
@@ -821,13 +825,13 @@ GLEffect.Image = function (image) {
         this.load(image);
     }
     return this;
-};
+}
 
 /** Clear and resize the image.
  * @param {Number} width
  * @param {Number} height
  */
-GLEffect.Image.prototype.resize = function (width, height) {
+GLImage.prototype.resize = function (width, height) {
     'use strict';
     var gl = this._context;
     var type = this._dataType();
@@ -843,7 +847,7 @@ GLEffect.Image.prototype.resize = function (width, height) {
  * @param {HTMLElement} image
  *  Image to be loaded.
  */
-GLEffect.Image.prototype.load = function (image) {
+GLImage.prototype.load = function (image) {
     'use strict';
     var gl = this._context;
     var type = this._dataType();
@@ -871,7 +875,7 @@ GLEffect.Image.prototype.load = function (image) {
  * @throws {Error}
  *  If a float array is requested but GLEffect does not support floating-point images.
  */
-GLEffect.Image.prototype.toArray = function (outArray) {
+GLImage.prototype.toArray = function (outArray) {
     'use strict';
     var gl = this._context;
     var type = this._dataType();
@@ -896,7 +900,7 @@ GLEffect.Image.prototype.toArray = function (outArray) {
  *  The resulting canvas, or `null` if the canvas does not support it.<br/>
  *  _Support failure:_ if the canvas is already used within a different context (e.g. WebGL).
  */
-GLEffect.Image.prototype.toCanvas = function (outCanvas) {
+GLImage.prototype.toCanvas = function (outCanvas) {
     'use strict';
     outCanvas = outCanvas || document.createElement('canvas');
     outCanvas.width = this.width;
@@ -922,7 +926,7 @@ GLEffect.Image.prototype.toCanvas = function (outCanvas) {
  * @throws {Error}
  *  If `useBytes=false` and float extension is not available.
  * @private */
-GLEffect.Image.prototype._dataType = function (useBytes) {
+GLImage.prototype._dataType = function (useBytes) {
     'use strict';
     var gl = this._context;
     var isFloat;
@@ -946,10 +950,10 @@ GLEffect.Image.prototype._dataType = function (useBytes) {
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
-//  SUB-CLASS --- REDUCER
+//  CLASS: GLREDUCTION
 ////////////////////////////////////////////////////////////////////////////////
 
-/** @class GLEffect.Reducer
+/** @class GLReduction
  * Apply scalar functions on images using the GPU.
  *
  * The principle is the following.
@@ -958,57 +962,44 @@ GLEffect.Image.prototype._dataType = function (useBytes) {
  * * This process stops once the image is small enough or its size is odd.
  * * The resulting pixel's values are then reduced to a single RGBA value (using the CPU).
  *
- * The main ingredient is the _reduction_.
- * It is a function which takes 2 pixels and reduces them to a single one.
- * Check out the #fromFunctions method to create a {@link GLEffect.Reducer Reducer}
+ * The main ingredient is the reduction function.
+ * It takes 2 pixels and reduces them to a single one.
+ * Check out the #fromFunctions method to create a {@link GLReduction Reduction}
  *  from a reduction function.
  */
 
 /** @constructor
- *  Create a new Reducer.
+ *  Create a new reduction.
  * @param {Function} jsFunction
- *  See: GLEffect.Reducer.fromFunctions
+ *  See: GLReduction.fromFunctions
  * @param {String} sourceCode
  *  GLSL source code.
- * @param {Object} [opts = {}]
- *  See: GLEffect.Reducer.fromFunctions
  * @private */
-GLEffect.Reducer = function (jsFunction, sourceCode, opts) {
+function GLReduction(jsFunction, sourceCode) {
     'use strict';
-    opts = GLEffect._cloneOpts(opts);
     /** The GLSL reduction effect. @type {GLEffect} @private */
     this.glEffect = new GLEffect(sourceCode);
-    /** The JS reduction function. See: GLEffect.Reducer.fromFunctions @type {Function} @private */
+    /** The JS reduction function. See: GLReduction.fromFunctions @type {Function} @private */
     this.jsFunction = jsFunction;
-    /** Type of the JS function. See: GLEffect.Reducer.fromFunctions @type {Boolean} @private */
-    this.isScalarFunction = GLEffect.Reducer._detectReturnValue(this.jsFunction);
-    /** Effect to be applied before reduction. @type {GLEffect} @readonly */
-    this.preEffect = GLEffect._readOpt(opts, 'pre');
-    /** Function to be applied on the reduced RGBA value. @type {Function} @readonly */
-    this.postFunction = GLEffect._readOpt(opts, 'post');
-    GLEffect._readOpt(opts);
+    /** Type of the JS function. See: GLReduction.fromFunctions @type {Boolean} @private */
+    this.isScalarFunction = GLReduction._detectReturnValue(this.jsFunction);
     return this;
-};
+}
 
 /** Apply the reduction to an image.
- * @param {GLEffect.Image | HTMLElement} image
- *  The image to be reduced.<br/>
- *  _Note:_ if a pre-effect was given (through `opts`), `image` might be an array of images to run the pre-effect on.
+ * @param {GLImage | HTMLElement} image
+ *  The image to be reduced.
  * @return {Array}
- *  An array of length 4 containing the resulting RGBA value.<br/>
- *  _Note:_ if a post-function was given (through `opts`), the result of the post-function is returned instead of the array.
+ *  An array of length 4 containing the resulting RGBA value.
  */
-GLEffect.Reducer.prototype.run = function (image, opts) {
+GLReduction.prototype.run = function (image, opts) {
     'use strict';
     opts = GLEffect._cloneOpts(opts);
     var maxIterCPU = GLEffect._readOpt(opts, 'maxIterCPU', 1024);
     GLEffect._readOpt(opts);
-    if (!(image instanceof GLEffect.Image)) {
+    if (!(image instanceof GLImage)) {
         var input = image;
-        image = new GLEffect.Image(input);
-    }
-    if (this.preEffect) {
-        image = this.preEffect.run(image);
+        image = new GLImage(input);
     }
     var isPositiveEven = function (n) {
         return (n > 0) && (n % 2 === 0);
@@ -1034,10 +1025,10 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
             result[3] = this.jsFunction(result[3], array[k + 3]);
         }
     }
-    return this.postFunction ? this.postFunction(result) : result;
+    return result;
 };
 
-/** Create a Reducer.
+/** Create a Reduction.
  * @param {Function} jsFunction
  *  The Javascript reduction function.<br/>
  *  _Prototype:_ the function prototype can be either:
@@ -1049,15 +1040,9 @@ GLEffect.Reducer.prototype.run = function (image, opts) {
  *  _Prototype:_ the function prototype must be:
  *
  *     vec4 function(vec4, vec4);  // reduction of two pixels
- * @param {Object} [opts = {}]
- *  - `pre`: {@link GLEffect}<br/>
- *      A pre-effect which is applied to `image` before the reduction.
- *  - `post` : Function<br/>
- *      A post-function which is applied on the resulting RGBA value.<br/>
- *      _Prototype_: `Function(Array<4>);`
- * @return {GLEffect.Reducer}
+ * @return {GLReduction}
  * @static */
-GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr, opts) {
+GLReduction.fromFunctions = function (jsFunction, glFunctionStr) {
     'use strict';
     var str = GLEffect.sourceCodeHeader;
     str += 'vec4 function(vec4, vec4);  // Reduction function prototype       \n\n';
@@ -1075,16 +1060,16 @@ GLEffect.Reducer.fromFunctions = function (jsFunction, glFunctionStr, opts) {
     str += '}                                                                 \n\n';
     str += '/* Reduction function */                                            \n';
     str += glFunctionStr;
-    return new GLEffect.Reducer(jsFunction, str, opts);
+    return new GLReduction(jsFunction, str);
 };
 
 /** Check whether the JS reduction function takes numbers or arrays as arguments.
  * @return {Boolean}
- *  `true` iff scalar function (see: GLEffect.Reducer.fromFunctions).
+ *  `true` iff scalar function (see: GLReduction.fromFunctions).
  * @throws {Error}
  *  If the function's return value is incoherent.
  * @static @private */
-GLEffect.Reducer._detectReturnValue = function (jsFunction) {
+GLReduction._detectReturnValue = function (jsFunction) {
     'use strict';
     var array, scalar;
     try {

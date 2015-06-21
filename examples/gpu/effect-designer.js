@@ -23,7 +23,7 @@ function runEffects() {
     if (!input) {
         return;
     }
-    var image = new GLEffect.Image(input);
+    var image = new GLImage(input);
     var k;
     for (k = 0; k < FILTERS.length; k++) {
         if (!FILTERS[k].ui_disabled) {
