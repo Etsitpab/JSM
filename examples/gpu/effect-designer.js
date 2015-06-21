@@ -1,15 +1,29 @@
-/*global GLEffect, FileReader */
+/*global GLEffect, GLImage, FileReader, MediaStreamTrack */
 /*jslint vars: true, nomen: true, browser: true, plusplus: true */
 /*exported init */
 
 'use strict';
 
 
+// Global variables (for console usage)
+var CLICKED;  // refer to the last double-clicked HTML element
+var OUTPUT;   // output canvas
+var OUTAUX;   // an extra output canvas
+
+
 // Global variables
-var IMAGE, VIDEO, IS_VIDEO;
-var CLICKED, OUTPUT, OUTAUX;
+var IMAGE, VIDEO;   // image and video elements
+var IS_VIDEO;       // current intput type (boolean)
+var WEBCAM_STREAM;  // webcam stream (don't forget to stop it)
 var TIMER;
 var FILTERS;
+
+
+// Cross-navigator variables
+window.URL = (window.URL || window.webkitURL || window.mozURL || window.msURL);
+navigator.getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia
+    || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+
 
 // Shortcut for 'getElementById'
 function $(str) {
@@ -39,19 +53,30 @@ function runEffects() {
 /********** DATA LOADING FUNCTIONS **********/
 
 // Reset input to 1x1 pixel
-function resetInputImages() {
+function resetInputImages(dontResetWebcam) {
     var image = $('inputImage');
     image.width = '1px';
     image.height = '1px';
     var video = $('inputVideo');
     video.width = '1px';
     video.height = '1px';
+    if (TIMER) {
+        clearInterval(TIMER);
+        TIMER = null;
+    }
+    if (WEBCAM_STREAM) {
+        WEBCAM_STREAM.stop();
+        WEBCAM_STREAM = null;
+    }
+    if (!dontResetWebcam) {
+        $('webcamChooser').selectedIndex = 0;
+    }
 }
 
 // Callback function: process a frame of the VIDEO
 function processVideoFrame() {
     runEffects();
-    if (VIDEO.paused && TIMER) {
+    if (TIMER && (VIDEO.paused || VIDEO.ended)) {
         clearInterval(TIMER);
         TIMER = null;
     }
@@ -77,6 +102,8 @@ function loadImageFromUrl() {
 // Callback function: load the video
 function loadVideoFromUrl() {
     var video = $('inputVideo');
+    video.controls = true;
+    video.autoplay = false;
     video.src = this;
     var runEffectLoop = function () {
         if (!TIMER) {
@@ -116,6 +143,59 @@ function fileSelectionCallback() {
         };
         reader.readAsDataURL(file);
     }
+}
+
+// List the available webcams, if any
+function listWebcams() {
+    if (!MediaStreamTrack || !MediaStreamTrack.getSources) {
+        $('webcamChooser').style.display = 'none';
+    } else {
+        $('webcamLauncher').style.display = 'none';
+        MediaStreamTrack.getSources(function(srcs) {
+            var i, name, opt, list = $('webcamChooser');
+            for (i = 0; i < srcs.length; ++i) {
+                if (srcs[i].kind === 'video') {
+                    name = srcs[i].label || 'Webcam: ' + (srcs[i].facing || i);
+                    opt = document.createElement('option');
+                    opt.value = srcs[i].id;
+                    opt.appendChild(document.createTextNode(name));
+                    list.appendChild(opt);
+                }
+            }
+        });
+    }
+}
+
+// Callback function: handle the webcam list
+function startWebcam(id) {
+    resetInputImages(true);
+    if (id === 'none') {
+        return;
+    }
+    var videoOpts = id ? {'optional': [{'sourceId': id}] } : true;
+    var video = $('inputVideo');
+    video.controls = false;
+    video.autoplay = true;
+    navigator.getUserMedia(
+        {'audio': false, 'video': videoOpts},
+        function (stream) {
+            WEBCAM_STREAM = stream;
+            video.src = window.URL ? window.URL.createObjectURL(stream) : stream;
+            video.play();
+        },
+        function () {
+            window.alert('Runtime Error: cannot launch the webcam.');
+        }
+    );
+    video.oncanplaythrough = function () {
+        video.width = video.videoWidth;
+        video.height = video.videoHeight;
+        VIDEO = video;
+        IS_VIDEO = true;
+        if (!TIMER) {
+            TIMER = setInterval(processVideoFrame, 1);
+        }
+    };
 }
 
 // Allow this element to be dropped on
@@ -194,7 +274,7 @@ function refreshFilterList() {
     var n, filter, name, group, opt, params;
     for (n = 0; n < FILTERS.length; n++) {
         filter = FILTERS[n];
-        name = filter.ui_name || 'Default';
+        name = filter.ui_name || 'default';
         // filters list
         opt = document.createElement('option');
         opt.appendChild(document.createTextNode(name));
@@ -257,11 +337,41 @@ function compileSelectedFilter() {
 }
 
 // Add a new filter in the list
-function appendNewFilter() {
-    var filter = new GLEffect();
+function appendNewFilter(filter) {
+    filter = filter || new GLEffect();
     FILTERS = FILTERS || [];
     FILTERS.push(filter);
     refreshFilterList();
+    runEffects();
+}
+
+// Import the selected filter
+function appendSelectedFilter() {
+    var elmt = $('filterSamples');
+    var name = (elmt.selectedIndex >= 0) ? elmt.options[elmt.selectedIndex].value : null;
+    var filter = GLEffect.sample && GLEffect.sample[name];
+    elmt.selectedIndex = 0;
+    if (filter) {
+        filter.ui_name = name;
+        appendNewFilter(filter);
+    }
+}
+
+// Create the list of available filters
+function listAvailableFilters() {
+    var elmt = $('filterSamples');
+    var name, opt;
+    if (!GLEffect.sample) {
+        elmt.style.display = 'none';
+    } else {
+        for (name in GLEffect.sample) {
+            if (GLEffect.sample.hasOwnProperty(name)) {
+                opt = document.createElement('option');
+                opt.appendChild(document.createTextNode(name));
+                elmt.appendChild(opt);
+            }
+        }
+    }
 }
 
 // Delete the selected filter
@@ -279,7 +389,7 @@ function expandSelectedFilter(doView) {
     if (doView && filter) {
         // View
         $('filterDetails').style.display = '';
-        $('shaderName').value = filter.ui_name || 'Default';
+        $('shaderName').value = filter.ui_name || 'default';
         $('shaderOpts').value = JSON.stringify(filter.ui_opts || {});
         $('shaderCode').value = removeTrailingSpaces(filter.sourceCode);
         $('shaderEnabled').checked = !filter.ui_disabled;
@@ -362,4 +472,6 @@ function init() {
         console.log(CLICKED);
     };
     appendNewFilter();
+    listAvailableFilters();
+    listWebcams();
 }

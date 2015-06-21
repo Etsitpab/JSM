@@ -4,6 +4,7 @@
     <title>GPU Processing</title>
 
     <script type="text/javascript" src="GLEffect.class.js"></script>
+    <script type="text/javascript" src="GLEffect.more.js"></script>
     <script type="text/javascript" src="effect-designer.js"></script>
 
     <style>
@@ -21,12 +22,19 @@
       <!-- INPUT IMAGE/VIDEO -->
       <fieldset id="dropZone">
         <legend>Input Image/Video</legend>
-        <input type="button" value="Select" onclick="$('inputFile').click()"
-            title="Load an image or a video..."/>
-        or drag here an image or a video...<br/>
+        Drag an image/video here<br/>
+        <input type="button" value="Select an image/video..."
+            onclick="$('inputFile').click()"
+            title="Load an image or a video..."/><br/>
+        <input id="webcamLauncher" type="button" value="Launch a webcam..."
+            onclick="startWebcam()"
+            title="Start the default webcam"/>
+        <select id="webcamChooser" onchange="startWebcam(this.value)">
+          <option value="none">Choose a webcam...</option>
+        </select><br/>
         <input type="file" id="inputFile" style="display:none"/>
         <img id="inputImage" width="1" height="1"/>
-        <video id="inputVideo" width="1" height="1" controls="controls" src=""></video>
+        <video id="inputVideo" width="1" height="1"></video>
       </fieldset>
       <!-- FILTERS MENU -->
       <fieldset>
@@ -41,7 +49,12 @@
                   title="List of active filter (click to edit)">
                 <option>Loading...</option>
               </select><br/>
-              <input type="button" value="New..." onclick="appendNewFilter()" title="Add a new filter">
+              <input type="button" value="New filter" onclick="appendNewFilter()"
+                  title="Add a new filter"><br/>
+              <select id="filterSamples" onchange="appendSelectedFilter()"
+                  title="Import an existing filter">
+                <option value="_title_">Import a filter...</option>
+              </select>
             </td>
             <!-- filter details -->
             <td id="filterDetails" style="display: none; padding-left: 20px">
