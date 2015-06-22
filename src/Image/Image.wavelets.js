@@ -72,7 +72,7 @@
                 sumL += kernelL[k] * idL[s];
                 sumH += kernelH[k] * idH[s];
             }
-            console.log(oy, sig, y, ny);
+            console.log("y =", y, "oy =", oy, sig);
             // console.log(oy, valL, y, ny);
             // console.log(oy, valk, y, ny);
             // console.log(sumL, sumH, sumH + sumL);
@@ -97,6 +97,13 @@
         case "nn":
             filter1D = filter1DSym;
             break;
+        case "debug_sym":
+        case "debug_symw":
+        case "debug_zpd":
+        case "debug_nn":
+            mode = mode.substr(6);
+            filter1D = filter1DSymDebug;
+            break;
         default:
             throw new Error("Matrix.dwtmode: invalid mode " + mode + "."); 
         }
@@ -104,9 +111,9 @@
     };
     Matrix.dwtmode("per");
     
-    var filterND = function (inL, inH, vI, kernelL, kernelH, origin, sub, outL, outH, vO) {
+    var filterND = function (inL, inH, vI, kL, kH, origin, sub, outL, outH, vO) {
 
-        var K = kernelL.length;
+        var K = kL.length;
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
         var isOdd = vI.getSize(0) % 2 ? true : false; 
      
@@ -128,7 +135,7 @@
         var k, s, sTmp, sumL, sumH;
         for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
             var yx0 = ys + i, nyx = ly + i;
-            filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH);
+            filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, kH, idL, idH, odL, odH);
         }
     };
 
@@ -146,19 +153,24 @@
         // Left and right output padding
         var lo = c(rk / 2),
             ro = isOdd ? c(lk / 2) : f(lk / 2);
+        if (K === 2) {
+            li = 0;
+            ri = isOdd ? 1 : 0;
+            lo = 0;
+            ro = isOdd ? 1 : 0;
+        }
         return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
     };
-
-    /*
     var padTest = function (isOdd) {
         console.log("For " + (isOdd ? "odd" : "even") + " signal");
         var data = {}, f = Math.floor, c = Math.ceil;
         for (var K = 2; K < 20; K += 2) {
             data[K] = getPaddingInfos(K, isOdd ? 1 : 2);
         }
-        console.table(data, ["lk", "rk", "li", "lo", "ri", "ro"]);
+        console.table(data, ["lk", "rk", "li", "ri", "lo", "ro"]);
     };
-     */
+
+
     var dwt = function (s, name, dim) {
         var wav = Matrix.wfilters(name, 'd');
         var fL = wav[0].getData(), fH = wav[1].getData();
@@ -883,40 +895,71 @@
     
     window.addEventListener("load", function () {
 
-        // padTest(false);
-        // padTest(true);
-
-        var test2 = function () {
-            var name = 'sym4';
-            var modes = ["sym", "symw", "per", "zpd"];
-            var tests = {};
-            for (var m in modes) {
-                Matrix.dwtmode(modes[m]);
-                for (var sz = 2; sz < 20; sz += 2) {
-                    var s = Matrix.rand(sz, sz, sz).cumsum(0).cumsum(1);
+        var test = function () {
+            var names = [
+                'haar',
+                // 'coif1', 'bi13',
+                'db2', 'db4', 'db8',
+                'coif2', 'coif4', 'coif4', 
+                'sym2', 'sym4', 'sym8'
+            ];
+            var modes = ["sym", "symw", "per", "zpd", "nn"];
+            var tests = {}, time;
+            var max = 8;
+            for (var m = 0; m < Math.max(names.length, modes.length); m++) {
+                var mode = modes[m % modes.length];
+                var name = names[m % names.length];
+                Matrix.dwtmode(mode);
+                Tools.tic();
+                console.log(name, mode, time);
+                for (var sz = 2; sz <= max; sz *= 2) {
+                    var s = Matrix.rand(sz, sz);
+                    s.display();
+                    Tools.tic();
                     var wt1 = dwt(s, name, 0);
                     var iwt = idwt(wt1, name, 0);
+                    iwt.display();
                     var wt2 = dwt(wt1[0], name, 1).concat(dwt(wt1[1], name, 1));
                     var iwt1 = idwt([wt2[0], wt2[1]], name, 1);
                     var iwt2 = idwt([wt2[2], wt2[3]], name, 1);
                     var iwt3 = idwt([iwt1, iwt2], name, 0);
-                    
+
+                    time = Tools.toc();
                     var n1 = Matrix.minus(iwt1, wt1[0]).norm(),
                         n2 = Matrix.minus(iwt2, wt1[1]).norm(),
                         n3 = Matrix.minus(iwt, s).norm(),
                         n4 = Matrix.minus(iwt3, s).norm();
-                    tests[sz + " " + modes[m]] = {
-                        "n1": n1,
-                        "n2": n2,
-                        "n3": n3, 
-                        "n4": n4, 
-                        "status": (n1 + n2 + n3 + n4) / 4 < 1e8 ? "ok": "NOK" 
+                    tests[sz] = {
+                        "n1": parseFloat(n1.toExponential(2)),
+                        "n2": parseFloat(n2.toExponential(2)),
+                        "n3": parseFloat(n3.toExponential(2)), 
+                        "n4": parseFloat(n4.toExponential(2)) ,
+                        "status": (n1 + n2 + n3 + n4) / 4 < 1e8 ? "ok": "NOK",
+                        "time": time
                     };
                 }
+                time = Tools.toc();
+                console.table(tests, ["status", "time", "n1", "n2", "n3", "n4"]);
             }
-            console.table(tests, ["status", "n1", "n2", "n3", "n4"]);
 
             Matrix.dwtmode("per");
+        };
+
+        var test2 = function () {
+            var name = 'coif2';
+            var mode = "debug_zpd"; 
+            Matrix.dwtmode(mode);
+            var s = Matrix.ones(3, 1).cumsum(0).cumsum(1);
+            s.display("s");
+            var wt1 = dwt(s, name, 0);
+            wt1[0].display("L");
+            wt1[1].display("H");
+            Matrix.dwtmode("zpd");
+            // var iwt = idwt(wt1, name, 0);
+            // iwt.display("iwt");
+            // Matrix.dwtmode("per");
+            // padTest(false);
+            // padTest(true);
         };
 
         var test3 = function () {
@@ -925,7 +968,7 @@
             
             im.display("image");
             var mode = ["sym"];
-            for (var x in mode){
+            for (var x in mode) {
                 Matrix.dwtmode(mode[x]);
                 var wt = Matrix.dwt2(im, name);
                 wt[0].display("LL");
@@ -939,8 +982,7 @@
             Matrix.dwtmode("per");
         };
 
-        // var sel = getIndiceSymw(6, 10, 11);
-        // console.log(sel, sel.length);
+        // test();
         test2();
         // test3();
     }, false);
