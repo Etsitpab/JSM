@@ -4,6 +4,23 @@
 /** Sample effects. @singleton @class GLEffect.sample */
 GLEffect.sample = {};
 
+/** Identity effect (using the raw source code) */
+GLEffect.sample.id_raw = new GLEffect();
+
+/** Identity effect (using the RGB function form) */
+GLEffect.sample.id_RGB = GLEffect.fromFunction([
+    'vec3 function(vec3 color) {',
+    '    return color;',
+    '}'
+].join('\n'));
+
+/** Identity effect (using the RGBA function form) */
+GLEffect.sample.id_RGBA = GLEffect.fromFunction([
+    'vec4 function(vec4 color) {',
+    '    return color;',
+    '}'
+].join('\n'));
+
 /** Pixel-wise absolute value. @type {GLEffect} */
 GLEffect.sample.abs = GLEffect.fromFunction([
     'vec3 function(vec3 color) {',

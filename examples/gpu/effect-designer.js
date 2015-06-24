@@ -380,6 +380,7 @@ function deleteSelectedFilter() {
     if (n >= 0) {
         FILTERS.splice(n, 1);
         refreshFilterList();
+        runEffects();
     }
 }
 
