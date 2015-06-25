@@ -148,23 +148,19 @@
         var lk = f((K - 1) / 2),
             rk = c((K - 1) / 2);
         // Left and right input padding
-        var li = c(rk / 2) * 2 + lk - 1,
-            ri = isOdd ? c(lk / 2) * 2 + rk - 1 : f(lk / 2) * 2 + rk;
+        var li = K - 2,
+            ri = K - 2 + (isOdd ? 1 : 0);
         // Left and right output padding
         var lo = c(rk / 2),
             ro = isOdd ? c(lk / 2) : f(lk / 2);
-        if (K === 2) {
-            li = 0;
-            ri = isOdd ? 1 : 0;
-            lo = 0;
-            ro = isOdd ? 1 : 0;
-        }
+        var lo = f(li / 4),
+            ro = isOdd ? f(ri / 4) + 1 : c(li / 4);
         return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
     };
     var padTest = function (isOdd) {
         console.log("For " + (isOdd ? "odd" : "even") + " signal");
         var data = {}, f = Math.floor, c = Math.ceil;
-        for (var K = 2; K < 20; K += 2) {
+        for (var K = 2; K < 16; K += 2) {
             data[K] = getPaddingInfos(K, isOdd ? 1 : 2);
         }
         console.table(data, ["lk", "rk", "li", "ri", "lo", "ro"]);
@@ -897,13 +893,14 @@
 
         var test = function () {
             var names = [
-                'haar',
-                // 'coif1', 'bi13',
-                'db2', 'db4', 'db8',
-                'coif2', 'coif4', 'coif4', 
-                'sym2', 'sym4', 'sym8'
+                'haar', 'coif1', 
+                'sym2', 'sym4', 'sym8',
+                // 'bi13',
+                'db2', 'db4', 'db8'
+                // 'coif2', 'coif4', 'coif4', 
             ];
             var modes = ["sym", "symw", "per", "zpd", "nn"];
+            var modes = ["zpd"];
             var tests = {}, time;
             var max = 8;
             for (var m = 0; m < Math.max(names.length, modes.length); m++) {
@@ -914,11 +911,11 @@
                 console.log(name, mode, time);
                 for (var sz = 2; sz <= max; sz *= 2) {
                     var s = Matrix.rand(sz, sz);
-                    s.display();
+                    // s.display();
                     Tools.tic();
                     var wt1 = dwt(s, name, 0);
                     var iwt = idwt(wt1, name, 0);
-                    iwt.display();
+                    // iwt.display();
                     var wt2 = dwt(wt1[0], name, 1).concat(dwt(wt1[1], name, 1));
                     var iwt1 = idwt([wt2[0], wt2[1]], name, 1);
                     var iwt2 = idwt([wt2[2], wt2[3]], name, 1);
@@ -946,10 +943,11 @@
         };
 
         var test2 = function () {
-            var name = 'coif2';
+            var name = 'sym2';
             var mode = "debug_zpd"; 
             Matrix.dwtmode(mode);
             var s = Matrix.ones(3, 1).cumsum(0).cumsum(1);
+            // var s = Matrix.toMatrix([0, 1]);
             s.display("s");
             var wt1 = dwt(s, name, 0);
             wt1[0].display("L");
@@ -958,8 +956,8 @@
             // var iwt = idwt(wt1, name, 0);
             // iwt.display("iwt");
             // Matrix.dwtmode("per");
-            // padTest(false);
-            // padTest(true);
+            padTest(false);
+            padTest(true);
         };
 
         var test3 = function () {
