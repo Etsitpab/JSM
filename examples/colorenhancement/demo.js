@@ -65,7 +65,7 @@ function updateOutput() {
 
 var colEn = function () {
     "use strict";
-    
+    Matrix.dwtmode("sym");
     var getParameters = function () {
         return {
             K: $F("K"),

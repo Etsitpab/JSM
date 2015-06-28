@@ -263,7 +263,6 @@
         psnr = Matrix.psnr(s, out.get([], [0, s.size(1) - 1])).getDataScalar();
         log("DWT 1D decomposition/reconstruction", psnr, time);
 
-
         var SQN = Math.round(Math.pow(N * N * 3, 1 / 3)) + 1;
         s = Matrix.ones(SQN, SQN, SQN).cumsum(1)["-"](1);
         Tools.tic();
