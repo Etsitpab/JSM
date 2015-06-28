@@ -56,6 +56,9 @@
         K = (K === undefined) ? 20 : K;
         average = (average === undefined) ? "channel" : average;
 
+        var initialMode = Matrix.dwtmode();
+        Matrix.dwtmode("sym");
+
         var im = this.im2double(), out = Matrix.zeros(im.size());
         var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
         
@@ -105,6 +108,8 @@
             var channel = wt[c][0].reshape(wt[c][1].get(0).getData());
             out.set([], [], c, channel);
         }
+
+        Matrix.dwtmode(initialMode);
         return out;
     };
     
@@ -115,7 +120,10 @@
         w = (w === undefined) ? 15 / 255 : w;
         name = (name === undefined) ? 'sym4' : name;
         K = (K === undefined) ? 20 : K;
-        
+
+        var initialMode = Matrix.dwtmode();
+        Matrix.dwtmode("sym");
+
         var im = this.im2double()
         var out = Matrix.zeros(im.size());
         var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
@@ -136,6 +144,7 @@
             var channel = wt[0].reshape(wt[1].get(0).getData());
             out.set([], [], c, channel);
         }
+        Matrix.dwtmode(initialMode);
         return out;
     };
 })();
