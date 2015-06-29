@@ -60,7 +60,7 @@
         Matrix.dwtmode("sym");
 
         var im = this.im2double(), out = Matrix.zeros(im.size());
-        var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
+        var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name) - 1;
         
         var nChannel = im.size(2), wt = [];
         var mean = [], max = [], min = [];
@@ -90,8 +90,8 @@
             } else if (average === "half") {
                 norm = wNorm * 0.5; 
             }
-            // A["-="](imMin)["*="](wNorm / (imMax - imMin));
-            // A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
+            //A["-="](imMin)["*="](wNorm / (imMax - imMin));
+            A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
             A["*="](1 - alpha)["+="](norm * alpha);
         }
 

@@ -20,8 +20,7 @@
 (function (Matrix, Matrix_prototype) {
     'use strict';
     
-    /** @class Matrix */
-    var filter1DPer = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    /** @class Matrix */var filter1DPer = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
@@ -144,7 +143,7 @@
         }
         dwtmode = mode;
     };
-    Matrix.dwtmode("per");
+    Matrix.dwtmode("sym");
     
     var filterND = function (inL, inH, vI, kL, kH, origin, sub, outL, outH, vO) {
 
@@ -185,6 +184,7 @@
         var li = K - 2, ri = K - 2 + (isOdd ? 1 : 0);
         // Left and right output padding
         var lo = f(li / 4), ro = c(ri / 4);
+        // On odd signal, the number of  
         if (isOdd && (K % 4) !== 0) {
             ro--;
         }
@@ -524,7 +524,6 @@
         cSizes[0] = cSizes[1];
         return Matrix.toMatrix([ySizes, xSizes, cSizes])
     };
-
     var getSubbandsCoordinates = function (lc) {
         var ySizes = lc.get([], 0).getData(),
             xSizes = lc.get([], 1).getData(),
@@ -552,7 +551,6 @@
             "J": J
         };
     };
-    
     // Function used to resize approximation coefficient matrix
     // to its original size after reconstruction.
     var resizeMatrix = function (A, ds, l) {
@@ -925,58 +923,7 @@
     
     window.addEventListener("load", function () {
 
-        var wNames = [
-            'haar',
-            'sym2', 'sym4', 'sym8',
-            'db2', 'db4', 'db8',
-            'coif1', 'coif2', 'coif4', 'coif4', 
-            'bi13', 'bi31', 'bi68', 'bi97',
-            'rbio31', 'rbio33', 'rbio35', 'rbio39'
-        ], wModes = [
-            "sym", "symw", "per", "zpd", "nn"
-        ];
-
-        var tests = function () {
-            for (var n = 0; n < wNames.length; n++) {
-                var name = wNames[n];
-                for (var m = 0; m < wModes.length; m++) {
-                    Matrix.dwtmode(wModes[m]);
-                    console.log("Name:", name, "Modes:", Matrix.dwtmode())
-                    for (var sz = 1; sz < 8; sz += 2) {
-                        var s = Matrix.rand(sz, sz + 1, 3);
-                        var N = Matrix.dwtmaxlev([sz, sz + 1], name);
-                        N = N < 1 ? 1 : N;
-                        Tools.tic();
-                        var wt1 = Matrix.wavedec(s, N, name, 0);
-                        var iwt1 = Matrix.waverec(wt1, name, 0);
-                        var wt2 = Matrix.wavedec(s, N, name, 1);
-                        var iwt2 = Matrix.waverec(wt2, name, 1);
-                        var time = Tools.toc();
-                        Tools.tic();
-                        var wt2D = Matrix.wavedec2(s, N, name);
-                        var iwt2D = Matrix.waverec2(wt2D, name);
-                        var time2D = Tools.toc();
-                        var err1 = Matrix.minus(s, iwt1).norm(); 
-                        var err2 = Matrix.minus(s, iwt2).norm();
-                        var err2D = Matrix.minus(s, iwt2D).norm();
-                        var err1Disp = parseFloat(err1.toExponential(2))
-                        var err2Disp = parseFloat(err2.toExponential(2))
-                        var err2DDisp = parseFloat(err2D.toExponential(2))
-                        console.log(
-                            "\t\t",
-                            "Size", [sz, sz + 1],
-                            "\tErrors:", [err1Disp, err2Disp, err2DDisp],
-                            "\tTime:", [time, time2D]
-                        );
-                        if (err1 > 1e-8 || err2 > 1e-8 || err2D > 1e-8)  {
-                            throw new Error("Error is too high: " + [err1, err2, err2D]);
-                        }
-                    }
-                }
-            }
-            Matrix.dwtmode("per");
-        };
-        tests();
+        // tests();
     }, false);
 
 })(Matrix, Matrix.prototype);

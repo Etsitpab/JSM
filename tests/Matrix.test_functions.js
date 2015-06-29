@@ -243,16 +243,20 @@
     var log = function (msg, psnr, time) {
         if (psnr < 100) {
             console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
-        } else {
+        } else if (psnr !== undefined && time !== undefined){
             console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
+        } else if (psnr === undefined && time !== undefined) {
+            console.log(msg, "Time:", time);
+        } else if (psnr === undefined && time === undefined) {
+            console.log(msg);
         }
     };
 
-    Matrix._benchmarkWavelets = function (N, name, dim) {
+    Matrix._benchmarkWavelets = function (N, name, mode, dim) {
         N = N || 100;
-        name = name || 'bi97';
+        name = name || 'cdf97';
+        mode = mode || "sym";
         dim = dim || 1;
-
         var s, wt, out, time, psnr;
         var SQN = Math.round(Math.pow(N * N * 3, 1 / 3));
         s = Matrix.ones(SQN, SQN, SQN).cumsum(dim)["-"](1);
@@ -290,7 +294,6 @@
         time = Tools.toc();
         psnr = Matrix.psnr(s, out.get([0, s.size(0) - 1], [0, s.size(1) - 1])).getDataScalar();
         log("DWT 2D decomposition/reconstruction from DWT 1D", psnr, time);
-
 
 
         var dim = 0, levels = 5;
@@ -340,6 +343,62 @@
         time = Tools.toc();
         psnr = Matrix.psnr(s, rec).getDataScalar();
         log("DWT 2D upwlev2", psnr, time);
+        
+        (function () {
+             var wNames = [
+                'haar',
+                'sym2', 'sym4', 'sym8',
+                'db2', 'db4', 'db8',
+                'coif1', 'coif2', 'coif4', 'coif4', 
+                'bi13', 'bi31', 'bi68',
+                'rbio31', 'rbio33', 'rbio35', 'rbio39',
+                'cdf97'
+            ], wModes = [
+                "sym", "symw", "per", "zpd", "nn"
+            ];
+            log("DWT 1D/2D all wavelets/mode test start");
+            Tools.tic();
+            for (var n = 0; n < wNames.length; n++) {
+                var name = wNames[n];
+                for (var m = 0; m < wModes.length; m++) {
+                    Matrix.dwtmode(wModes[m]);
+                    for (var sz = 1; sz < 8; sz += 2) {
+                        var s = Matrix.rand(sz, sz + 1, 3);
+                        var N = Matrix.dwtmaxlev([sz, sz + 1], name);
+                        N = N < 1 ? 1 : N;
+                        Tools.tic();
+                        var wt1 = Matrix.wavedec(s, N, name, 0);
+                        var iwt1 = Matrix.waverec(wt1, name, 0);
+                        var wt2 = Matrix.wavedec(s, N, name, 1);
+                        var iwt2 = Matrix.waverec(wt2, name, 1);
+                        var time = Tools.toc();
+                        Tools.tic();
+                        var wt2D = Matrix.wavedec2(s, N, name);
+                        var iwt2D = Matrix.waverec2(wt2D, name);
+                        var time2D = Tools.toc();
+                        var err1 = Matrix.minus(s, iwt1).norm(); 
+                        var err2 = Matrix.minus(s, iwt2).norm();
+                        var err2D = Matrix.minus(s, iwt2D).norm();
+                        var err1Disp = parseFloat(err1.toExponential(2))
+                        var err2Disp = parseFloat(err2.toExponential(2))
+                        var err2DDisp = parseFloat(err2D.toExponential(2))
+                        if (err1 > 1e-8 || err2 > 1e-8 || err2D > 1e-8)  {
+                            console.log("Name:", name, "Modes:", Matrix.dwtmode())
+                            console.log(
+                                "\t\t",
+                                "Size", [sz, sz + 1],
+                                "\tErrors:", [err1Disp, err2Disp, err2DDisp],
+                                "\tTime:", [time, time2D]
+                            );
+                            throw new Error("Error is too high: " + [err1, err2, err2D]);
+                        }
+                    }
+                }
+            }
+            var time = Tools.toc();
+            log("DWT 1D/2D all wavelets/mode", undefined, time);
+            Matrix.dwtmode("per");
+        })();
     };
 
     Matrix._benchmarkFourier = function (N) {
