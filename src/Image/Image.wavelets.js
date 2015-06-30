@@ -43,7 +43,7 @@
         }
     };
     var filter1DPad = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
-        var y, oy, k, s, sumL, sumH, sTmp;
+        var y, oy, k, s, sumL, sumH;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
@@ -56,11 +56,11 @@
         }
     };
     var filter1DPadMono = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernel, id, od) {
-        var y, oy, k, s, sum, sTmp;
+        var y, oy, k, s, sum;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
-            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+            for (k = 0, s = y + orig, sum = 0; k < K; k++, s -= kdy) {
                 sum += kernel[k] * id[s];
             }
             od[oy] += sum;
@@ -68,7 +68,7 @@
     };
 
     var filter1DPadDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
-        var y, oy, k, s, sumL, sumH, sTmp;
+        var y, oy, k, s, sumL, sumH;
         console.log("y0", y0, "ny", ny, "dy", dy, "oys", oys, "ody", ody);
         console.log("orig", orig, "K", K, "Kdy", kdy);
         y0 += (K - 1) * kdy - orig;
@@ -94,7 +94,7 @@
         console.log("");
     };
     var filter1DPadCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
-        var y, oy, k, s, sumL, sumH, sTmp;
+        var y, oy, k, s, sumL, sumH;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
         if (odL.length !== odH.length) {
@@ -167,8 +167,6 @@
         var ly = vI.getEnd(0) + ((isOdd && dwtmode === "per") ? dy : 0);
         var oys = vO.getFirst(0), ody = vO.getStep(0);
 
-        var idL = inL.getData(),  idH = inH.getData(),
-            odL = outL.getData(), odH = outH.getData();
 
         var orig = origin * dy;
         var kdy = dy;
@@ -179,9 +177,19 @@
         var oy, o, ot = itO.iterator, bo = itO.begin;
 
         var k, s, sTmp, sumL, sumH;
-        for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
-            var yx0 = ys + i, nyx = ly + i;
-            filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, kH, idL, idH, odL, odH);
+        if (!inH && !kH) {
+            var idL = inL.getData(), odL = outL.getData();
+            for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
+                var yx0 = ys + i, nyx = ly + i;
+                filter1DPadMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, idL, odL);
+            }
+        } else {
+        var idL = inL.getData(),  idH = inH.getData(),
+            odL = outL.getData(), odH = outH.getData();
+            for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
+                var yx0 = ys + i, nyx = ly + i;
+                filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, kH, idL, idH, odL, odH);
+            }
         }
     };
 
@@ -218,9 +226,9 @@
         console.table(data, ["lk", "rk", "li", "ri", "lo", "ro"]);
     };
 
-    var dwt = function (s, fL, fH, dim) {
+    var dwt = function (s, filters, dim) {
         var size = s.getSize();
-        var p = getPaddingInfos(fL.length, size[dim]);
+        var p = getPaddingInfos(filters[0].length, size[dim]);
         size[dim] = Math.ceil(size[dim] / 2) + p.ro + p.lo;
         if (p.li !== 0 || p.ri !== 0) {
             s = s.paddim(dwtmode, dim, [p.li, p.ri]);
@@ -230,33 +238,41 @@
         var v = dL.getView().swapDimensions(0, dim);
         var iV = s.getView().swapDimensions(0, dim);
         // H filtering from signal to output
-        filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
+        filterND(s, s, iV, filters[0], filters[1], 'cr', 2, dL, dH, v);
         return [dL, dH];
     };
-    var idwt = function (bands, fL, fH, dim) {
+
+    var idwt = function (bands, filters, dim, out) {
         var size = bands[0].getSize();
         var start = dwtmode === 'per' ? 0 : 1;
         size[dim] = size[dim] * 2 + start; 
 
-        var L = zeros(size), H = zeros(size);
-        var v = L.getView().selectDimension(dim, [start, 2, -1]);
-        bands[0].extractViewTo(v, L);
-        bands[1].extractViewTo(v, H);
+        var data = [
+            zeros(size),
+            !bands[1] ? undefined : zeros(size),
+        ];
+        var v = data[0].getView().selectDimension(dim, [start, 2, -1]);
+        for (var b = 0; b < bands.length; b++) {
+            bands[b].extractViewTo(v, data[b]);
+        }
         v.restore().swapDimensions(0, dim);
 
         if (dwtmode !== 'per') {
-            var p = getPaddingInfos(fL.length, bands[0].getSize(dim));
+            var p = getPaddingInfos(filters[0].length, bands[0].getSize(dim));
             size[dim] -= p.rk + p.lk;
         }
 
         // Out array
-        var out = zeros(size), vO = out.getView().swapDimensions(0, dim);
+        if (out !== undefined && !Tools.checkSizeEquals(out.getSize(), size)) {
+            throw new Error("idwtMono: Wrong output size.");
+        }
+        var out = out || zeros(size), vO = out.getView().swapDimensions(0, dim);
 
         // Process scale
-        filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
+        filterND(data[0], data[1], v, filters[0], filters[1], 'cl', 1, out, out, vO);
         return out;
     };
-
+    
     var dwt2 = function (im, fL, fH) {
         var h = im.getSize(0), w = im.getSize(1), c = im.getSize(2);
         
@@ -348,11 +364,11 @@
     Matrix.dwt = function (im, name, dim) {
         dim = dim || 0;
         var wav = Matrix.wfilters(name, 'd');
-        var fL = wav[0].getData(), fH = wav[1].getData();
-        return dwt(im, fL, fH, dim);
+        var filters = [wav[0].getData(), wav[1].getData()];
+        return dwt(im, filters, dim);
     };
     /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
-     *n
+     *
      * __See also :__
      * {@link Matrix#dwt},
      * {@link Matrix#idwt2}.
@@ -369,8 +385,8 @@
     Matrix.idwt = function (bands, name, dim) {
         dim = dim || 0;
         var wav = Matrix.wfilters(name, 'r');
-        var fL = wav[0].getData(), fH = wav[1].getData();
-        return idwt(bands, fL, fH, dim);
+        var filters = [wav[0].getData(), wav[1].getData()];
+        return idwt(bands, filters, dim);
     };
         
     /** Compute the 2D DWT (Discrete Wavelet Transform)
@@ -456,7 +472,7 @@
         var matOut = zeros(size), outView = matOut.getView();
         var matIn = s, dL, dH;
         for (l = n; l >= 1; l--) {
-            var wt = dwt(matIn, fL, fH, dim);
+            var wt = dwt(matIn, [fL, fH], dim);
             outView.selectDimension(dim, [cumsize[l], cumsize[l + 1] - 1]);
             wt[1].extractViewTo(outView, matOut);
             outView.restore();
@@ -505,7 +521,7 @@
                 dLView = dL.getView().selectDimension(dim, [0, -2]);
                 dL = dL.extractViewFrom(dLView);
             }
-            dL = idwt([dL, dH], fL, fH, dim);
+            dL = idwt([dL, dH], [fL, fH], dim);
         }
         
         if (dL.size(dim) === sd[sd.length - 1] + 1) {
@@ -682,7 +698,6 @@
 
     /** Returns the coefficients corresponding to the approximation subband
      * at a given level.
-
      *
      * __See also :__
      * {@link Matrix#detcoef2},
@@ -942,8 +957,15 @@
     })();
     
     window.addEventListener("load", function () {
-
-        // tests();
+        var name = 'coif1';
+        var a = Matrix.ones(5, 1).cumsum(0).display();
+        var wt = Matrix.dwt(a, name);
+        wt[0].display();
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+        var L = idwt([wt[0]], [fL], 0).display();
+        idwt([wt[1]], [fH], 0, L).display();
+        L.display("sum");
     }, false);
 
 })(Matrix, Matrix.prototype);
