@@ -90,8 +90,8 @@
             } else if (average === "half") {
                 norm = wNorm * 0.5; 
             }
-            //A["-="](imMin)["*="](wNorm / (imMax - imMin));
-            A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
+            A["-="](imMin)["*="](wNorm / (imMax - imMin));
+            // A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
             A["*="](1 - alpha)["+="](norm * alpha);
         }
 

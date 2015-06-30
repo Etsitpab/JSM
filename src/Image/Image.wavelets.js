@@ -20,7 +20,8 @@
 (function (Matrix, Matrix_prototype) {
     'use strict';
     
-    /** @class Matrix */var filter1DPer = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    /** @class Matrix */
+    var filter1DPer = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
@@ -41,10 +42,10 @@
             odH[oy] += sumH;
         }
     };
-    var filter1DSym = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    var filter1DPad = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         y0 += (K - 1) * kdy - orig;
-        ny -= orig;// + (isOdd ? 1 : 0)
+        ny -= orig;
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                 sumL += kernelL[k] * idL[s];
@@ -54,7 +55,19 @@
             odH[oy] += sumH;
         }
     };
-    var filter1DSymDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    var filter1DPadMono = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernel, id, od) {
+        var y, oy, k, s, sum, sTmp;
+        y0 += (K - 1) * kdy - orig;
+        ny -= orig;
+        for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
+            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+                sum += kernel[k] * id[s];
+            }
+            od[oy] += sum;
+        }
+    };
+
+    var filter1DPadDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         console.log("y0", y0, "ny", ny, "dy", dy, "oys", oys, "ody", ody);
         console.log("orig", orig, "K", K, "Kdy", kdy);
@@ -80,7 +93,7 @@
         }
         console.log("");
     };
-    var filter1DSymCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    var filter1DPadCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH, sTmp;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
@@ -122,21 +135,21 @@
         case "symw":
         case "zpd":
         case "nn":
-            filter1D = filter1DSym;
+            filter1D = filter1DPad;
             break;
         case "debug_sym":
         case "debug_symw":
         case "debug_zpd":
         case "debug_nn":
             mode = mode.substr(6);
-            filter1D = filter1DSymDebug;
+            filter1D = filter1DPadDebug;
             break;
         case "check_sym":
         case "check_symw":
         case "check_zpd":
         case "check_nn":
             mode = mode.substr(6);
-            filter1D = filter1DSymCheck;
+            filter1D = filter1DPadCheck;
             break;
         default:
             throw new Error("Matrix.dwtmode: invalid mode " + mode + "."); 
@@ -144,9 +157,8 @@
         dwtmode = mode;
     };
     Matrix.dwtmode("sym");
-    
-    var filterND = function (inL, inH, vI, kL, kH, origin, sub, outL, outH, vO) {
 
+    var filterND = function (inL, inH, vI, kL, kH, origin, sub, outL, outH, vO) {
         var K = kL.length;
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
         var isOdd = vI.getSize(0) % 2 ? true : false; 
@@ -197,7 +209,6 @@
         }
         return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
     };
-    
     var padTest = function (isOdd) {
         console.log("For " + (isOdd ? "odd" : "even") + " signal");
         var data = {}, f = Math.floor, c = Math.ceil;
@@ -207,9 +218,7 @@
         console.table(data, ["lk", "rk", "li", "ri", "lo", "ro"]);
     };
 
-    var dwt = function (s, name, dim) {
-        var wav = Matrix.wfilters(name, 'd');
-        var fL = wav[0].getData(), fH = wav[1].getData();
+    var dwt = function (s, fL, fH, dim) {
         var size = s.getSize();
         var p = getPaddingInfos(fL.length, size[dim]);
         size[dim] = Math.ceil(size[dim] / 2) + p.ro + p.lo;
@@ -224,11 +233,7 @@
         filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
         return [dL, dH];
     };
-
-    var idwt = function (bands, name, dim) {
-        var wav = Matrix.wfilters(name, 'r');
-        var fL = wav[0].getData(), fH = wav[1].getData();
-
+    var idwt = function (bands, fL, fH, dim) {
         var size = bands[0].getSize();
         var start = dwtmode === 'per' ? 0 : 1;
         size[dim] = size[dim] * 2 + start; 
@@ -251,9 +256,8 @@
         filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
         return out;
     };
-    var dwt2 = function (im, name) {
-        var wav = Matrix.wfilters(name, 'd');
-        var fL = wav[0].getData(), fH = wav[1].getData();
+
+    var dwt2 = function (im, fL, fH) {
         var h = im.getSize(0), w = im.getSize(1), c = im.getSize(2);
         
         // Create output image
@@ -290,11 +294,7 @@
         filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
         return [dA, dH, dV, dD];
     };
-
-    var idwt2 = function (bands, name) {
-        var wav = Matrix.wfilters(name, 'r');
-        var fL = wav[0].getData(), fH = wav[1].getData();
-
+    var idwt2 = function (bands, fL, fH) {
         var ph = getPaddingInfos(fL.length, bands[0].getSize(0));
         var pw = getPaddingInfos(fL.length, bands[0].getSize(1));
         var oh = 0, ow = 0, start = 0;
@@ -347,7 +347,9 @@
      */
     Matrix.dwt = function (im, name, dim) {
         dim = dim || 0;
-        return dwt(im, name, dim);
+        var wav = Matrix.wfilters(name, 'd');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+        return dwt(im, fL, fH, dim);
     };
     /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
      *n
@@ -366,7 +368,9 @@
      */
     Matrix.idwt = function (bands, name, dim) {
         dim = dim || 0;
-        return idwt(bands, name, dim);
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+        return idwt(bands, fL, fH, dim);
     };
         
     /** Compute the 2D DWT (Discrete Wavelet Transform)
@@ -382,7 +386,11 @@
      *  Array containing approximation coefficients and details.
      * @matlike
      */
-    Matrix.dwt2 = dwt2;
+    Matrix.dwt2 = function (im, name) {
+        var wav = Matrix.wfilters(name, 'd');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+        return dwt2(im, fL, fH)
+    };
     /** Compute the 2D inverse DWT (Discrete Wavelet Transform).
      *
      * __See also :__
@@ -396,7 +404,11 @@
      *  Matrix with the reconstructed signal.
      * @matlike
      */
-    Matrix.idwt2 = idwt2;
+    Matrix.idwt2 = function (bands, name) {
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+        return idwt2(bands, fL, fH)
+    };
     
     /** Perform a DWT (Discrete Wavelet Transform)
      * on each vector presents on a given Matrix dimension.
@@ -420,7 +432,7 @@
     Matrix.wavedec = function (s, n, name, dim) {
         dim = dim || 0;
         var wav = Matrix.wfilters(name, 'd');
-        var fL = wav[0].getData();
+        var fL = wav[0].getData(), fH = wav[1].getData();
 
         var sd = new Uint16Array(n + 2), outSize = 0;
         sd[n + 1] = s.getSize(dim);
@@ -444,7 +456,7 @@
         var matOut = zeros(size), outView = matOut.getView();
         var matIn = s, dL, dH;
         for (l = n; l >= 1; l--) {
-            var wt = dwt(matIn, name, dim);
+            var wt = dwt(matIn, fL, fH, dim);
             outView.selectDimension(dim, [cumsize[l], cumsize[l + 1] - 1]);
             wt[1].extractViewTo(outView, matOut);
             outView.restore();
@@ -474,6 +486,8 @@
      */
     Matrix.waverec = function (lc, name, dim) {
         dim = dim || 0;
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
         var sd = lc[1].getData();
         var cumsize = [0, sd[0]];
         var l, n = sd.length - 2;
@@ -491,7 +505,7 @@
                 dLView = dL.getView().selectDimension(dim, [0, -2]);
                 dL = dL.extractViewFrom(dLView);
             }
-            dL = idwt([dL, dH], name, dim);
+            dL = idwt([dL, dH], fL, fH, dim);
         }
         
         if (dL.size(dim) === sd[sd.length - 1] + 1) {
@@ -577,11 +591,13 @@
      * @matlike
      */
     Matrix.wavedec2 = function (input, n, name) {
+        var wav = Matrix.wfilters(name, 'd');
+        var fL = wav[0].getData(), fH = wav[1].getData();
         var sizes = createStruct(input, n, name);
         var ds = getSubbandsCoordinates(sizes);
         var out = new Float64Array(ds.outSize);
         for (var l = n - 1, s = 3 * l; l >= 0; l--, s -= 3) {
-            var wt = dwt2(input, name);
+            var wt = dwt2(input, fL, fH);
             out.subarray(ds.bands[s + 1], ds.bands[s + 2]).set(wt[1].getData());
             out.subarray(ds.bands[s + 2], ds.bands[s + 3]).set(wt[2].getData());
             out.subarray(ds.bands[s + 3], ds.bands[s + 4]).set(wt[3].getData());
@@ -606,6 +622,8 @@
      * @matlike
      */
     Matrix.waverec2 = function (lc, name) {
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
         var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
         var A, H, V, D;
         A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
@@ -613,7 +631,7 @@
             H = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 1], ds.bands[s + 2]));
             V = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 2], ds.bands[s + 3]));
             D = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 3], ds.bands[s + 4]));
-            A = idwt2([A, H, V, D], name);
+            A = idwt2([A, H, V, D], fL, fH);
             A = resizeMatrix(A, ds, l + 1);
         }
         return A;
@@ -642,12 +660,14 @@
             return [new Matrix(), new Matrix()];
         }
 
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
         var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
         var Am = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
         var H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
         var V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
         var D = new Matrix(ds.subSizes[0], data.subarray(ds.bands[3], ds.bands[4]));
-        var A = idwt2([Am, H, V, D], name);
+        var A = idwt2([Am, H, V, D], fL, fH);
         A = resizeMatrix(A, ds, 1);
 
         var sizes = lc[1].get([1, -1]);
