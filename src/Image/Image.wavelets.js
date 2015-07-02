@@ -159,7 +159,7 @@
     Matrix.dwtmode("sym");
 
     var filterND = function (inL, inH, vI, kL, kH, origin, sub, outL, outH, vO) {
-        var K = kL.length;
+        var K = (kL || kH).length;
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
         var isOdd = vI.getSize(0) % 2 ? true : false; 
      
@@ -177,15 +177,17 @@
         var oy, o, ot = itO.iterator, bo = itO.begin;
 
         var k, s, sTmp, sumL, sumH;
-        if (!inH && !kH) {
-            var idL = inL.getData(), odL = outL.getData();
+        if (!inL || !inH) {
+            var id = (inL || inH).getData(), 
+                od = (inL ? outL : outH).getData(),
+                k = inL ? kL : kH;
             for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
                 var yx0 = ys + i, nyx = ly + i;
-                filter1DPadMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, idL, odL);
+                filter1DPadMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, k, id, od);
             }
         } else {
-        var idL = inL.getData(),  idH = inH.getData(),
-            odL = outL.getData(), odH = outH.getData();
+            var idL = inL.getData(),  idH = inH.getData(),
+                odL = outL.getData(), odH = outH.getData();
             for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
                 var yx0 = ys + i, nyx = ly + i;
                 filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, kH, idL, idH, odL, odH);
@@ -241,24 +243,26 @@
         filterND(s, s, iV, filters[0], filters[1], 'cr', 2, dL, dH, v);
         return [dL, dH];
     };
-
     var idwt = function (bands, filters, dim, out) {
-        var size = bands[0].getSize();
+        var n = bands[0] ? 0 : 1;
+        var size = bands[n].getSize();
         var start = dwtmode === 'per' ? 0 : 1;
         size[dim] = size[dim] * 2 + start; 
 
         var data = [
-            zeros(size),
-            !bands[1] ? undefined : zeros(size),
+            bands[0] ? zeros(size) : undefined,
+            bands[1] ? zeros(size) : undefined,
         ];
-        var v = data[0].getView().selectDimension(dim, [start, 2, -1]);
+        var v = data[n].getView().selectDimension(dim, [start, 2, -1]);
         for (var b = 0; b < bands.length; b++) {
-            bands[b].extractViewTo(v, data[b]);
+            if (bands[b]) {
+                bands[b].extractViewTo(v, data[b]);
+            }
         }
         v.restore().swapDimensions(0, dim);
 
         if (dwtmode !== 'per') {
-            var p = getPaddingInfos(filters[0].length, bands[0].getSize(dim));
+            var p = getPaddingInfos(filters[n].length, bands[n].getSize(dim));
             size[dim] -= p.rk + p.lk;
         }
 
@@ -273,11 +277,11 @@
         return out;
     };
     
-    var dwt2 = function (im, fL, fH) {
+    var dwt2 = function (im, filters) {
         var h = im.getSize(0), w = im.getSize(1), c = im.getSize(2);
         
         // Create output image
-        var ph = getPaddingInfos(fL.length, h);
+        var ph = getPaddingInfos(filters[0].length, h);
         var hh = Math.ceil(h / 2) + ph.ro + ph.lo;
         if (ph.li !== 0 || ph.ri !== 0) {
             im = im.paddim(dwtmode, 0, [ph.li, ph.ri]);
@@ -289,9 +293,9 @@
 
         // H filtering from image to buffer
         var vI = im.getView();
-        filterND(im, im, vI, fL, fH, 'cr', 2, bL, bH, vB);
+        filterND(im, im, vI, filters[0], filters[1], 'cr', 2, bL, bH, vB);
 
-        var pw = getPaddingInfos(fL.length, w);
+        var pw = getPaddingInfos(filters[0].length, w);
         var hw = Math.ceil(w / 2) + pw.ro + pw.lo;
         if (pw.li !== 0 || pw.ri !== 0) {
             bH = bH.paddim(dwtmode, 1, [pw.li, pw.ri]);
@@ -306,13 +310,14 @@
         var v = dA.getView().swapDimensions(0, 1);
 
         vB.swapDimensions(0, 1);
-        filterND(bL, bL, vB, fL, fH, 'cr', 2, dA, dH, v);
-        filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
+        filterND(bL, bL, vB, filters[0], filters[1], 'cr', 2, dA, dH, v);
+        filterND(bH, bH, vB, filters[0], filters[1], 'cr', 2, dV, dD, v);
         return [dA, dH, dV, dD];
     };
-    var idwt2 = function (bands, fL, fH) {
-        var ph = getPaddingInfos(fL.length, bands[0].getSize(0));
-        var pw = getPaddingInfos(fL.length, bands[0].getSize(1));
+    var idwt2 = function (bands, filters) {
+        var n = bands[0] ? 0 : (bands[1] ? 1 : (bands[2] ? 2 : 3));
+        var ph = getPaddingInfos(filters[0].length, bands[n].getSize(0));
+        var pw = getPaddingInfos(filters[0].length, bands[n].getSize(1));
         var oh = 0, ow = 0, start = 0;
         if (dwtmode !== 'per') {
             oh = ph.rk + ph.lk;
@@ -320,29 +325,55 @@
             start = 1;
         }
 
-        var size = bands[0].getSize();
+        var size = bands[n].getSize();
         size[0] = 2 * size[0] + start
 
-        var dL = zeros(size), dH = zeros(size);
+        var dL, dH;
+        if (bands[0] || bands[1]) {
+            dL = zeros(size)
+        }
+        if (bands[2] || bands[3]) {
+            dH = zeros(size)
+        }
         size[0] -= oh;
         size[1] = 2 * size[1] + start;
 
-        var bL = zeros(size), bH = zeros(size);
-        var dV = dL.getView(), B = bL.getView();
-
+        var bL, bH;
+        if (bands[0] || bands[2]) {
+            bL = zeros(size)
+        }
+        if (bands[1] || bands[3]) {
+            bH = zeros(size)
+        }
+        var dV = (dL || dH).getView(), B = (bL || bH).getView();
+        
+        // console.log(bH, bL, dH, dL);
         B.select([], [start, 2, -1]);
-        dL.set([start, 2, -1], bands[0]);
-        dH.set([start, 2, -1], bands[2]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B);
-
-        dL.set([start, 2, -1], [], bands[1]);
-        dH.set([start, 2, -1], [], bands[3]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B);
+        if (bL) {
+            if (dL) {
+                dL.set([start, 2, -1], bands[0]);
+            }
+            if (dH) {
+                dH.set([start, 2, -1], bands[2]);
+            }
+            filterND(dL, dH, dV, filters[0], filters[1], 'cl', 1, bL, bL, B);
+        }
+        if (bH) {
+            if (dL) {
+                dL.set([start, 2, -1], bands[1]);
+            }
+            if (dH) {
+                dH.set([start, 2, -1], bands[3]);
+            }
+            filterND(dL, dH, dV, filters[0], filters[1], 'cl', 1, bH, bH, B);
+            // bands[1].display();
+            // console.log(dL, dH, bL, bH, fL, fH);
+        }
 
         size[1] -= ow;
         var out = zeros(size), vO = out.getView().swapDimensions(0, 1);
         B.restore().swapDimensions(0, 1);
-        filterND(bL, bH, B, fL, fH, 'cl', 1, out, out, vO);
+        filterND(bL, bH, B, filters[0], filters[1], 'cl', 1, out, out, vO);
         return out;
     };
     
@@ -405,7 +436,7 @@
     Matrix.dwt2 = function (im, name) {
         var wav = Matrix.wfilters(name, 'd');
         var fL = wav[0].getData(), fH = wav[1].getData();
-        return dwt2(im, fL, fH)
+        return dwt2(im, [fL, fH])
     };
     /** Compute the 2D inverse DWT (Discrete Wavelet Transform).
      *
@@ -423,7 +454,7 @@
     Matrix.idwt2 = function (bands, name) {
         var wav = Matrix.wfilters(name, 'r');
         var fL = wav[0].getData(), fH = wav[1].getData();
-        return idwt2(bands, fL, fH)
+        return idwt2(bands, [fL, fH])
     };
     
     /** Perform a DWT (Discrete Wavelet Transform)
@@ -613,7 +644,7 @@
         var ds = getSubbandsCoordinates(sizes);
         var out = new Float64Array(ds.outSize);
         for (var l = n - 1, s = 3 * l; l >= 0; l--, s -= 3) {
-            var wt = dwt2(input, fL, fH);
+            var wt = dwt2(input, [fL, fH]);
             out.subarray(ds.bands[s + 1], ds.bands[s + 2]).set(wt[1].getData());
             out.subarray(ds.bands[s + 2], ds.bands[s + 3]).set(wt[2].getData());
             out.subarray(ds.bands[s + 3], ds.bands[s + 4]).set(wt[3].getData());
@@ -647,7 +678,7 @@
             H = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 1], ds.bands[s + 2]));
             V = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 2], ds.bands[s + 3]));
             D = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 3], ds.bands[s + 4]));
-            A = idwt2([A, H, V, D], fL, fH);
+            A = idwt2([A, H, V, D], [fL, fH]);
             A = resizeMatrix(A, ds, l + 1);
         }
         return A;
@@ -683,7 +714,7 @@
         var H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
         var V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
         var D = new Matrix(ds.subSizes[0], data.subarray(ds.bands[3], ds.bands[4]));
-        var A = idwt2([Am, H, V, D], fL, fH);
+        var A = idwt2([Am, H, V, D], [fL, fH]);
         A = resizeMatrix(A, ds, 1);
 
         var sizes = lc[1].get([1, -1]);
@@ -811,6 +842,34 @@
             lc = Matrix.upwlev2(lc, name);
         }
         return lc[0].reshape(lc[1].get(0).getData());
+    };
+    Matrix.wrcoef2 = function (type, lc, name, N) {
+        var ds = getSubbandsCoordinates(lc[1]), J = ds.J;
+        for (var l = 0; l < N; l++) {
+            lc = Matrix.upwlev2(lc, name);
+        }
+        console.log("l", l, J, N);
+        var A, H, V, D;
+        if (type === 'a') {
+            A = Matrix.appcoef2(lc, name, 0);
+        }  else if (type === 'h') {
+            H = Matrix.detcoef2('h', lc, 0)
+        } else if (type === 'v') {
+            V = Matrix.detcoef2('v', lc, 0)
+        } else if (type === 'd') {
+            D = Matrix.detcoef2('d', lc, 0)
+        }
+
+        var wav = Matrix.wfilters(name, 'r');
+        var filters = [wav[0].getData(), wav[1].getData()];
+        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
+        for (var j = 0, J = ds.J; j < J; j++) {
+            console.log(j, [A, H, V, D]);
+            A = idwt2([A, H, V, D], filters);
+            H = V = D = undefined;
+            A = resizeMatrix(A, ds, j);
+        }
+        return A;
     };
     /** Returns the maximum level of the decomposition according 
      * to a mother wavelet name.
@@ -957,15 +1016,46 @@
     })();
     
     window.addEventListener("load", function () {
+        return;
         var name = 'coif1';
-        var a = Matrix.ones(5, 1).cumsum(0).display();
-        var wt = Matrix.dwt(a, name);
-        wt[0].display();
         var wav = Matrix.wfilters(name, 'r');
         var fL = wav[0].getData(), fH = wav[1].getData();
-        var L = idwt([wt[0]], [fL], 0).display();
-        idwt([wt[1]], [fH], 0, L).display();
+        var a = Matrix.randi(9, 5, 5).display();
+
+        var wt = Matrix.dwt(a, name);
+        var L = idwt([wt[0], undefined], [fL, fH], 0);
+        idwt([undefined, wt[1]], [fL, fH], 0, L);
         L.display("sum");
+
+        var wt = Matrix.dwt2(a, name);
+        // console.log(wt);
+        var LL = idwt2([wt[0], undefined, undefined, undefined], [fL, fH]).display("LL");
+        var LH = idwt2([undefined, wt[1], undefined, undefined], [fL, fH]).display("LH");
+        var HL = idwt2([undefined, undefined, wt[2], undefined], [fL, fH]).display("HL");
+        var HH = idwt2([undefined, undefined, undefined, wt[3]], [fL, fH]).display("HH");
+        LL['+'](LH)['+'](HL)['+'](HH).display("sum");
+    }, false);
+
+    window.addEventListener("load", function () {
+        var name = 'coif1';
+        var wav = Matrix.wfilters(name, 'r');
+        var fL = wav[0].getData(), fH = wav[1].getData();
+        var a = Matrix.ones(5, 5).cumsum(0).cumsum(1).display();
+
+        var wt = Matrix.wavedec2(a, 2, name);
+        var A = Matrix.appcoef2(wt, name, 0).display("A");
+
+        var A0 = Matrix.wrcoef2('a', wt, name, 0).display("A");
+        var H0 = Matrix.wrcoef2('h', wt, name, 0).display("H0");
+        var V0 = Matrix.wrcoef2('v', wt, name, 0).display("V0");
+        var D0 = Matrix.wrcoef2('d', wt, name, 0).display("D0");
+        var sum = A0['+'](H0)['+'](V0)['+'](D0);
+        sum.display("sum");
+        var H1 = Matrix.wrcoef2('h', wt, name, 1).display("H1");
+        var V1 = Matrix.wrcoef2('v', wt, name, 1).display("V1");
+        var D1 = Matrix.wrcoef2('d', wt, name, 1).display("D1");
+        sum = sum['+'](H1)['+'](V1)['+'](D1);
+        sum.display("sum");
     }, false);
 
 })(Matrix, Matrix.prototype);
