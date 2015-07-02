@@ -670,15 +670,16 @@
      */
     Matrix.waverec2 = function (lc, name) {
         var wav = Matrix.wfilters(name, 'r');
-        var fL = wav[0].getData(), fH = wav[1].getData();
+        var filters = [wav[0].getData(), wav[1].getData()];
         var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
         var A, H, V, D;
         A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
         for (var l = 0, s = 0, J = ds.J; l < J; l++, s += 3) {
-            H = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 1], ds.bands[s + 2]));
-            V = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 2], ds.bands[s + 3]));
-            D = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 3], ds.bands[s + 4]));
-            A = idwt2([A, H, V, D], [fL, fH]);
+            var size = ds.subSizes[l];
+            H = new Matrix(size, data.subarray(ds.bands[s + 1], ds.bands[s + 2]));
+            V = new Matrix(size, data.subarray(ds.bands[s + 2], ds.bands[s + 3]));
+            D = new Matrix(size, data.subarray(ds.bands[s + 3], ds.bands[s + 4]));
+            A = idwt2([A, H, V, D], filters);
             A = resizeMatrix(A, ds, l + 1);
         }
         return A;
@@ -742,7 +743,8 @@
      * @param {String} name
      *  Wavelet name.
      * @param {Number} level
-     *  Wavelet name.
+     *  The level of the subband between 0 (the original signal) and 
+     *  N the decomposition level.
      * @return {Matrix}
      *  If the level corresponds to the last level of decomposition, 
      *  the coefficients returned will be a view on the coefficient
@@ -750,8 +752,12 @@
      * @matlike
      */
     Matrix.appcoef2 = function (lc, name, j) {
+        j = j === undefined ? lc[1].size()[0] - 2 : j;
         var J = lc[1].size(0) - 2;
-        while (J > j + 1) {
+        if (j > J || j < 0) {
+            throw new Error("Matrix.appcoef2: Invalid decomposition level.");
+        }
+        while (J > j) {
             lc = Matrix.upwlev2(lc, name);
             J = lc[1].size(0) - 2;
         }
@@ -774,7 +780,8 @@
      *  Array of two elements, one contains the dwt coefficients 
      *  while the seconds contains the sizes of each subbands.
      * @param {Number} level
-     *  The level of the subband.
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
      * @return {Matrix}
      *  Returns the coefficients required. The Matrix returned is a 
      *  view on the coefficient provided. Therefore, a modification 
@@ -790,7 +797,10 @@
             ];
         }
         var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
-        var scale = ds.J - (j + 1);
+        if (j > ds.J || j < 1) {
+            throw new Error("Matrix.detcoef2: Invalid decomposition level.");
+        }
+        var scale = ds.J - j;
         var size = lc[1].get([scale + 1], []).getData();
         var band = 1 + scale * 3;
         if (type === 'v') {
@@ -807,67 +817,25 @@
      * To be implemented efficiently.
      */
     Matrix.wrcoef2 = function (type, lc, name, N) {
-        var ds = getSubbandsCoordinates(lc[1]), J = ds.J;
-        for (var l = 0; l < N; l++) {
-            lc = Matrix.upwlev2(lc, name);
-        }
-
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
-        var A, H, V, D;
-        var Z = new Matrix(ds.subSizes[0]);
-        A = H = V = D = Z;
-        if (type === 'a') {
-            A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
-        } else if (type === 'h') {
-            H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
-        } else if (type === 'v') {
-            V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
-        } else if (type === 'd') {
-            D = new Matrix(ds.subSizes[0], data.subarray(ds.bands[3], ds.bands[4]));
-        }
-
-        var A = idwt2([A, H, V, D], name);
-        A = resizeMatrix(A, ds, 1);
-
-        var sizes = lc[1].get([1, -1]);
-        sizes.set(0, [], sizes.get(1, []));
-
-        var Asize = A.numel(), remaining = data.length - ds.bands[4];
-        var out = new Float64Array(Asize + remaining);
-        out.subarray(0, Asize).set(A.getData());
-
-        lc = [new Matrix([out.length], out), sizes, A];
-
-        for (var l = N + 1; l < J; l++) {
-            lc = Matrix.upwlev2(lc, name);
-        }
-        return lc[0].reshape(lc[1].get(0).getData());
-    };
-    Matrix.wrcoef2 = function (type, lc, name, N) {
-        var ds = getSubbandsCoordinates(lc[1]), J = ds.J;
-        for (var l = 0; l < N; l++) {
-            lc = Matrix.upwlev2(lc, name);
-        }
-        console.log("l", l, J, N);
         var A, H, V, D;
         if (type === 'a') {
-            A = Matrix.appcoef2(lc, name, 0);
+            A = Matrix.appcoef2(lc, name, N);
         }  else if (type === 'h') {
-            H = Matrix.detcoef2('h', lc, 0)
+            H = Matrix.detcoef2('h', lc, N)
         } else if (type === 'v') {
-            V = Matrix.detcoef2('v', lc, 0)
+            V = Matrix.detcoef2('v', lc, N)
         } else if (type === 'd') {
-            D = Matrix.detcoef2('d', lc, 0)
+            D = Matrix.detcoef2('d', lc, N)
         }
 
         var wav = Matrix.wfilters(name, 'r');
         var filters = [wav[0].getData(), wav[1].getData()];
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
-        for (var j = 0, J = ds.J; j < J; j++) {
-            console.log(j, [A, H, V, D]);
+        var ds = getSubbandsCoordinates(lc[1]);
+
+        for (var l = 0; l < N; l++) {
             A = idwt2([A, H, V, D], filters);
-            H = V = D = undefined;
-            A = resizeMatrix(A, ds, j);
+            A = resizeMatrix(A, ds, ds.J - N + l + 1);
+            H = V = D = undefined; 
         }
         return A;
     };
@@ -1039,23 +1007,20 @@
     window.addEventListener("load", function () {
         var name = 'coif1';
         var wav = Matrix.wfilters(name, 'r');
-        var fL = wav[0].getData(), fH = wav[1].getData();
-        var a = Matrix.ones(5, 5).cumsum(0).cumsum(1).display();
-
-        var wt = Matrix.wavedec2(a, 2, name);
-        var A = Matrix.appcoef2(wt, name, 0).display("A");
-
-        var A0 = Matrix.wrcoef2('a', wt, name, 0).display("A");
-        var H0 = Matrix.wrcoef2('h', wt, name, 0).display("H0");
-        var V0 = Matrix.wrcoef2('v', wt, name, 0).display("V0");
-        var D0 = Matrix.wrcoef2('d', wt, name, 0).display("D0");
-        var sum = A0['+'](H0)['+'](V0)['+'](D0);
-        sum.display("sum");
-        var H1 = Matrix.wrcoef2('h', wt, name, 1).display("H1");
-        var V1 = Matrix.wrcoef2('v', wt, name, 1).display("V1");
-        var D1 = Matrix.wrcoef2('d', wt, name, 1).display("D1");
-        sum = sum['+'](H1)['+'](V1)['+'](D1);
-        sum.display("sum");
+        var filters = [wav[0].getData(), wav[1].getData()];
+        var s = Matrix.randi(9, 17, 19).display();
+        var N = 10;
+        var wt = Matrix.wavedec2(s, N, name);
+        N = N - 2;
+        var rec = Matrix.wrcoef2('a', wt, name, N);
+        for (var n = N; n > 0; n--) {
+            rec["+="](Matrix.wrcoef2('h', wt, name, n));
+            rec["+="](Matrix.wrcoef2('v', wt, name, n));
+            rec["+="](Matrix.wrcoef2('d', wt, name, n));
+        }
+        rec.display("rec");
+        var psnr = Matrix.psnr(s, rec).getDataScalar();
+        console.log(psnr, "dB");
     }, false);
 
 })(Matrix, Matrix.prototype);
