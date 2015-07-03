@@ -42,6 +42,25 @@
             odH[oy] += sumH;
         }
     };
+    var filter1DPerMono = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, idL, odL) {
+        var y, oy, k, s, sumL, sumH, sTmp;
+        for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
+            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
+                sTmp = s;
+                while (sTmp < yx0) {
+                    sTmp += ly;
+                }
+                while (sTmp >= nyx) {
+                    sTmp -= ly;
+                }
+                if (isOdd && sTmp === nyx - kdy) {
+                    sTmp -= kdy; 
+                }
+                sumL += kernelL[k] * idL[sTmp];
+            }
+            odL[oy] += sumL;
+        }
+    };
     var filter1DPad = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH;
         y0 += (K - 1) * kdy - orig;
@@ -121,7 +140,7 @@
             odH[oy] += sumH;
         }
     };
-    var filter1D, dwtmode;
+    var filter1D, filter1DMono, dwtmode;
     Matrix.dwtmode = function (mode) {
         if (mode === undefined) {
             return dwtmode;
@@ -130,12 +149,14 @@
         switch (mode) {
         case "per":
             filter1D = filter1DPer;
+            filter1DMono = filter1DPerMono;
             break;
         case "sym":
         case "symw":
         case "zpd":
         case "nn":
             filter1D = filter1DPad;
+            filter1DMono = filter1DPadMono;
             break;
         case "debug_sym":
         case "debug_symw":
@@ -183,7 +204,7 @@
                 k = inL ? kL : kH;
             for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
                 var yx0 = ys + i, nyx = ly + i;
-                filter1DPadMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, k, id, od);
+                filter1DMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, k, id, od);
             }
         } else {
             var idL = inL.getData(),  idH = inH.getData(),
@@ -984,7 +1005,8 @@
     })();
     
     window.addEventListener("load", function () {
-        return;
+
+        Matrix.dwtmode("per");
         var name = 'coif1';
         var wav = Matrix.wfilters(name, 'r');
         var fL = wav[0].getData(), fH = wav[1].getData();
@@ -1005,10 +1027,11 @@
     }, false);
 
     window.addEventListener("load", function () {
-        var name = 'coif1';
+        return;
+        var name = 'sym4';
         var wav = Matrix.wfilters(name, 'r');
         var filters = [wav[0].getData(), wav[1].getData()];
-        var s = Matrix.randi(9, 17, 19).display();
+        var s = Matrix.randi(9, 17, 19)
         var N = 10;
         var wt = Matrix.wavedec2(s, N, name);
         N = N - 2;
@@ -1018,7 +1041,6 @@
             rec["+="](Matrix.wrcoef2('v', wt, name, n));
             rec["+="](Matrix.wrcoef2('d', wt, name, n));
         }
-        rec.display("rec");
         var psnr = Matrix.psnr(s, rec).getDataScalar();
         console.log(psnr, "dB");
     }, false);

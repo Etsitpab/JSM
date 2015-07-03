@@ -243,6 +243,7 @@
     var log = function (msg, psnr, time) {
         if (psnr < 100) {
             console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
+            return -1;
         } else if (psnr !== undefined && time !== undefined){
             console.log(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
         } else if (psnr === undefined && time !== undefined) {
@@ -343,9 +344,9 @@
         time = Tools.toc();
         psnr = Matrix.psnr(s, rec).getDataScalar();
         log("DWT 2D upwlev2", psnr, time);
-        
-        (function () {
-             var wNames = [
+
+        var completeTests = function () {
+            var wNames = [
                 'haar',
                 'sym2', 'sym4', 'sym8',
                 'db2', 'db4', 'db8',
@@ -356,8 +357,93 @@
             ], wModes = [
                 "sym", "symw", "per", "zpd", "nn"
             ];
-            log("DWT 1D/2D all wavelets/mode test start");
-            Tools.tic();
+            /*
+             (function () {
+             log("DWT 1D/2D all wavelets/mode test start");
+             Tools.tic();
+             for (var n = 0; n < wNames.length; n++) {
+             var name = wNames[n];
+             for (var m = 0; m < wModes.length; m++) {
+             Matrix.dwtmode(wModes[m]);
+             for (var sz = 1; sz < 8; sz += 2) {
+             var s = Matrix.rand(sz, sz + 1, 3);
+             var N = Matrix.dwtmaxlev([sz, sz + 1], name);
+             N = N < 1 ? 1 : N;
+             Tools.tic();
+             var wt1 = Matrix.wavedec(s, N, name, 0);
+             var iwt1 = Matrix.waverec(wt1, name, 0);
+             var wt2 = Matrix.wavedec(s, N, name, 1);
+             var iwt2 = Matrix.waverec(wt2, name, 1);
+             var time = Tools.toc();
+             Tools.tic();
+             var wt2D = Matrix.wavedec2(s, N, name);
+             var iwt2D = Matrix.waverec2(wt2D, name);
+             var time2D = Tools.toc();
+             var err1 = Matrix.minus(s, iwt1).norm(); 
+             var err2 = Matrix.minus(s, iwt2).norm();
+             var err2D = Matrix.minus(s, iwt2D).norm();
+             var err1Disp = parseFloat(err1.toExponential(2))
+             var err2Disp = parseFloat(err2.toExponential(2))
+             var err2DDisp = parseFloat(err2D.toExponential(2))
+             if (err1 > 1e-8 || err2 > 1e-8 || err2D > 1e-8)  {
+             console.log("Name:", name, "Modes:", Matrix.dwtmode())
+             console.log(
+             "\t\t",
+             "Size", [sz, sz + 1],
+             "\tErrors:", [err1Disp, err2Disp, err2DDisp],
+             "\tTime:", [time, time2D]
+             );
+             throw new Error("Error is too high: " + [err1, err2, err2D]);
+             }
+             }
+             }
+             }
+             var time = Tools.toc();
+             log("DWT 1D/2D all wavelets/mode", undefined, time);
+             Matrix.dwtmode("per");
+             })();
+             */
+            var test = function (s, name, N, M) {
+                var wav = Matrix.wfilters(name, 'r');
+                var filters = [wav[0].getData(), wav[1].getData()];
+                Tools.tic();
+                var wt = Matrix.wavedec2(s, N, name);
+                var rec = Matrix.wrcoef2('a', wt, name, N - M);
+                for (var n = N - M; n > 0; n--) {
+                    rec["+="](Matrix.wrcoef2('h', wt, name, n));
+                    rec["+="](Matrix.wrcoef2('v', wt, name, n));
+                    rec["+="](Matrix.wrcoef2('d', wt, name, n));
+                }
+                var time = Tools.toc();
+                return {
+                    psnr: Matrix.psnr(s, rec).getDataScalar(),
+                    time: time
+                }
+            }
+            var test2 = function (s, N, name, dim) {
+                Tools.tic();
+                var wt = Matrix.wavedec(s, N, name, dim);
+                var iwt = Matrix.waverec(wt, name, dim);
+                var time = Tools.toc();
+                var psnr = Matrix.psnr(s, iwt).getDataScalar();
+                return {
+                    psnr: psnr,
+                    time: time
+                }
+            }
+            var test3 = function (s, N, name) {
+                Tools.tic();
+                var wt2 = Matrix.wavedec2(s, N, name);
+                var iwt2 = Matrix.waverec2(wt2, name);
+                var time = Tools.toc();
+                var psnr = Matrix.psnr(s, iwt2).getDataScalar();
+                return {
+                    psnr: psnr,
+                    time: time
+                }
+            }
+
+            var res;
             for (var n = 0; n < wNames.length; n++) {
                 var name = wNames[n];
                 for (var m = 0; m < wModes.length; m++) {
@@ -366,39 +452,25 @@
                         var s = Matrix.rand(sz, sz + 1, 3);
                         var N = Matrix.dwtmaxlev([sz, sz + 1], name);
                         N = N < 1 ? 1 : N;
-                        Tools.tic();
-                        var wt1 = Matrix.wavedec(s, N, name, 0);
-                        var iwt1 = Matrix.waverec(wt1, name, 0);
-                        var wt2 = Matrix.wavedec(s, N, name, 1);
-                        var iwt2 = Matrix.waverec(wt2, name, 1);
-                        var time = Tools.toc();
-                        Tools.tic();
-                        var wt2D = Matrix.wavedec2(s, N, name);
-                        var iwt2D = Matrix.waverec2(wt2D, name);
-                        var time2D = Tools.toc();
-                        var err1 = Matrix.minus(s, iwt1).norm(); 
-                        var err2 = Matrix.minus(s, iwt2).norm();
-                        var err2D = Matrix.minus(s, iwt2D).norm();
-                        var err1Disp = parseFloat(err1.toExponential(2))
-                        var err2Disp = parseFloat(err2.toExponential(2))
-                        var err2DDisp = parseFloat(err2D.toExponential(2))
-                        if (err1 > 1e-8 || err2 > 1e-8 || err2D > 1e-8)  {
-                            console.log("Name:", name, "Modes:", Matrix.dwtmode())
-                            console.log(
-                                "\t\t",
-                                "Size", [sz, sz + 1],
-                                "\tErrors:", [err1Disp, err2Disp, err2DDisp],
-                                "\tTime:", [time, time2D]
-                            );
-                            throw new Error("Error is too high: " + [err1, err2, err2D]);
-                        }
+                        
+                        log(s.size() + " " + name + " " + wModes[m]);
+                        
+                        res = test(s, name, N, 0);
+                        log("Reconstruction with wrcoef2 on " + N + " levels", res.psnr, res.time);
+
+                        res = test2(s, N, name, 0);
+                        log("DWT 1D on " + N + " levels", res.psnr, res.time);
+                        res = test2(s, N, name, 1);
+                        log("DWT 1D on " + N + " levels", res.psnr, res.time);
+                        
+                        res = test3(s, N, name);
+                        log("DWT 2D on " + N + " levels", res.psnr, res.time);
+                        log("\n");
                     }
                 }
             }
-            var time = Tools.toc();
-            log("DWT 1D/2D all wavelets/mode", undefined, time);
-            Matrix.dwtmode("per");
-        })();
+        };
+        completeTests();
     };
 
     Matrix._benchmarkFourier = function (N) {
