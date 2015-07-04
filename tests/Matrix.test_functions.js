@@ -404,8 +404,6 @@
              })();
              */
             var test = function (s, name, N, M) {
-                var wav = Matrix.wfilters(name, 'r');
-                var filters = [wav[0].getData(), wav[1].getData()];
                 Tools.tic();
                 var wt = Matrix.wavedec2(s, N, name);
                 var rec = Matrix.wrcoef2('a', wt, name, N - M);
@@ -418,8 +416,8 @@
                 return {
                     psnr: Matrix.psnr(s, rec).getDataScalar(),
                     time: time
-                }
-            }
+                };
+            };
             var test2 = function (s, N, name, dim) {
                 Tools.tic();
                 var wt = Matrix.wavedec(s, N, name, dim);
@@ -429,8 +427,8 @@
                 return {
                     psnr: psnr,
                     time: time
-                }
-            }
+                };
+            };
             var test3 = function (s, N, name) {
                 Tools.tic();
                 var wt2 = Matrix.wavedec2(s, N, name);
@@ -440,15 +438,52 @@
                 return {
                     psnr: psnr,
                     time: time
+                };
+            };
+            var test4 = function (s, N, name, dim) {
+                Tools.tic();
+                var wt = Matrix.wavedec(s, N, name, dim);
+                for (var n = 0; n < N; n++) {
+                    wt = Matrix.upwlev(wt, name, dim);
                 }
+                var time = Tools.toc();
+                return {
+                    psnr: Matrix.psnr(wt[0], s).getDataScalar(),
+                    time: time
+                };
             }
-
+            var test5 = function (s, N, name) {
+                Tools.tic();
+                var wt = Matrix.wavedec2(s, N, name);
+                for (var n = 0; n < N; n++) {
+                    wt = Matrix.upwlev2(wt, name);
+                }
+                var rec = Matrix.appcoef2(wt, name, 0);
+                var time = Tools.toc();
+                return {
+                    psnr: Matrix.psnr(rec, s).getDataScalar(),
+                    time: time
+                };
+            };
+            var test6 = function (s, name, N, M, dim) {
+                Tools.tic();
+                var wt = Matrix.wavedec(s, N, name, dim);
+                var rec = Matrix.wrcoef('l', wt, name, dim, N - M);
+                for (var n = N - M; n > 0; n--) {
+                    rec["+="](Matrix.wrcoef('h', wt, name, dim, n));
+                }
+                var time = Tools.toc();
+                return {
+                    psnr: Matrix.psnr(s, rec).getDataScalar(),
+                    time: time
+                };
+            };
             var res;
             for (var n = 0; n < wNames.length; n++) {
                 var name = wNames[n];
                 for (var m = 0; m < wModes.length; m++) {
                     Matrix.dwtmode(wModes[m]);
-                    for (var sz = 1; sz < 8; sz += 2) {
+                    for (var sz = 1; sz < 6; sz += 2) {
                         var s = Matrix.rand(sz, sz + 1, 3);
                         var N = Matrix.dwtmaxlev([sz, sz + 1], name);
                         N = N < 1 ? 1 : N;
@@ -457,6 +492,10 @@
                         
                         res = test(s, name, N, 0);
                         log("Reconstruction with wrcoef2 on " + N + " levels", res.psnr, res.time);
+                        res = test6(s, name, N, 0, 0);
+                        log("Reconstruction with wrcoef on " + N + " levels", res.psnr, res.time);
+                        res = test6(s, name, N, 0, 1);
+                        log("Reconstruction with wrcoef on " + N + " levels", res.psnr, res.time);
 
                         res = test2(s, N, name, 0);
                         log("DWT 1D on " + N + " levels", res.psnr, res.time);
@@ -465,6 +504,13 @@
                         
                         res = test3(s, N, name);
                         log("DWT 2D on " + N + " levels", res.psnr, res.time);
+
+                        res = test4(s, N, name, 0);
+                        log("1D upwlev on " + N + " levels", res.psnr, res.time);
+                        res = test4(s, N, name, 1);
+                        log("1D upwlev on " + N + " levels", res.psnr, res.time);
+                        res = test5(s, N, name);
+                        log("2D upwlev on " + N + " levels", res.psnr, res.time);
                         log("\n");
                     }
                 }
