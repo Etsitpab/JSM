@@ -490,8 +490,6 @@
                         
                         log(s.size() + " " + name + " " + wModes[m]);
                         
-                        res = test(s, name, N, 0);
-                        log("Reconstruction with wrcoef2 on " + N + " levels", res.psnr, res.time);
                         res = test6(s, name, N, 0, 0);
                         log("Reconstruction with wrcoef on " + N + " levels", res.psnr, res.time);
                         res = test6(s, name, N, 0, 1);
@@ -501,14 +499,14 @@
                         log("DWT 1D on " + N + " levels", res.psnr, res.time);
                         res = test2(s, N, name, 1);
                         log("DWT 1D on " + N + " levels", res.psnr, res.time);
-                        
-                        res = test3(s, N, name);
-                        log("DWT 2D on " + N + " levels", res.psnr, res.time);
-
                         res = test4(s, N, name, 0);
                         log("1D upwlev on " + N + " levels", res.psnr, res.time);
                         res = test4(s, N, name, 1);
                         log("1D upwlev on " + N + " levels", res.psnr, res.time);
+                        res = test(s, name, N, 0);
+                        log("Reconstruction with wrcoef2 on " + N + " levels", res.psnr, res.time);
+                        res = test3(s, N, name);
+                        log("DWT 2D on " + N + " levels", res.psnr, res.time);
                         res = test5(s, N, name);
                         log("2D upwlev on " + N + " levels", res.psnr, res.time);
                         log("\n");

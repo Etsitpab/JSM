@@ -151,6 +151,7 @@
             filter1D = filter1DPer;
             filter1DMono = filter1DPerMono;
             break;
+        case "per2":
         case "sym":
         case "symw":
         case "zpd":
@@ -181,16 +182,14 @@
 
     var filterND = function (inL, inH, vI, name, forward, origin, sub, outL, outH, vO) {
         var wav = Matrix.wfilters(name, forward ? 'd' : 'r');
-        var kL = wav[0].getData(), kH = wav[1].getData();
-
-        var K = kL.length;
+        var kL = wav[0].getData(), kH = wav[1].getData(), K = kL.length;
+        
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
         var isOdd = vI.getSize(0) % 2 ? true : false; 
      
         var ys = vI.getFirst(0), dy = vI.getStep(0);
         var ly = vI.getEnd(0) + ((isOdd && dwtmode === "per") ? dy : 0);
         var oys = vO.getFirst(0), ody = vO.getStep(0);
-
 
         var orig = origin * dy;
         var kdy = dy;
@@ -233,17 +232,24 @@
         var li = K - 2, ri = K - 2 + (isOdd ? 1 : 0);
         // Left and right output padding
         var lo = f(li / 4), ro = c(ri / 4);
-        // On odd signal, the number of  
+        // On odd signal, the length of output corresponding to
+        // the signal without considering padding depend if we start
+        // on te first or on the second value. This starting point
+        // depends itself on if we have K % 4 equal to zero or not. 
         if (isOdd && (K % 4) !== 0) {
             ro--;
         }
         if (dwtmode === 'per') {
-            return {
-                "lk": lk, "rk": rk,
-                "li": 0, "ri": 0,
-                "lo": 0, "ro": 0
-            };
-        }
+            li = 0;
+            ri = 0;
+            lo = 0;
+            ro = 0;
+        } else if (dwtmode === 'per2') {
+            li = lk;
+            ri = rk;
+            lo = 0;
+            ro = 0;
+        } 
         return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
     };
     var padTest = function (isOdd) {
@@ -256,6 +262,7 @@
     };
 
     var dwt = function (s, name, dim) {
+        dim = dim || 0;
         var size = s.getSize();
         var p = getPaddingInfos(name, size[dim]);
         size[dim] = Math.ceil(size[dim] / 2) + p.ro + p.lo;
@@ -271,36 +278,48 @@
         return [dL, dH];
     };
     var idwt = function (bands, name, dim, out) {
+        dim = dim || 0;
         var n = bands[0] ? 0 : 1;
+
+        var p = getPaddingInfos(name, bands[n].getSize(dim));
+        var start = (dwtmode === 'per' || dwtmode === 'per2') ? 0 : 1,
+            offset = dwtmode === 'per' ? 0 : p.lk + p.rk;
+
         var size = bands[n].getSize();
-        var start = dwtmode === 'per' ? 0 : 1;
-        size[dim] = size[dim] * 2 + start; 
+        size[dim] = 2 * size[dim] + start; 
+        var dL = bands[0] ? zeros(size) : undefined,
+            dH = bands[1] ? zeros(size) : undefined,
+            dV = new MatrixView(size).selectDimension(dim, [start, 2, -1])
 
-        var data = [
-            bands[0] ? zeros(size) : undefined,
-            bands[1] ? zeros(size) : undefined,
-        ];
-        var v = data[n].getView().selectDimension(dim, [start, 2, -1]);
-        for (var b = 0; b < bands.length; b++) {
-            if (bands[b]) {
-                bands[b].extractViewTo(v, data[b]);
+        if (dL) {
+            bands[0].extractViewTo(dV, dL);
+        }
+        if (dH) {
+            bands[1].extractViewTo(dV, dH);
+        }
+
+        if (dwtmode === "per2") {
+            if (dL) {
+                dL = dL.paddim(dwtmode, dim, [p.li + 1, p.ri - 1]);
             }
+            if (dH) {
+                dH = dH.paddim(dwtmode, dim, [p.li + 1, p.ri - 1]);
+            }
+            dV = (dL || dH).getView();
+            size = (dL || dH).getSize();
         }
-        v.restore().swapDimensions(0, dim);
-
-        if (dwtmode !== 'per') {
-            var p = getPaddingInfos(name, bands[n].getSize(dim));
-            size[dim] -= p.rk + p.lk;
-        }
+        
+        dV.restore().swapDimensions(0, dim);
+        size[dim] -= offset;
 
         // Out array
         if (out !== undefined && !Tools.checkSizeEquals(out.getSize(), size)) {
-            throw new Error("idwtMono: Wrong output size.");
+            throw new Error("idwt: Wrong output size.");
         }
         var out = out || zeros(size), vO = out.getView().swapDimensions(0, dim);
 
         // Process scale
-        filterND(data[0], data[1], v, name, false, 'cl', 1, out, out, vO);
+        filterND(dL, dH, dV, name, false, 'cl', 1, out, out, vO);
         return out;
     };
     
@@ -343,8 +362,8 @@
     };
     var idwt2 = function (bands, name) {
         var n = bands[0] ? 0 : (bands[1] ? 1 : (bands[2] ? 2 : 3));
-        var ph = getPaddingInfos(name, bands[n].getSize(0));
-        var pw = getPaddingInfos(name, bands[n].getSize(1));
+        var ph = getPaddingInfos(name, bands[n].getSize(0)),
+            pw = getPaddingInfos(name, bands[n].getSize(1));
         var oh = 0, ow = 0, start = 0;
         if (dwtmode !== 'per') {
             oh = ph.rk + ph.lk;
@@ -354,48 +373,74 @@
 
         var size = bands[n].getSize();
         size[0] = 2 * size[0] + start
+        var dL = (bands[0] || bands[1]) ? zeros(size) : undefined,
+            dH = (bands[2] || bands[3]) ? zeros(size) : undefined,
+            dV = new MatrixView(size);
 
-        var dL, dH;
-        if (bands[0] || bands[1]) {
-            dL = zeros(size)
-        }
-        if (bands[2] || bands[3]) {
-            dH = zeros(size)
-        }
         size[0] -= oh;
         size[1] = 2 * size[1] + start;
-
-        var bL, bH;
+        /*
+        var bL = (bands[0] || bands[2]) ? zeros(size) : undefined,
+            bH = (bands[1] || bands[3]) ? zeros(size) : undefined,
+            B = new MatrixView(size).select([], [start, 2, -1]);
+         */
+        var bL, bH, B;
         if (bands[0] || bands[2]) {
-            bL = zeros(size)
-        }
-        if (bands[1] || bands[3]) {
-            bH = zeros(size)
-        }
-        var dV = (dL || dH).getView(), B = (bL || bH).getView();
-        
-        B.select([], [start, 2, -1]);
-        if (bL) {
             if (dL) {
                 dL.set([start, 2, -1], bands[0]);
             }
             if (dH) {
                 dH.set([start, 2, -1], bands[2]);
             }
+            if (dwtmode === "per2") {
+                if (dL) {
+                    dL = dL.paddim(dwtmode, 0, [ph.li + 1, ph.ri - 1]);
+                }
+                if (dH) {
+                    dH = dH.paddim(dwtmode, 0, [ph.li + 1, ph.ri - 1]);
+                }
+                dV = (dL || dH).getView();
+                size[0] += ph.li + ph.ri;
+            }
+            bL = zeros(size);
+            B = bL.getView().select([], [start, 2, -1]);
             filterND(dL, dH, dV, name, false, 'cl', 1, bL, bL, B);
         }
-        if (bH) {
+        if (bands[1] || bands[3]) {
             if (dL) {
                 dL.set([start, 2, -1], bands[1]);
             }
             if (dH) {
                 dH.set([start, 2, -1], bands[3]);
             }
+            if (dwtmode === "per2") {
+                if (dL) {
+                    dL = dL.paddim(dwtmode, 0, [ph.li + 1, ph.ri - 1]);
+                }
+                if (dH) {
+                    dH = dH.paddim(dwtmode, 0, [ph.li + 1, ph.ri - 1]);
+                }
+                dV = (dL || dH).getView();
+                size[0] += ph.li + ph.ri;
+            }            
+            bH = zeros(size),
+            B = bH.getView().select([], [start, 2, -1]);
             filterND(dL, dH, dV, name, false, 'cl', 1, bH, bH, B);
         }
 
         size[1] -= ow;
-        var out = zeros(size), vO = out.getView().swapDimensions(0, 1);
+        if (dwtmode === "per2") {
+            if (bL) {
+                bL = bL.paddim(dwtmode, 0, [pw.li + 1, pw.ri - 1]);
+            }
+            if (bH) {
+                bH = bH.paddim(dwtmode, 0, [pw.li + 1, pw.ri - 1]);
+            }
+            dV = (dL || dH).getView();
+            size[0] += pw.li + pw.ri;
+        }            
+
+        var out = zeros(size), vO = new MatrixView(size).swapDimensions(0, 1);
         B.restore().swapDimensions(0, 1);
         filterND(bL, bH, B, name, false, 'cl', 1, out, out, vO);
         return out;
@@ -428,78 +473,6 @@
         return maxlev < 0 ? 0 : maxlev;
     };
   
-    /** Compute the 1D DWT (Discrete Wavelet Transform)
-     * of a column vector.
-     * __See also :__
-     * {@link Matrix#idwt},
-     * {@link Matrix#dwt2}.
-     *
-     * @param {Matrix} signal
-     * @param {String} [name='haar']
-     *  Wavelet name.
-     * @param {Number} [dim=0]
-     *  Dimension on which perform th dwt.
-     * @return {Array}
-     *  Array containing approximation coefficients and details.
-     * @matlike
-     */
-    Matrix.dwt = function (im, name, dim) {
-        dim = dim || 0;
-        return dwt(im, name, dim);
-    };
-    /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
-     *
-     * __See also :__
-     * {@link Matrix#dwt},
-     * {@link Matrix#idwt2}.
-     * @param {Array} bands
-     *  Array containing approximation and details coefficients.
-     * @param {String} [name='haar']
-     *  Wavelet name.
-     * @param {Number} [dim=0]
-     *  Dimension on which perform th idwt.
-     * @return {Matrix}
-     *  Matrix with the reconstructed signal.
-     * @matlike
-     */
-    Matrix.idwt = function (bands, name, dim) {
-        dim = dim || 0;
-        return idwt(bands, name, dim);
-    };
-        
-    /** Compute the 2D DWT (Discrete Wavelet Transform)
-     * of a column vector.
-     * __See also :__
-     * {@link Matrix#idwt},
-     * {@link Matrix#dwt2}.
-     *
-     * @param {Matrix} signal
-     * @param {String} name
-     *  Wavelet name.
-     * @return {Array}
-     *  Array containing approximation coefficients and details.
-     * @matlike
-     */
-    Matrix.dwt2 = function (im, name) {
-        return dwt2(im, name)
-    };
-    /** Compute the 2D inverse DWT (Discrete Wavelet Transform).
-     *
-     * __See also :__
-     * {@link Matrix#dwt},
-     * {@link Matrix#idwt2}.
-     * @param {Array} bands
-     *  Array containing approximation and details coefficients.
-     * @param {String} name
-     *  Wavelet name.
-     * @return {Matrix}
-     *  Matrix with the reconstructed signal.
-     * @matlike
-     */
-    Matrix.idwt2 = function (bands, name) {
-        return idwt2(bands, name)
-    };
-
     var createStruct1D = function (s, n, name, dim) {
         var sizes = new Uint16Array(n + 2);
         sizes[n + 1] = s.getSize(dim);
@@ -538,6 +511,38 @@
         return A;
     };
    
+    /** Compute the 1D DWT (Discrete Wavelet Transform)
+     * of a column vector.
+     * __See also :__
+     * {@link Matrix#idwt},
+     * {@link Matrix#dwt2}.
+     *
+     * @param {Matrix} signal
+     * @param {String} [name='haar']
+     *  Wavelet name.
+     * @param {Number} [dim=0]
+     *  Dimension on which perform th dwt.
+     * @return {Array}
+     *  Array containing approximation coefficients and details.
+     * @matlike
+     */
+    Matrix.dwt = dwt
+    /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
+     *
+     * __See also :__
+     * {@link Matrix#dwt},
+     * {@link Matrix#idwt2}.
+     * @param {Array} bands
+     *  Array containing approximation and details coefficients.
+     * @param {String} [name='haar']
+     *  Wavelet name.
+     * @param {Number} [dim=0]
+     *  Dimension on which perform th idwt.
+     * @return {Matrix}
+     *  Matrix with the reconstructed signal.
+     * @matlike
+     */
+    Matrix.idwt = idwt
     /** Perform a DWT (Discrete Wavelet Transform)
      * on each vector presents on a given Matrix dimension.
      *
@@ -731,7 +736,36 @@
         }
         return A;
     };
-    
+
+    /** Compute the 2D DWT (Discrete Wavelet Transform)
+     * of a column vector.
+     * __See also :__
+     * {@link Matrix#idwt},
+     * {@link Matrix#dwt2}.
+     *
+     * @param {Matrix} signal
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array containing approximation coefficients and details.
+     * @matlike
+     */
+    Matrix.dwt2 = dwt2;
+    /** Compute the 2D inverse DWT (Discrete Wavelet Transform).
+     *
+     * __See also :__
+     * {@link Matrix#dwt},
+     * {@link Matrix#idwt2}.
+     * @param {Array} bands
+     *  Array containing approximation and details coefficients.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Matrix}
+     *  Matrix with the reconstructed signal.
+     * @matlike
+     */
+    Matrix.idwt2 = idwt2;
+
     /** Perform a 2D DWT (Discrete Wavelet Transform)
      *
      * __See also :__
@@ -973,18 +1007,26 @@
                 }
                 return sel;
             },
-            per: function (s, l, r) {
-                var length = s + l + r, sel = new Uint32Array(length);
+            per2: function (s, l, r) {
+                var isOdd = s % 2;
+                s += isOdd ? 1 : 0;
+                var length = s + l + r, sel = new Int32Array(length);
                 var i, j;
-                i = 0;
-                for (j = l; j > 0; j--, i++) {
-                    sel[i] = s - j;
+                for (i = 0, j = l; j > 0; j--, i++) {
+                    sel[i] = s - (j - 1) % s - 1;
                 }
                 for (j = 0; j < s; j++, i++) {
                     sel[i] = j;
                 }
                 for (j = 0; j < r; j++, i++) {
-                    sel[i] = j;
+                    sel[i] = j % s;
+                }
+                if (isOdd) {
+                    for (i = 0; i < sel.length; i++) {
+                        if (sel[i] == s - 1) {
+                            sel[i]--;
+                        }
+                    }                    
                 }
                 return sel;
             },
@@ -1056,6 +1098,41 @@
     })();
     
     window.addEventListener("load", function () {
+        // var s = Matrix.colon(1, 1);
+        // s.paddim("per2", 0, [0, 12]).display();
+        var test6 = function (s, name, N, M, dim) {
+            Tools.tic();
+            var wt = Matrix.wavedec(s, N, name, dim);
+            var rec = Matrix.wrcoef('l', wt, name, dim, N - M);
+            for (var n = N - M; n > 0; n--) {
+                rec["+="](Matrix.wrcoef('h', wt, name, dim, n));
+            }
+            var time = Tools.toc();
+            return {
+                psnr: Matrix.psnr(s, rec).getDataScalar(),
+                time: time
+            };
+        };
+        Matrix.dwtmode("per2");
+        var name = 'haar', dim = 0;
+        var s = Matrix.ones(1, 2, 3).display();
+        test6(s, name, 2, 0, 0);
+        return;
+        var sz = 5;
+        var s = Matrix.ones(sz, 4).cumsum(0).cumsum(1).display();
+        Matrix.dwtmode("per");
+        var wt = Matrix.dwt(s, name, dim);
+        wt[0].display();
+        wt[1].display();
+
+        Matrix.dwtmode("per2");
+        wt = Matrix.dwt(s, name, dim);
+        wt[0].display();
+        wt[1].display();
+        var iwt = Matrix.idwt(wt, name, dim);
+        iwt.display();
+        Matrix.dwtmode("sym");
+        
     }, false);
 
 
