@@ -16,7 +16,6 @@
  * @author Guillaume Tartavel <guillaume.tartavel@telecom-paristech.fr>
  */
 
-
 (function (Matrix, Matrix_prototype) {
     'use strict';
     
@@ -141,10 +140,21 @@
         }
     };
     var filter1D, filter1DMono, dwtmode;
+    
+    /** Select or return the mode used for bordering management.
+     *   Available modes are :
+     *   - "per", for periodic, it leads to the shortest representation,
+     *   - "sym", for symmetric boundary (default mode),
+     *   - "nn", for nearest neighbour boundary,
+     *   - "symw", for symmetric boundary with whole point,
+     *   - "zpd". zero padding boundary.
+     *
+     *  @param {string} mode
+     *   The mode to be used.
+     *  @return {String} 
+     *   Returns the current or new mode.
+     */
     Matrix.dwtmode = function (mode) {
-        if (mode === undefined) {
-            return dwtmode;
-        }
         mode = mode.toLowerCase();
         switch (mode) {
         case "per":
@@ -152,6 +162,7 @@
             filter1DMono = filter1DPerMono;
             break;
         case "per2":
+        case "per3":
         case "sym":
         case "symw":
         case "zpd":
@@ -177,6 +188,7 @@
             throw new Error("Matrix.dwtmode: invalid mode " + mode + "."); 
         }
         dwtmode = mode;
+        return dwtmode;
     };
     Matrix.dwtmode("sym");
 
@@ -309,10 +321,9 @@
             size = (dL || dH).getSize();
         }
         
+        // Out array
         dV.restore().swapDimensions(0, dim);
         size[dim] -= offset;
-
-        // Out array
         if (out !== undefined && !Tools.checkSizeEquals(out.getSize(), size)) {
             throw new Error("idwt: Wrong output size.");
         }
@@ -483,8 +494,8 @@
         sizes[0] = sizes[1];
         return Matrix.toMatrix(sizes)
     };
-    var getSubbandsCoordinates1D = function (lc, dim) {
-        var sizes = lc.get([], 0).getData();
+    var getSubbandsCoordinates1D = function (wt, dim) {
+        var sizes = wt.get([], 0).getData();
 
         var outSize = sizes[0];
         var bands = [0, outSize], subSizes = [];
@@ -600,10 +611,10 @@
      *  The reconstructed signal.
      * @matlike
      */
-    Matrix.waverec = function (lc, name, dim) {
+    Matrix.waverec = function (wt, name, dim) {
         dim = dim || 0;
-        var ds = getSubbandsCoordinates1D(lc[1], dim);
-        var input = lc[0], iV = input.getView();
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
+        var input = wt[0], iV = input.getView();
         var dLView = iV.selectDimension(dim, [ds.bands[0], ds.bands[1] - 1]);
         var dL = input.extractViewFrom(dLView);
 
@@ -615,14 +626,32 @@
         }
         return dL;
     };
-
-    Matrix.upwlev = function (lc, name, dim) {
-        if (lc[1].getSize(0) === 2) {
+    /** Reconstruct the signal from a 1D DWT (Discrete Wavelet Transform)
+     * at the coarsest level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec},
+     * {@link Matrix#idwt}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array of three elements, one contains the coefficients 
+     *  the second contains the sizes of each subbands, and the third 
+     *  contains the approximation coefficients at the scale j-1.
+     * @matlike
+     */
+    Matrix.upwlev = function (wt, name, dim) {
+        if (wt[1].getSize(0) === 2) {
             return [new Matrix(), new Matrix()];
         }
         dim = dim || 0;
-        var ds = getSubbandsCoordinates1D(lc[1], dim);
-        var input = lc[0], iV = input.getView();
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
+        var input = wt[0], iV = input.getView();
         var dLView = iV.selectDimension(dim, [ds.bands[0], ds.bands[1] - 1]);
         var dLm = input.extractViewFrom(dLView);
         var dHView = iV.restore().selectDimension(dim, [ds.bands[1], ds.bands[2] - 1]);
@@ -636,44 +665,121 @@
         oV = o.getView().selectDimension(dim, [0, bSize - 1]);
         dL.extractViewTo(oV, o);
 
-        var sizes = lc[1].get([1, -1]);
+        var sizes = wt[1].get([1, -1]);
         sizes.set(0, [], sizes.get(1, []));
 
         return [o, sizes, dLm];
     };
-    Matrix.appcoef = function (lc, name, dim, j) {
-        j = j === undefined ? lc[1].size()[0] - 2 : j;
-        var J = lc[1].size(0) - 2;
+    /** Returns the coefficients corresponding to the approximation subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#wrcoef},
+     * {@link Matrix#detcoef},
+     * {@link Matrix#upwlev},
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} dim
+     *  Dimension along which the signal must be reconstructed.
+     * @param {Number} level
+     *  The level of the subband between 0 (the original signal) and 
+     *  N the decomposition level.
+     * @return {Matrix}
+     *  If the level corresponds to the last level of decomposition, 
+     *  the coefficients returned will be a view on the coefficient
+     *  provided. Therefore, a modification on one will affect both.
+     * @matlike
+     */
+    Matrix.appcoef = function (wt, name, dim, j) {
+        j = j === undefined ? wt[1].size()[0] - 2 : j;
+        var J = wt[1].size(0) - 2;
         if (j > J || j < 0) {
             throw new Error("Matrix.appcoef2: Invalid decomposition level.");
         }
         while (J > j) {
-            lc = Matrix.upwlev(lc, name);
-            J = lc[1].size(0) - 2;
+            wt = Matrix.upwlev(wt, name);
+            J = wt[1].size(0) - 2;
         }
-        var ds = getSubbandsCoordinates1D(lc[1], dim);
-        var input = lc[0], iV = input.getView();
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
+        var input = wt[0], iV = input.getView();
         var dLView = iV.selectDimension(dim, [ds.bands[0], ds.bands[1] - 1]);
         return input.extractViewFrom(dLView);
     };
-    Matrix.detcoef = function (lc, dim, j) {
-        var ds = getSubbandsCoordinates1D(lc[1], dim);
+    /** Returns the coefficients corresponding to a detail subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec},
+     * {@link Matrix#wrcoef},
+     * {@link Matrix#appcoef}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {Number} level
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
+     * @matlike
+     */
+    Matrix.detcoef = function (wt, dim, j) {
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
         if (j > ds.J || j < 1) {
             throw new Error("Matrix.detcoef2: Invalid decomposition level.");
         }
         var scale = ds.J - j;
-        var input = lc[0], iV = input.getView();
+        var input = wt[0], iV = input.getView();
         var dHView = iV.selectDimension(dim, [ds.bands[1 + scale], ds.bands[2 + scale] - 1]);
         return input.extractViewFrom(dHView);
     };
-    Matrix.wrcoef = function (type, lc, name, dim, N) {
+    /** Reconstruct the signal using only one subband.
+     *
+     * __See also :__
+     * {@link Matrix#appcoef},
+     * {@link Matrix#detcoef},
+     * {@link Matrix#upwlev},
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec}.
+     *
+     * @param {String} type
+     *  Give the subband to use for the reconstruction ('l' or 'h').
+     *  The value 'l' corresponds to the approximation coefficients (low-pass filter)
+     *  while the seconds corresponds to the detail coefficients (high-pass filter).
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  The wavelet filters to use for the reconstruction.
+     * @param {Number} dimension
+     *  Dimension along which the reconstruction will occur.
+     * @param {Number} level
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
+     * @matlike
+     */
+    Matrix.wrcoef = function (type, wt, name, dim, N) {
         var L, H;
         if (type === 'l') {
-            L = Matrix.appcoef(lc, name, dim, N);
+            L = Matrix.appcoef(wt, name, dim, N);
         }  else if (type === 'h') {
-            H = Matrix.detcoef(lc, dim, N)
+            H = Matrix.detcoef(wt, dim, N)
         } 
-        var ds = getSubbandsCoordinates1D(lc[1]);
+        var ds = getSubbandsCoordinates1D(wt[1]);
         for (var n = 0; n < N; n++) {
             L = idwt([L, H], name, dim);
             L = resizeMatrix1d(L, ds, ds.J - N + n + 1, dim);
@@ -701,10 +807,10 @@
         cSizes[0] = cSizes[1];
         return Matrix.toMatrix([ySizes, xSizes, cSizes])
     };
-    var getSubbandsCoordinates = function (lc) {
-        var ySizes = lc.get([], 0).getData(),
-            xSizes = lc.get([], 1).getData(),
-            cSizes = lc.get([], 2).getData();
+    var getSubbandsCoordinates = function (wt) {
+        var ySizes = wt.get([], 0).getData(),
+            xSizes = wt.get([], 1).getData(),
+            cSizes = wt.get([], 2).getData();
 
         var outSize = xSizes[0] * ySizes[0] * cSizes[0];
         var bands = [0, outSize], subSizes = [];
@@ -811,8 +917,8 @@
      *  The reconstructed signal.
      * @matlike
      */
-    Matrix.waverec2 = function (lc, name) {
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
+    Matrix.waverec2 = function (wt, name) {
+        var ds = getSubbandsCoordinates(wt[1]), data = wt[0].getData();
         var A, H, V, D;
         A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
         for (var l = 0, s = 0, J = ds.J; l < J; l++, s += 3) {
@@ -844,12 +950,12 @@
      *  contains the approximation coefficients at the scale j-1.
      * @matlike
      */
-    Matrix.upwlev2 = function (lc, name) {
-        if (lc[1].getSize(0) === 2) {
+    Matrix.upwlev2 = function (wt, name) {
+        if (wt[1].getSize(0) === 2) {
             return [new Matrix(), new Matrix()];
         }
 
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
+        var ds = getSubbandsCoordinates(wt[1]), data = wt[0].getData();
         var Am = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
         var H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
         var V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
@@ -857,7 +963,7 @@
         var A = idwt2([Am, H, V, D], name);
         A = resizeMatrix(A, ds, 1);
 
-        var sizes = lc[1].get([1, -1]);
+        var sizes = wt[1].get([1, -1]);
         sizes.set(0, [], sizes.get(1, []));
 
         var Asize = A.numel(), remaining = data.length - ds.bands[4];
@@ -866,7 +972,6 @@
         out.subarray(Asize).set(data.subarray(ds.bands[4]));
         return [new Matrix([out.length], out), sizes, Am];
     };
-
     /** Returns the coefficients corresponding to the approximation subband
      * at a given level.
      *
@@ -890,19 +995,19 @@
      *  provided. Therefore, a modification on one will affect both.
      * @matlike
      */
-    Matrix.appcoef2 = function (lc, name, j) {
-        j = j === undefined ? lc[1].size()[0] - 2 : j;
-        var J = lc[1].size(0) - 2;
+    Matrix.appcoef2 = function (wt, name, j) {
+        j = j === undefined ? wt[1].size()[0] - 2 : j;
+        var J = wt[1].size(0) - 2;
         if (j > J || j < 0) {
             throw new Error("Matrix.appcoef2: Invalid decomposition level.");
         }
         while (J > j) {
-            lc = Matrix.upwlev2(lc, name);
-            J = lc[1].size(0) - 2;
+            wt = Matrix.upwlev2(wt, name);
+            J = wt[1].size(0) - 2;
         }
-        var sizes = lc[1].get([1, -1]).prod(1).getData();
-        var data = lc[0].getData();
-        var size = lc[1].get(0).getData();
+        var sizes = wt[1].get([1, -1]).prod(1).getData();
+        var data = wt[0].getData();
+        var size = wt[1].get(0).getData();
         return new Matrix(size, data.subarray(0, sizes[0]));
     };
     /** Returns the coefficients corresponding to a detail subband
@@ -927,20 +1032,20 @@
      *  on one will affect both.
      * @matlike
      */
-    Matrix.detcoef2 = function (type, lc, j) {
+    Matrix.detcoef2 = function (type, wt, j) {
         if (type === 'all') {
             return [
-                Matrix.detcoef2('h', lc, j),
-                Matrix.detcoef2('v', lc, j),
-                Matrix.detcoef2('d', lc, j)
+                Matrix.detcoef2('h', wt, j),
+                Matrix.detcoef2('v', wt, j),
+                Matrix.detcoef2('d', wt, j)
             ];
         }
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
+        var ds = getSubbandsCoordinates(wt[1]), data = wt[0].getData();
         if (j > ds.J || j < 1) {
             throw new Error("Matrix.detcoef2: Invalid decomposition level.");
         }
         var scale = ds.J - j;
-        var size = lc[1].get([scale + 1], []).getData();
+        var size = wt[1].get([scale + 1], []).getData();
         var band = 1 + scale * 3;
         if (type === 'v') {
             band += 1;
@@ -951,19 +1056,45 @@
         }
         return new Matrix(size, data.subarray(ds.bands[band], ds.bands[band + 1]));
     };
-
-    Matrix.wrcoef2 = function (type, lc, name, N) {
+    /** Reconstruct the image using only one subband.
+     *
+     * __See also :__
+     * {@link Matrix#appcoef2},
+     * {@link Matrix#detcoef2},
+     * {@link Matrix#upwlev2},
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2}.
+     *
+     * @param {String} type
+     *  Give the subband to use for the reconstruction ('a' or 'h', 'v' or 'd').
+     *  The value 'a' corresponds to the approximation coefficients (low-pass filter)
+     *  while the others correspond to the detail coefficients (horizontal, vertical and diagonal).
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  The wavelet filters to use for the reconstruction.
+     * @param {Number} level
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
+     * @matlike
+     */
+    Matrix.wrcoef2 = function (type, wt, name, N) {
         var A, H, V, D;
         if (type === 'a') {
-            A = Matrix.appcoef2(lc, name, N);
+            A = Matrix.appcoef2(wt, name, N);
         }  else if (type === 'h') {
-            H = Matrix.detcoef2('h', lc, N)
+            H = Matrix.detcoef2('h', wt, N)
         } else if (type === 'v') {
-            V = Matrix.detcoef2('v', lc, N)
+            V = Matrix.detcoef2('v', wt, N)
         } else if (type === 'd') {
-            D = Matrix.detcoef2('d', lc, N)
+            D = Matrix.detcoef2('d', wt, N)
         }
-        var ds = getSubbandsCoordinates(lc[1]);
+        var ds = getSubbandsCoordinates(wt[1]);
         for (var l = 0; l < N; l++) {
             A = idwt2([A, H, V, D], name);
             A = resizeMatrix(A, ds, ds.J - N + l + 1);
@@ -1008,6 +1139,29 @@
                 return sel;
             },
             per2: function (s, l, r) {
+                var isOdd = s % 2;
+                s += isOdd ? 1 : 0;
+                var length = s + l + r, sel = new Int32Array(length);
+                var i, j;
+                for (i = 0, j = l; j > 0; j--, i++) {
+                    sel[i] = s - (j - 1) % s - 1;
+                }
+                for (j = 0; j < s; j++, i++) {
+                    sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    sel[i] = j % s;
+                }
+                if (isOdd) {
+                    for (i = 0; i < sel.length; i++) {
+                        if (sel[i] == s - 1) {
+                            sel[i]--;
+                        }
+                    }                    
+                }
+                return sel;
+            },
+            per3: function (s, l, r) {
                 var isOdd = s % 2;
                 s += isOdd ? 1 : 0;
                 var length = s + l + r, sel = new Int32Array(length);
@@ -1100,6 +1254,7 @@
     window.addEventListener("load", function () {
         // var s = Matrix.colon(1, 1);
         // s.paddim("per2", 0, [0, 12]).display();
+        /*
         var test6 = function (s, name, N, M, dim) {
             Tools.tic();
             var wt = Matrix.wavedec(s, N, name, dim);
@@ -1113,24 +1268,23 @@
                 time: time
             };
         };
-        Matrix.dwtmode("per2");
         var name = 'haar', dim = 0;
         var s = Matrix.ones(1, 2, 3).display();
         test6(s, name, 2, 0, 0);
-        return;
+        return;*/
         var sz = 5;
         var s = Matrix.ones(sz, 4).cumsum(0).cumsum(1).display();
+
+        var name = 'coif1', dim = 0;
         Matrix.dwtmode("per");
         var wt = Matrix.dwt(s, name, dim);
         wt[0].display();
-        wt[1].display();
-
-        Matrix.dwtmode("per2");
+        Matrix.dwtmode("per3");
         wt = Matrix.dwt(s, name, dim);
         wt[0].display();
-        wt[1].display();
         var iwt = Matrix.idwt(wt, name, dim);
         iwt.display();
+
         Matrix.dwtmode("sym");
         
     }, false);
