@@ -253,8 +253,8 @@
         }
     };
 
-    Matrix._benchmarkWavelets = function () {
-        var wNames = [
+    Matrix._benchmarkWavelets = function (wNames, wModes) {
+        var wNames = wNames || [
             'haar',
             'sym2', 'sym4', 'sym8',
             'db2', 'db4', 'db8',
@@ -262,8 +262,8 @@
             'bi13', 'bi31', 'bi68',
             'rbio31', 'rbio33', 'rbio35', 'rbio39',
             'cdf97'
-        ], wModes = [
-            "sym", "symw", "per", "zpd", "nn"
+        ], wModes = wModes || [
+            "sym", "symw", "per", "per2", "zpd", "nn"
         ];
         var test_wavedecrec = function (s, N, name, dim) {
             Tools.tic();
@@ -357,6 +357,7 @@
                     log("DWT 1D on " + N + " levels", res.psnr, res.time);
                     res = test_wavedecrec(s, N, name, 1);
                     log("DWT 1D on " + N + " levels", res.psnr, res.time);
+                    /*
                     res = test_upwlev(s, N, name, 0);
                     log("1D upwlev on " + N + " levels", res.psnr, res.time);
                     res = test_upwlev(s, N, name, 1);
@@ -365,15 +366,16 @@
                     log("Reconstruction with wrcoef on " + N + " levels", res.psnr, res.time);
                     res = test_wrcoef(s, name, N, 0, 1);
                     log("Reconstruction with wrcoef on " + N + " levels", res.psnr, res.time);
-                    
+                    */
                     // 2D tests
+                    /*
                     res = test_wavedecrec2(s, N, name);
                     log("DWT 2D on " + N + " levels", res.psnr, res.time);
                     res = test_upwlev2(s, N, name);
                     log("2D upwlev on " + N + " levels", res.psnr, res.time);
                     res = test_wrcoef2(s, name, N, 0);
                     log("Reconstruction with wrcoef2 on " + N + " levels", res.psnr, res.time);
-
+                    */
                     log("\n");
                 }
             }
