@@ -139,6 +139,26 @@
             odH[oy] += sumH;
         }
     };
+    var filter1DPadMonoCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernel, id, od) {
+        var y, oy, k, s, sum;
+        y0 += (K - 1) * kdy - orig;
+        ny -= orig;
+        for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
+            for (k = 0, s = y + orig, sum = 0; k < K; k++, s -= kdy) {
+                if (k < 0 || k >= kernel.length) {
+                    throw new Error("Kernel error");
+                }
+                if (s < 0 || s >= id.length) {
+                    throw new Error("Input error");
+                }
+                sum += kernel[k] * id[s];
+            }
+            if (oy < 0 || oy >= od.length) {
+                throw new Error("Output error");
+            }
+            od[oy] += sum;
+        }
+    };
     var filter1D, filter1DMono, dwtmode;
     
     /** Select or return the mode used for bordering management.
@@ -166,8 +186,11 @@
         case "symw":
         case "zpd":
         case "nn":
-            filter1D = filter1DPad;
-            filter1DMono = filter1DPadMono;
+            filter1D = filter1DPadCheck;
+            filter1DMono = filter1DPadMonoCheck;
+
+            // filter1D = filter1DPad;
+            // filter1DMono = filter1DPadMono;
             break;
         case "debug_sym":
         case "debug_symw":
@@ -180,8 +203,10 @@
         case "check_symw":
         case "check_zpd":
         case "check_nn":
+        case "check_per2":
             mode = mode.substr(6);
             filter1D = filter1DPadCheck;
+            filter1DMono = filter1DPadMonoCheck;
             break;
         default:
             throw new Error("Matrix.dwtmode: invalid mode " + mode + "."); 
@@ -284,6 +309,7 @@
         filterND(s, s, iV, name, true, 'cr', 2, dL, dH, v);
         if (dwtmode === "per2") {
             var K = Matrix.wfilters(name)[0].numel();
+            
             var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
             v = v.restore().selectDimension(dim, [lc, -rc - 1]);
             dL = dL.extractViewFrom(v);
@@ -367,62 +393,70 @@
         vB.swapDimensions(0, 1);
         filterND(bL, bL, vB, name, true, 'cr', 2, dA, dH, v);
         filterND(bH, bH, vB, name, true, 'cr', 2, dV, dD, v);
+        if (dwtmode === "per2") {
+            var K = Matrix.wfilters(name)[0].numel();
+            var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+            dA = dA.get([lc, -rc - 1], [lc, -rc - 1]);
+            dH = dH.get([lc, -rc - 1], [lc, -rc - 1]);
+            dV = dV.get([lc, -rc - 1], [lc, -rc - 1]);
+            dD = dD.get([lc, -rc - 1], [lc, -rc - 1]);
+        }         
         return [dA, dH, dV, dD];
     };
     var idwt2 = function (bands, name) {
-        var n = bands[0] ? 0 : (bands[1] ? 1 : (bands[2] ? 2 : 3));
-        var ph = getPaddingInfos(name, bands[n].getSize(0)),
-            pw = getPaddingInfos(name, bands[n].getSize(1));
+        var bands = bands.slice();
+        if (dwtmode === "per2") {
+            var K = Matrix.wfilters(name)[0].numel();
+            var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+            for (var b = 0; b < 4; b++) {
+                bands[b] = bands[b] ? bands[b].padarray("per", [lc, rc], [lc, rc]) : undefined;
+            }
+        }   
+        var size = (bands[0] || bands[1] || bands[2] || bands[3]).getSize();
+
         var oh = 0, ow = 0, start = 0;
         if (dwtmode !== 'per') {
+            var ph = getPaddingInfos(name, size[0]),
+                pw = getPaddingInfos(name, size[1]);
             oh = ph.rk + ph.lk;
             ow = pw.rk + pw.lk;
             start = 1;
         }
 
-        var size = bands[n].getSize();
-        size[0] = 2 * size[0] + start
+        size[0] = 2 * size[0] + start;
         var dL = (bands[0] || bands[1]) ? zeros(size) : undefined,
             dH = (bands[2] || bands[3]) ? zeros(size) : undefined,
             dV = new MatrixView(size);
 
         size[0] -= oh;
         size[1] = 2 * size[1] + start;
-        /*
-        var bL = (bands[0] || bands[2]) ? zeros(size) : undefined,
+        var bL = (bands[0] || bands[2]) ? zeros(size) : undefined, 
             bH = (bands[1] || bands[3]) ? zeros(size) : undefined,
-            B = new MatrixView(size).select([], [start, 2, -1]);
-         */
-        var bL, bH, B;
-        if (bands[0] || bands[2]) {
+            bV = new MatrixView(size).select([], [start, 2, -1])
+        
+        if (bL) {
             if (dL) {
                 dL.set([start, 2, -1], bands[0]);
             }
             if (dH) {
                 dH.set([start, 2, -1], bands[2]);
             }
-            bL = zeros(size);
-            B = bL.getView().select([], [start, 2, -1]);
-            filterND(dL, dH, dV, name, false, 'cl', 1, bL, bL, B);
+            filterND(dL, dH, dV, name, false, 'cl', 1, bL, bL, bV);
         }
-        if (bands[1] || bands[3]) {
+        if (bH) {
             if (dL) {
                 dL.set([start, 2, -1], bands[1]);
             }
             if (dH) {
                 dH.set([start, 2, -1], bands[3]);
             }      
-            bH = zeros(size),
-            B = bH.getView().select([], [start, 2, -1]);
-            filterND(dL, dH, dV, name, false, 'cl', 1, bH, bH, B);
+            filterND(dL, dH, dV, name, false, 'cl', 1, bH, bH, bV);
         }
 
         size[1] -= ow;
-           
-
-        var out = zeros(size), vO = new MatrixView(size).swapDimensions(0, 1);
-        B.restore().swapDimensions(0, 1);
-        filterND(bL, bH, B, name, false, 'cl', 1, out, out, vO);
+        var out = zeros(size), oV = new MatrixView(size).swapDimensions(0, 1);
+        bV.restore().swapDimensions(0, 1);
+        filterND(bL, bH, bV, name, false, 'cl', 1, out, out, oV);
         return out;
     };
 
@@ -456,9 +490,13 @@
     var createStruct1D = function (s, n, name, dim) {
         var sizes = new Uint16Array(n + 2);
         sizes[n + 1] = s.getSize(dim);
+
+        var K = Matrix.wfilters(name)[0].numel();
+        var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+        
         for (var l = n; l >= 1; l--) {
             var py = getPaddingInfos(name, sizes[l + 1]);
-            sizes[l] = Math.ceil(sizes[l + 1] / 2) + py.ro + py.lo;
+            sizes[l] = Math.ceil(sizes[l + 1] / 2) + py.ro + py.lo - (dwtmode === "per2" ? lc + rc : 0);
         }
         sizes[0] = sizes[1];
         return Matrix.toMatrix(sizes)
@@ -759,7 +797,9 @@
     };
    
     var createStruct = function (s, n, name) {
-        var xSizes = new Array(n + 2);
+        var K = Matrix.wfilters(name)[0].numel();
+        var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+        var xSizes = new Array(n + 2);  
         var ySizes = new Array(n + 2);
         var cSizes = new Array(n + 2);
         ySizes[n + 1] = s.getSize(0);
@@ -768,8 +808,8 @@
         for (var l = n; l >= 1; l--) {
             var py = getPaddingInfos(name, ySizes[l + 1]),
                 px = getPaddingInfos(name, xSizes[l + 1]);
-            ySizes[l] = Math.ceil(ySizes[l + 1] / 2) + py.ro + py.lo;
-            xSizes[l] = Math.ceil(xSizes[l + 1] / 2) + px.ro + px.lo;
+            ySizes[l] = Math.ceil(ySizes[l + 1] / 2) + py.ro + py.lo - (dwtmode === "per2" ? lc + rc : 0);
+            xSizes[l] = Math.ceil(xSizes[l + 1] / 2) + px.ro + px.lo - (dwtmode === "per2" ? lc + rc : 0);
             cSizes[l] = cSizes[l + 1];
         }
         ySizes[0] = ySizes[1];
@@ -1125,6 +1165,7 @@
             per2: function (s, l, r) {
                 var isOdd = s % 2;
                 s += isOdd ? 1 : 0;
+                r -= isOdd ? 1 : 0;
                 var length = s + l + r, sel = new Int32Array(length);
                 var i, j;
                 for (i = 0, j = l; j > 0; j--, i++) {
@@ -1233,10 +1274,10 @@
         var s = Matrix.ones(1, 2, 3).display();
         test6(s, name, 2, 0, 0);
         return;*/
-        var sz = 1;
-        var s = Matrix.ones(sz, 2, 3).cumsum(0).cumsum(1).display();
+        var sz = 5;
+        var s = Matrix.ones(sz, 2).cumsum(0).cumsum(1).display();
 
-        var name = 'coif1', dim = 0;
+        var name = 'sym2', dim = 0;
         Matrix.dwtmode("per");
         var wt = Matrix.dwt(s, name, dim);
         wt[0].display();
@@ -1254,7 +1295,8 @@
         wt[0] = wt[0].paddim("per", dim, [lc, rc]);
         wt[0].display();
         */
-        Matrix.dwtmode("sym");
+        // Matrix.dwtmode("sym");
+        Matrix.wavedec(s, 1, name, 0);
         
     }, false);
 

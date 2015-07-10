@@ -263,7 +263,7 @@
             'rbio31', 'rbio33', 'rbio35', 'rbio39',
             'cdf97'
         ], wModes = wModes || [
-            "sym", "symw", "per", "per2", "zpd", "nn"
+            "sym", "symw", "per2", "zpd", "nn"
         ];
         var test_wavedecrec = function (s, N, name, dim) {
             Tools.tic();
@@ -345,19 +345,17 @@
             var name = wNames[n];
             for (var m = 0; m < wModes.length; m++) {
                 Matrix.dwtmode(wModes[m]);
-                for (var sz = 1; sz < 6; sz += 2) {
+                for (var sz = 1; sz < 16; sz += 2) {
                     var s = Matrix.rand(sz, sz + 1, 3);
                     var N = Matrix.dwtmaxlev([sz, sz + 1], name);
                     N = N < 1 ? 1 : N;
                     
                     log(s.size() + " " + name + " " + wModes[m]);
-
                     // 1D tests
                     res = test_wavedecrec(s, N, name, 0);
                     log("DWT 1D on " + N + " levels", res.psnr, res.time);
                     res = test_wavedecrec(s, N, name, 1);
                     log("DWT 1D on " + N + " levels", res.psnr, res.time);
-                    /*
                     res = test_upwlev(s, N, name, 0);
                     log("1D upwlev on " + N + " levels", res.psnr, res.time);
                     res = test_upwlev(s, N, name, 1);
@@ -366,16 +364,13 @@
                     log("Reconstruction with wrcoef on " + N + " levels", res.psnr, res.time);
                     res = test_wrcoef(s, name, N, 0, 1);
                     log("Reconstruction with wrcoef on " + N + " levels", res.psnr, res.time);
-                    */
                     // 2D tests
-                    /*
                     res = test_wavedecrec2(s, N, name);
                     log("DWT 2D on " + N + " levels", res.psnr, res.time);
                     res = test_upwlev2(s, N, name);
                     log("2D upwlev on " + N + " levels", res.psnr, res.time);
                     res = test_wrcoef2(s, name, N, 0);
                     log("Reconstruction with wrcoef2 on " + N + " levels", res.psnr, res.time);
-                    */
                     log("\n");
                 }
             }
