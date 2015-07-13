@@ -175,6 +175,9 @@
      *   Returns the current or new mode.
      */
     Matrix.dwtmode = function (mode) {
+        if (mode === undefined) {
+            return dwtmode;
+        }
         mode = mode.toLowerCase();
         switch (mode) {
         case "per":
@@ -709,7 +712,7 @@
         j = j === undefined ? wt[1].size()[0] - 2 : j;
         var J = wt[1].size(0) - 2;
         if (j > J || j < 0) {
-            throw new Error("Matrix.appcoef2: Invalid decomposition level.");
+            throw new Error("Matrix.appcoef: Invalid decomposition level.");
         }
         while (J > j) {
             wt = Matrix.upwlev(wt, name);
@@ -1012,6 +1015,7 @@
             throw new Error("Matrix.appcoef2: Invalid decomposition level.");
         }
         while (J > j) {
+            console.log("upwlev");
             wt = Matrix.upwlev2(wt, name);
             J = wt[1].size(0) - 2;
         }

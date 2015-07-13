@@ -72,7 +72,7 @@
         var imMean = 0;
         for (var c = 0; c < nChannel; c++) {
             wt[c] = Matrix.wavedec2(im.get([], [], c), J, name);
-            var A = Matrix.appcoef2(wt[c], name, J - 1);
+            var A = Matrix.appcoef2(wt[c], name, J);
             mean[c] = A.mean().getDataScalar();
             min[c] = A.min().getDataScalar();
             max[c] = A.max().getDataScalar();
@@ -82,7 +82,7 @@
         var imMax = Math.max(max[0], max[1], max[2]);
    
         for (var c = 0; c < nChannel; c++) {
-            var A = Matrix.appcoef2(wt[c], name, J - 1);
+            var A = Matrix.appcoef2(wt[c], name, J);
             if (average === "image") {
                 norm = imMean;
             } else if (average === "channel") {
@@ -90,7 +90,7 @@
             } else if (average === "half") {
                 norm = wNorm * 0.5; 
             }
-            A["-="](imMin)["*="](wNorm / (imMax - imMin));
+            // A["-="](imMin)["*="](wNorm / (imMax - imMin));
             // A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
             A["*="](1 - alpha)["+="](norm * alpha);
         }
