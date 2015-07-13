@@ -414,9 +414,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             for (i = 0, ei = keypoints.length; i < ei; i++) {
                 var key = keypoints[i];
                 var patch = this.getViewOnImagePatch(key);
-                //var patch = this.getImagePatch_old(key);
                 if (patch !== null) {
-                    //var orientations = key.extractMainOrientation_old(patch, this.algorithm);
                     var orientations = key.extractMainOrientation(patch, this.algorithm);
                     for (o = 0, eo = orientations.length; o < eo; o++) {
                         var k = key.getCopy();
