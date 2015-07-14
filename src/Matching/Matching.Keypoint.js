@@ -555,6 +555,5 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return out;
     };
 
-
     global.Keypoint = Keypoint;
 })(Matching);

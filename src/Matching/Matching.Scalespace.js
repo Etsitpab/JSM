@@ -18,9 +18,9 @@
 
 var root = typeof window === 'undefined' ? module.exports : window;
 
-//////////////////////////////////////////////////////////////////
-//                       Scalespace Class                      //
-//////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+//                           Scalespace Class                             //
+////////////////////////////////////////////////////////////////////////////
 
 
 (function (global) {
@@ -47,13 +47,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
         this.scale = [];
     }
 
-
     ScaleSpace.prototype = {
         nScale: 13,
         sigmaInit: 0.63,
         scaleRatio: 1.26,
         lapThresh: 4e-3,
-        harrisThresh: 1e4,
+        harrisThresh: 1e0,
         /** Function to use for exporting the keypoint list 
          * @return {String}
          */
@@ -81,24 +80,20 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * purpose.
          * @return {String}
          */
-        getImage: function (scale, img, norm) {
+        getImage: function (scale, img, norm, gradient) {
             if (img === undefined) {
                 img = this.image;
+                return norm === true ? img : Matrix.rdivide(img, img.max());
+            }
+            var scale = this.scale[scale];
+            if (img === "blur" || img === "gray") {
+                img = scale[img];
+            } else if (img === "phase-norm") {
+                
             } else {
-                img = img.toLowerCase();
-                if (img === "blur" || img === "gray") {
-                    img = this.scale[scale][img];
-                } else if (img === "phase-norm") {
-
-                } else {
-                    img = this.scale[scale].gradient[img];
-                }
+                img = scale.gradient[img];
             }
-
-            if (norm === true) {
-                return img.rdivide(img.max());
-            }
-            return img;
+            return norm === true ? Matrix.rdivide(img, img.max()) : img;
         },
         /** This function computes the scalespace.
          * @param {Number} nScale
@@ -366,7 +361,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             // return {patch: patch, mean: [1, 1, 1]};
             return patch;
         },
-        getViewOnImagePatch: function (key) {
+        getViewOnImagePatch: function (key, space, type) {
             var sigma = key.sigma;
             // Looking for closer blured image
             var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
@@ -377,7 +372,10 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     sMin = i;
                 }
             }
-            var scale = this.scale[sMin], image = scale.gray;
+            var scale = this.scale[sMin], 
+                image = scale["gray"],
+                grad = scale.gradient,
+                channel = [];
 
             // Get RGB patch
             var x = key.x, y = key.y, s = Math.round(key.factorSize * sigma);
@@ -392,10 +390,47 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else if (yMax > image.getSize(0) - 1) {
                 return null;
             }
+            var view = image.getView().select([yMin, yMax], [xMin, xMax]);
+
+            if (space instanceof Object) {
+                var name = space.name;
+                if (scale[name] === undefined) {
+                    scale[name] = {
+                        image: Matrix.applycform(
+                            scale["blur"], "RGB to " + name
+                        )
+                    };
+                }
+                image = scale[name].image;
+                if (type === "GRADIENT") {
+                    if (scale[name].gradient === undefined) {
+                        scale[name].gradient = image.gradient(0, 0, 1, 1);
+                        scale[name].gradientView = scale[name].gradient.norm.getView();
+                    }
+                    grad = scale[name].gradient;
+                    view = scale[name].gradientView.restore().select(
+                        [yMin, yMax], [xMin, xMax], space.channels
+                    );
+                } else if (type === "WEIGHTED-HISTOGRAMS") {
+                    if (scale[name].colorChannels === undefined) {
+                        scale[name].colorChannels = {
+                            norm: image.get([], [], space.weightChannel),
+                            phase: image.get([], [], space.phaseChannel)
+                        };
+                        scale[name].colorChannelsView = scale[name].colorChannels.norm.getView();
+                    }
+                    grad = scale[name].colorChannels;
+                    view = scale[name].colorChannelsView.restore().select(
+                        [yMin, yMax], [xMin, xMax]
+                    );
+                }
+            }
+            
             return {
-                norm: scale.gradient.norm,
-                phase: scale.gradient.phase,
-                view: image.getView().select([yMin, yMax], [xMin, xMax])
+                norm: grad.norm,
+                phase: grad.phase,
+                image: image,
+                view: view,
             };
         },
         /** Extract the main direction(s) of all keypoint detected in 
@@ -413,7 +448,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var i, ei, newKeypoints = [], o, eo;
             for (i = 0, ei = keypoints.length; i < ei; i++) {
                 var key = keypoints[i];
-                var patch = this.getViewOnImagePatch(key);
+                var patch = this.getViewOnImagePatch(key, "gray");
                 if (patch !== null) {
                     var orientations = key.extractMainOrientation(patch, this.algorithm);
                     for (o = 0, eo = orientations.length; o < eo; o++) {
@@ -470,8 +505,55 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     mem[name] = descriptorsData[name][k];
                 }
                 key.extractDescriptors(patchRGB, descriptors, mem);
+            }            
+            return this;
+        },
+        extractDescriptors_new: function (descriptors) {
+            descriptors = descriptors || global.Keypoint.prototype.descriptors;
+
+            // Descriptors memory allocation for n keypoints
+            var getData = function (d, n) {
+                var length =  d.nBin * d.nSector;
+                var data = new Float32Array(n * length);
+                var i, tab = [];
+                for (i = 0; i < n; i++) {
+                    tab.push(data.subarray(i * length, (i + 1) * length));
+                }
+                tab.data = data;
+                return tab;
+            };
+
+            if (!this.keypoints) {
+                throw new Error("ScaleSpace: Keypoints have to be computed.");
+            }
+            var keypoints = this.keypoints;
+            var i, k, ek, descriptorsData = {}, name;
+
+            for (i = 0; i < descriptors.length; i++) {
+                name = descriptors[i].name;
+                descriptorsData[name] = getData(descriptors[i], keypoints.length);
             }
 
+            this.descriptorsData = descriptorsData;
+            for (k = 0, ek = keypoints.length; k < ek; k++) {
+                keypoints[k].descriptorsData = keypoints[k].descriptorsData || {};
+            }
+            for (i = 0; i < descriptors.length; i++) {
+                var descriptor = descriptors[i],
+                    name = descriptor.name,
+                    mem = descriptorsData[name],
+                    space = descriptor.colorspace,
+                    type = descriptor.type;
+                for (k = 0, ek = keypoints.length; k < ek; k++) {
+                    var key = keypoints[k],
+                        patch = this.getViewOnImagePatch(key, space, type);
+                    key.descriptorsData[name] =
+                        descriptor.extractFromPatch_new(
+                            key.orientation, patch, mem[k]
+                        );
+                }
+            }
+            
             return this;
         }
     };

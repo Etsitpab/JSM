@@ -213,6 +213,78 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             return data;
         },
+        extractWeightedHistograms_new: function (o, patch, data) {
+            data = new global.DescriptorData(this, data);
+            var h = data.histograms;
+            var pps = data.pps;
+            var sum = data.sum;
+            var dPhase = patch.phase.getData(),
+                dNorm = patch.norm.getData(),
+                view = patch.view;
+            var xs = view.getFirst(1), dx = view.getStep(1),
+                ys = view.getFirst(0);
+
+            var size = view.getSize(0),
+                wSize = Math.floor(size / 2),
+                wSize2 = wSize * wSize;
+            
+            // var exp = Math.exp, c = -2 / wSize2;
+            var oR = this.relativeOrientation === true ? o : 0;
+
+            var rings = this.rings, sectors = this.sectors;
+            var rings2 = new Float32Array(rings.length);
+            for (var r = 0; r < rings.length; r++) {
+                rings2[r] = wSize * wSize * rings[r] * rings[r];
+            }
+            
+            var cst = 1 / (2 * Math.PI);
+            
+            var i, j, _j, ij;
+            var x, y, x2, r2, j2;
+            
+            for (j = 0, _j = xs; j < size; j++, _j += dx) {
+                for (i = 0, ij = _j + ys, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
+                    r2 = j2 + (i - wSize) * (i - wSize);
+                    
+                    if (r2 > wSize2) {
+                        continue;
+                    }
+
+                    var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin);
+
+
+                    var y = i - wSize, x = j - wSize;
+                    var ring = 0;
+                    while (r2 > rings2[ring]) {
+                        ring++;
+                    }
+                    // Sector corresponding to point (x, y)
+                    var phase = Math.atan2(y, x) * cst;
+                    phase = (phase < 0 ? phase + 1 : phase) - o;
+                    var nBin = sectors[ring];
+                    if (phase < 0) {
+                        phase += 1;
+                    }
+                    var k =  Math.floor(phase * nBin + 0.5);
+                    var sec = (k >= nBin) ? (k - nBin) : k;
+                    
+                    // Histogram corresponding to sector and ring
+                    var s, his = sec;
+                    for (s = 0; s < ring; s++) {
+                        his += sectors[s];
+                    }
+                    // var his = getHistogramNumber(i - wSize, j - wSize, o, wSize);
+                    //dNorm[ij] *= exp(c * r2);
+                    var norm = dNorm[ij];
+                    //var norm = exp(c * r2) * dNorm[ij];
+                    pps[his]++;
+                    sum[his] += norm;
+                    h[his][bin] += norm;
+                    
+                }
+            }
+            return data;
+        },
 
         /** This function normalize the color of an RGB patch.
          * Each channel is normalize such that they have the same average value.
@@ -299,6 +371,24 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var patch = this.getPatch(patchRGB);
 
             var dataStruct = this.extractWeightedHistograms(o, patch, data);
+            this.data = dataStruct;
+            if (this.extractModes === true) {
+                dataStruct.extractModes();
+                dataStruct.normalizeModes();
+                dataStruct.processModes();
+            }
+
+            if (this.distance === "CEMD") {
+                dataStruct.normalizeHistograms();
+                dataStruct.cumulHistograms();
+            } else {
+                dataStruct.normalizeHistograms();
+            }
+
+            return dataStruct;
+        },
+        extractFromPatch_new: function (o, patch, data) {
+            var dataStruct = this.extractWeightedHistograms_new(o, patch, data);
             this.data = dataStruct;
             if (this.extractModes === true) {
                 dataStruct.extractModes();

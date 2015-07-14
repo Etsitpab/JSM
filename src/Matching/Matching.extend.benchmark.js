@@ -312,6 +312,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             throw new Error("Sift.benchmark: usage error");
         }
 
+        Tools.tic();
         var S = new global.Sift([im1, im2]);
         S.computeScaleSpace();
 
@@ -338,13 +339,14 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.curves[c] = global.createCurves(S.matchs[0][1][c]);
             }
         }
+        console.log("Benchmark time:", Tools.toc());
 
         return S;
     };
 
     global.ScaleSpace.prototype.getDescriptorPatch = function (n, name, part, sz) {
         var k = this.keypoints[n];
-        var patchRGB = this.getImagePatch(k, true);
+        var patchRGB = this.getImagePatch_old(k, true);
         var mask = patchRGB.mask;
         var descriptor, patch;
 
@@ -425,7 +427,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
         var f = Math.floor;
         var S = this;
-        w = w || cell.clientWidth;
+        w = w || cell.clientWidth - 50;
         h = h || cell.clientHeight;
         cell.style.setProperty("width", w);
         cell.style.setProperty("height", h);

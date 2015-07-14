@@ -122,7 +122,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var i, ie;
             Tools.tic();
             for (i = 0, ie = this.scaleSpaces.length; i < ie; i++) {
-                this.scaleSpaces[i].extractDescriptors(descriptors);
+                // this.scaleSpaces[i].extractDescriptors(descriptors);
+                this.scaleSpaces[i].extractDescriptors_new(descriptors);
             }
             console.log("Compute Descriptors: ", Tools.toc());
             return this;
