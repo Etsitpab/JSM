@@ -1,5 +1,5 @@
 /*jslint browser: true, vars: true, plusplus: true, nomen: true */
-/*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray */
+/*global Float64Array, Float32Array, Int32Array, Uint8Array, Uint8ClampedArray, HTMLCanvasElement */
 
 
 // Forward declarations
@@ -103,12 +103,16 @@ function GLEffect(sourceCode) {
  *  Input image or array of input images (for multi-images effects).
  *  Images can be `img`, `canvas`, or `video` elements.
  * @param {Object} [opts = {}]
+ *  - `toCanvas`: Boolean<br/>
+ *      If true, render to the default canvas instead of a GLImage.
  *  - `scale`: Number<br/>
  *      Size ratio of output / input.
- *  - `width` : Number<br/>
+ *  - `width`: Number<br/>
  *      Width of the output.
- *  - `height` : Number<br/>
+ *  - `height`: Number<br/>
  *      Height of the output image.
+ *  - `output`: GLImage | Mixed<br/>
+ *      The output image.
  *  - `getSize`: Function<br/>
  *      _Argument:_ the `image` argument.<br/>
  *      _Returns:_ the size of the output image, or `false` on error.
@@ -136,7 +140,7 @@ GLEffect.prototype.run = function (image, opts) {
 
     // Render
     this._bindAttributes();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, output._framebuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, output._framebuffer || null);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, this._vertexCount);
 
@@ -302,6 +306,7 @@ GLEffect._getDefaultContext = function () {
     'use strict';
     if (!GLEffect.prototype._canvas) {
         var canvas = document.createElement('canvas');
+        canvas.style.transform = 'scale(1, -1)';
         GLEffect.prototype._canvas = canvas;
         GLEffect.prototype._context = GLEffect._createContext(canvas);
     }
@@ -351,7 +356,7 @@ GLEffect._readOpt = function (opts, name, defaultValue) {
     if (opts) {
         var key;
         for (key in opts) {
-            if (opts.hasOwnProperty(key)) {
+            if (opts.hasOwnProperty(key) && opts[key] !== undefined) {
                 throw new Error('Argument Error: unknown option ' + key);
             }
         }
@@ -633,7 +638,7 @@ GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
 /** Initialize the input and output images.
  * @param {GLImage | HTMLElement | Array} input
  *  Input image(s).
- * @param {Object} opts
+ * @param {Object} [opts]
  *  The `opts` parameters of GLEffect.run.
  * @return {GLImage}
  *  The output image, initialized.
@@ -643,12 +648,17 @@ GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
 GLEffect.prototype._initOutput = function (input, opts) {
     'use strict';
     var outsize = input;
+    var output = GLEffect._readOpt(opts, 'output');
+    var toCanvas = GLEffect._readOpt(opts, 'toCanvas');
     var getSize = GLEffect._readOpt(opts, 'getSize');
     var scale = GLEffect._readOpt(opts, 'scale');
 
     if (!this._uImageLength) {  // SINGLE IMAGE
         if (input instanceof Array) {
             throw new Error('Argument Error: expected a single image as input.');
+        }
+        if (input === output) {
+            throw new Error('Argument Error: cannot use the input image as output.');
         }
         if (getSize instanceof Function) {
             outsize = getSize(input);
@@ -672,6 +682,9 @@ GLEffect.prototype._initOutput = function (input, opts) {
                 if (!input[k]) {
                     throw new Error('Argument Error: invalid images.');
                 }
+                if (input[k] === output) {
+                    throw new Error('Argument Error: cannot use the input image as output.');
+                }
                 if (input[k].width !== outsize.width || input[k].height !== outsize.height) {
                     throw new Error('Argument Error: invalid images\' dimensions.');
                 }
@@ -680,7 +693,17 @@ GLEffect.prototype._initOutput = function (input, opts) {
     }
 
     // Create output image with given dimensions
-    var output = new GLImage();
+    if (!toCanvas) {
+        output = output || new GLImage();
+    } else if (!output) {
+        output = this._context.canvas;
+        output.resize = function (width, height) {
+            output.width = width;
+            output.height = height;
+        };
+    } else {
+        throw new Error('Argument error: cannot have both "toCanvas" true and "output" set.');
+    }
     if (!scale) {
         output.resize(
             GLEffect._readOpt(opts, 'width', outsize.width),
@@ -725,7 +748,7 @@ GLEffect.prototype._setupImages = function (input) {
 
 /** Header of the source code, available to avoid code duplication.
  * @static @readonly @type {String} */
-GLEffect.sourceCodeHeader =  (function() {
+GLEffect.sourceCodeHeader = (function() {
     'use strict';
     var str = '';
     str += 'precision mediump float;                                      \n\n';

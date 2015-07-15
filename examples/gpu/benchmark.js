@@ -1,5 +1,5 @@
-/*global GLEffect, FileReader, Uint8Array, Float32Array, Float64Array */
-/*jslint vars: true, nomen: true, browser: true, plusplus: true */
+/*jslint vars: true, nomen: true, browser: true, plusplus: true, devel: true */
+/*global GLEffect, GLImage, GLReduction, FileReader, Uint8Array, Float32Array, Float64Array */
 /*exported init */
 
 'use strict';
@@ -99,8 +99,7 @@ function runEffect() {
 
     // Display
     var gray = GRAYIFYER.run(im);
-    var canvas = im.toCanvas();
-
+    var canvas = MIXER.run([im, gray], {'toCanvas': true});
     var container = $('content');
     removeAllChildren(container);
     container.appendChild(canvas);
@@ -110,7 +109,7 @@ function runEffect() {
     slider.value = 0;
     slider.oninput = function () {
         MIXER.setParameter('alpha', slider.value);
-        MIXER.run([im, gray]).toCanvas(canvas);
+        MIXER.run([im, gray], {'toCanvas': true});
         slider.focus();
     };
 }
