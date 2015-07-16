@@ -52,7 +52,7 @@ function FileLoader(elmt, flags, filter) {
 
     /** HTML container.  @private @type {HTMLElement} */
     this._domElement = (typeof elmt === 'string') ? document.getElementById(elmt) : elmt;
-    this._domElement.className = 'js-fileloader';
+    this._domElement.classList.add('js-fileloader');
     Dom.removeChildren(this._domElement);
 
     /** Selected slot(s).  @private @type {FileSlot | Array} */

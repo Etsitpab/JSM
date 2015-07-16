@@ -1,0 +1,79 @@
+input[type=button] {
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+select {
+    min-width: 10em;
+    max-width: 95%;
+    max-height: 20em;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.tab {
+    display: inline-block;
+    width: 2em;
+}
+
+
+/* Column-wise settings */
+
+.left-column {
+    position: fixed;
+    overflow-x: hidden;
+    overflow-y: auto;
+    left: 0px;
+    width: 200px;
+}
+
+.right-column {
+    margin-left: 220px;  /* = left-column-width + 2 * (margin + padding + border) */
+}
+
+#resizer {
+    position: absolute;
+    width: 5px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    opacity: 0.1;
+    background-color: gray;
+    /* border: 1px solid orange; */
+}
+
+#resizer:hover {
+    cursor: e-resize;
+    opacity: 0.5;
+}
+
+
+/* Boxes format */
+
+body {
+    margin: 0px;
+    padding: 0px;
+}
+
+body > div {
+    margin: 6px;
+    padding: 3px;
+    border: 1px solid gray;
+}
+
+#effects {
+    top: 0px;
+    bottom: 0px;
+}
+
+#images {
+}
+
+#editing {
+}
+
+#outputs {
+}
+

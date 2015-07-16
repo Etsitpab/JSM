@@ -1,99 +1,77 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>GPU Processing</title>
+    <title>GPU Processing UI</title>
+
+    <meta charset="UTF-8">
+
+    <link rel="stylesheet" type="text/css" href="../common/FileLoader.css"/>
+    <link rel="stylesheet" type="text/css" href="effect-designer.css"/>
 
     <script type="text/javascript" src="GLEffect.class.js"></script>
     <script type="text/javascript" src="GLEffect.more.js"></script>
+    <script type="text/javascript" src="../common/FileLoader.class.js"></script>
+    <script type="text/javascript" src="../common/Webcam.class.js"></script>
+    <script type="text/javascript" src="../common/FileLoader-Webcam.ext.js"></script>
     <script type="text/javascript" src="effect-designer.js"></script>
-
-    <style>
-        td {
-            vertical-align: top;
-            padding: 5px;
+    <script type="text/javascript">
+    <!--
+        function $(id) {
+            return document.getElementById(id);
         }
-    </style>
-  </head>
+    //-->
+    </script>
 
+  </head>
   <body onload="init()">
 
-    <div id="content">
-
-      <!-- INPUT IMAGE/VIDEO -->
-      <fieldset id="dropZone">
-        <legend>Input Image/Video</legend>
-        Drag an image/video here<br/>
-        <input type="button" value="Select an image/video..."
-            onclick="$('inputFile').click()"
-            title="Load an image or a video..."/><br/>
-        <input id="webcamLauncher" type="button" value="Launch a webcam..."
-            onclick="startWebcam()"
-            title="Start the default webcam"/>
-        <select id="webcamChooser" onchange="startWebcam(this.value)">
-          <option value="none">Choose a webcam...</option>
+    <!-- Effect list -->
+    <div id="effects" class="left-column">
+      <p>
+        <label for="effects">Effects</label>:<br/>
+        <select id="effects" size="3"
+                title="List of active filters (double-click to turn on/off)">
         </select><br/>
-        <input type="file" id="inputFile" style="display:none"/>
-        <img id="inputImage" width="1" height="1"/>
-        <video id="inputVideo" width="1" height="1"></video>
-      </fieldset>
-      <!-- FILTERS MENU -->
-      <fieldset>
-        <legend>Filters</legend>
-        <table>
-          <tr>
-            <!-- filters list -->
-            <td>
-              Active&nbsp;filters:<br/>
-              <select id="filterList" size="5" style="min-width: 7em"
-                  onchange="expandSelectedFilter(true)"
-                  title="List of active filter (click to edit)">
-                <option>Loading...</option>
-              </select><br/>
-              <input type="button" value="New filter" onclick="appendNewFilter()"
-                  title="Add a new filter"><br/>
-              <select id="filterSamples" onchange="appendSelectedFilter()"
-                  title="Import an existing filter">
-                <option value="_title_">Import a filter...</option>
-              </select>
-            </td>
-            <!-- filter details -->
-            <td id="filterDetails" style="display: none; padding-left: 20px">
-              <label>Name: <input type="text" id="shaderName" title="Name of the filter"/></label>
-              <input type="button" value="Compile" onclick="compileSelectedFilter()" style="font-weight: bold"
-                  title="Recompile the filter to apply any changes"/>
-              <input type="checkbox" id="shaderEnabled" onclick="toggleSelectedFilter(this)"
-                  title="Enable / disable the filter">
-              <input type="button" value="Close" onclick="expandSelectedFilter(false)"
-                  title="Close the filter's details without saving"/>
-              <input type="button" value="Delete" onclick="deleteSelectedFilter()"
-                  title="Delete this filter"/><br/>
-              <label>Parameters: <input type="text" id="shaderOpts" title="Filter options"
-                  onkeypress="ifEnterPressed(event, compileSelectedFilter)">
-              </label><br/>
-              <textarea cols="80" rows="12" id="shaderCode"></textarea>
-            </td>
-            <!-- parameters list -->
-            <td>
-              Parameters:<br/>
-              <select id="paramList" size="5" style="min-width:10em"
-                  onclick="displaySelectedParam()"
-                  title="List of editable parameters (click to edit)">
-                <option>Loading...</option>
-              </select><br/>
-              <input type="text" id="paramValue" style="width:10em"
-                  onkeypress="ifEnterPressed(event, updateSelectedParam)"/>
-            </td>
-          </tr>
-        </table>
-      </fieldset>
-      <!-- OUTPUT -->
-      <fieldset>
-        <legend>Output</legend>
-        <input type="text" id="outputStatus" size="20" readonly="readonly" title="Filtering time"/><br/>
-        <canvas id="outputCanvas" width="1px" height="1px"></canvas>
-        <canvas id="auxCanvas" width="1px" height="1px"></canvas>
-      </fieldset>
+        <select id="effectlib"
+                title="Import predefined effects">
+          <option value="">Import...</option>
+        </select>
+      </p>
+      <p>
+        <label for="parameters">Parameters</label>:<br/>
+        <select id="parameters" size="3"
+                title="Parameters of the effects">
+        </select>
+      </p>
+      <div id="resizer"></div>
     </div>
 
+    <!-- Image set -->
+    <div id="images" class="right-column">Images</div>
+
+    <!-- Editing area -->
+    <div id="editing" class="right-column">
+      <input type="text" id="name" size="20" class="bold"/>
+      <input type="checkbox"
+             title="Toggle the effect"/>
+      <input type="button" value="Compile" class="bold"
+             title="Compile the effect (Ctrl+Enter)"/>
+      <input type="button" value="Close"
+             title="Close and discard changes (Escap)"/>
+      <input type="button" value="Delete"
+             title="Delete the effect"/><br/>
+      <input type="text" id="opts" size="40" disabled readonly
+             title="Current options"/>
+      <input type="button" value="Set options..."
+             title="Set optional effect arguments"/><br/>
+      <textarea id="sourceCode" cols="60" rows="15"></textarea>
+    </div>
+
+    <!-- Output image -->
+    <div id="outputs" class="right-column">
+      <p style="margin: 1em">
+        No ouput yet!
+      </p>
+    </div>
   </body>
 </html>
