@@ -34,7 +34,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
     };
 
     /**
-     * @class Matching.Keypoint
+     * @class Maxtching.Keypoint
      *
      * This class creates `Keypoint` objects which contains the
      * information on keypoint extracted from an image.

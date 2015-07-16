@@ -167,7 +167,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             return his;
         },
 
-        /** Extract the histograms from a main orientation `o` and an RGB
+        /** Extract the histograms from a main orientation `o` and an
          * image patch `patch`.
          * @param {Number} o
          * @param {Matrix} patch
@@ -179,49 +179,11 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var h = data.histograms;
             var pps = data.pps;
             var sum = data.sum;
-
-            var dPhase = patch.phase.getData(), dNorm = patch.norm.getData();
-            var size = patch.norm.getSize(0);
-            var wSize = Math.floor(size / 2), wSize2 = wSize * wSize;
-
-            // var exp = Math.exp, c = -2 / wSize2;
-            var oR = this.relativeOrientation === true ? o : 0;
-
-            var i, j, _j, ij;
-            var x, y, x2, r2;
-
-            for (j = 0, _j = 0, x = -wSize; j < size; j++, _j += size, x++) {
-                for (i = 0, ij = _j, x2 = x * x, y = wSize; i < size; i++, ij++, y--) {
-
-                    r2 = x2 + y * y;
-
-                    if (r2 > wSize2) {
-                        dNorm[ij] = 0;
-                        dPhase[ij] = 0;
-                        continue;
-                    }
-
-                    var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin);
-                    var his = this.getHistogramNumber(y, x, o, wSize);
-                    //dNorm[ij] *= exp(c * r2);
-                    var norm = dNorm[ij];
-                    //var norm = exp(c * r2) * dNorm[ij];
-                    pps[his]++;
-                    sum[his] += norm;
-                    h[his][bin] += norm;
-                }
-            }
-            return data;
-        },
-        extractWeightedHistograms_new: function (o, patch, data) {
-            data = new global.DescriptorData(this, data);
-            var h = data.histograms;
-            var pps = data.pps;
-            var sum = data.sum;
             var dPhase = patch.phase.getData(),
                 dNorm = patch.norm.getData(),
                 view = patch.view;
-            var xs = view.getFirst(1), dx = view.getStep(1),
+            var xs = view.getFirst(2) + view.getFirst(1),
+                dx = view.getStep(1),
                 ys = view.getFirst(0);
 
             var size = view.getSize(0),
@@ -250,6 +212,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                         continue;
                     }
 
+                    var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin);
                     var y = i - wSize, x = j - wSize;
                     var ring = 0;
                     while (r2 > rings2[ring]) {
@@ -270,7 +233,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     for (s = 0; s < ring; s++) {
                         his += sectors[s];
                     }
-                    var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin)                    // var his = getHistogramNumber(i - wSize, j - wSize, o, wSize);
                     //dNorm[ij] *= exp(c * r2);
                     var norm = dNorm[ij];
                     //var norm = exp(c * r2) * dNorm[ij];
@@ -289,14 +251,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * robust color descriptors.
          */
         normalizeColor: function (patchRGB) {
-            //return correctImage(patchRGB, patchRGB.miredHistogram().modes[0].RGB);
-            // patchNorm = patch['.^'](2.4).colorConstancy("grey_world").imcor['.^'](1 / 2.4);
-            // return patchRGB.general_cc(0, 1, 0, patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("shades_of_grey", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("grey_world", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("grey_edge", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("max_rgb", patchRGB.mask).imcor;
-
             var R = 1 / patchRGB.mean[0];
             var G = 1 / patchRGB.mean[1];
             var B = 1 / patchRGB.mean[2];
@@ -326,16 +280,14 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             return {patch: patch, mean: patchRGB.mean, mask: patchRGB.mask};
         },
-
         /** Compute from an RGB image patch an patch adapted to the descriptor
          * computation. This transformation is constituted by a colorspace conversion
          * an a gradient phase/norm computation.
          */
         getPatch: function (patch) {
-            
-            // if (this.normalize === true) {
-            //    patch = this.normalizeColor(patch);
-            //}
+            if (this.normalize === true) {
+                // patch = this.normalizeColor(patch);
+            }
             var cs = this.colorspace;
             if (cs.name !== "RGB") {
                 patch = patch.applycform(this.convert);
@@ -356,37 +308,16 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             return patch;
         },
-
         /** Extract a `DescriptorData` structure from a main
-         * orientation `o` and an RGB image patch `patchRGB`.
+         * orientation `o` and an image `patch`.
          *
          * @param {Number} o
-         * @param {Matrix} patchRGB
+         * @param {Matrix} patch
          * @param {Array} [mem]
          *  Preallocated memory.
          */
-        extractFromPatch: function (o, patchRGB, data) {
-            var patch = this.getPatch(patchRGB);
-
+        extractFromPatch: function (o, patch, data) {
             var dataStruct = this.extractWeightedHistograms(o, patch, data);
-            this.data = dataStruct;
-            if (this.extractModes === true) {
-                dataStruct.extractModes();
-                dataStruct.normalizeModes();
-                dataStruct.processModes();
-            }
-
-            if (this.distance === "CEMD") {
-                dataStruct.normalizeHistograms();
-                dataStruct.cumulHistograms();
-            } else {
-                dataStruct.normalizeHistograms();
-            }
-
-            return dataStruct;
-        },
-        extractFromPatch_new: function (o, patch, data) {
-            var dataStruct = this.extractWeightedHistograms_new(o, patch, data);
             this.data = dataStruct;
             if (this.extractModes === true) {
                 dataStruct.extractModes();
@@ -660,17 +591,17 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
     /** Examples of descriptors */
     global.descriptorDB = {
-        R:      new Descriptor({name: "R", colorspace: {name: "RGB", channels: 0}}),
-        G:      new Descriptor({name: "G", colorspace: {name: "RGB", channels: 1}}),
-        B:      new Descriptor({name: "B", colorspace: {name: "RGB", channels: 2}}),
-        H:      new Descriptor({name: "H", colorspace: {name: "HSL", channels: 0}}),
-        S:      new Descriptor({name: "S", colorspace: {name: "HSL", channels: 1}}),
-        L:      new Descriptor({name: "L", colorspace: {name: "HSL", channels: 2}}),
-        SIFT:   new Descriptor({name: "SIFT"}),
-        OHTA1:  new Descriptor({name: "OHTA1", colorspace: {name: "Ohta", channels: 1}}),
-        OHTA2:  new Descriptor({name: "OHTA2", colorspace: {name: "Ohta", channels: 2}}),
-        OPP1:   new Descriptor({name: "OPP1", colorspace: {name: "Opponent", channels: 1}}),
-        OPP2:   new Descriptor({name: "OPP2", colorspace: {name: "Opponent", channels: 2}}),
+        R:    new Descriptor({name: "R", colorspace: {name: "RGB", channels: 0}}),
+        G:    new Descriptor({name: "G", colorspace: {name: "RGB", channels: 1}}),
+        B:    new Descriptor({name: "B", colorspace: {name: "RGB", channels: 2}}),
+        H:    new Descriptor({name: "H", colorspace: {name: "HSL", channels: 0}}),
+        S:    new Descriptor({name: "S", colorspace: {name: "HSL", channels: 1}}),
+        L:    new Descriptor({name: "L", colorspace: {name: "HSL", channels: 2}}),
+        SIFT: new Descriptor({name: "SIFT"}),
+        OHTA1: new Descriptor({name: "OHTA1", colorspace: {name: "Ohta", channels: 1}}),
+        OHTA2: new Descriptor({name: "OHTA2", colorspace: {name: "Ohta", channels: 2}}),
+        OPP1: new Descriptor({name: "OPP1", colorspace: {name: "Opponent", channels: 1}}),
+        OPP2: new Descriptor({name: "OPP2", colorspace: {name: "Opponent", channels: 2}}),
         OHTAN1: new Descriptor({name: "OHTAN1", colorspace: {name: "OhtaNorm", channels: 1}}),
         OHTAN2: new Descriptor({name: "OHTAN2", colorspace: {name: "OhtaNorm", channels: 2}}),
 

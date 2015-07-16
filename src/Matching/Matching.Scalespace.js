@@ -48,7 +48,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
     }
 
     ScaleSpace.prototype = {
-        nScale: 9,
+        nScale: 10,
         sigmaInit: 0.63,
         scaleRatio: 1.26,
         lapThresh: 4e-3,
@@ -266,101 +266,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             return this;
         },
-        /** Normalize the colors of an image patch, by using the 
-         * Grey-World hypothesis.
-         * @param {Object} patchRGB
-         * @return {Object}
-         * Oject with the following properties:
-         * 
-         * + patch: The patch normalised (not a copy),
-         * + mean: An array containing the R, G and B average values,
-         *   before normalisation,
-         * + mask: the spatial mask used to compute the normalisation.
-         */
-        normalizePatch: function (patchRGB) {
-            var data = patchRGB.getData();
-
-            var size = patchRGB.getSize(0), wSize = Math.floor(size / 2);
-            var wSize2 = wSize * wSize, c = -2 / wSize2;
-
-            var mask = Matrix.ones(size, size, 'logical'), maskData = mask.getData();
-            var i, j, _j, r, g, b;
-            var x, y, x2, r2, dc = size * size;
-
-            var R = 0, G = 0, B = 0, nPoints = 0;
-            var exp = Math.exp;
-            for (j = 0, _j = 0, x = -wSize; j < size; j++, _j += size, x++) {
-                r = _j;
-                g = r + dc;
-                b = g + dc;
-                for (i = 0, x2 = x * x, y = wSize; i < size; i++, r++, g++, b++, y--) {
-
-                    r2 = x2 + y * y;
-                    
-                    if (r2 > wSize2) {
-                        maskData[r] = 0;
-                    }
-                    var cst = exp(c * r2);
-                    data[r] *= cst
-                    data[g] *= cst
-                    data[b] *= cst
-                    R += data[r];
-                    G += data[g];
-                    B += data[b];
-                    nPoints += cst;
-                }
-            }
-            R /= nPoints;
-            G /= nPoints;
-            B /= nPoints;
-            var norm = Math.sqrt((R * R + G * G + B * B) / 3);
-            return {patch: patchRGB, mean: [R / norm, G / norm, B / norm], mask: mask};
-        },
-        /** Returns the patch corresponding to a keypoint.
-         * @param {Object} keypoint
-         *  The keypoint.
-         * @param {Boolean} rgb
-         *  True if rgb patch is required false for gray-scale only.
-         * @return {Object} 
-         *  The patch
-         */
-        getImagePatch_old: function (key, rgb, grad) {
-            var sigma = key.sigma;
-            // Looking for closer blured image
-            var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
-            for (i = 0, ei = this.nScale; i < ei; i++) {
-                d = this.scale[i].sigma - sigma;
-                if (abs(d) < dMin && d <= 0) {
-                    dMin = abs(d);
-                    sMin = i;
-                }
-            }
-
-            var image = (rgb === true) ? this.scale[sMin].blur : this.scale[sMin].gray;
-
-            // Get RGB patch
-            var x = key.x, y = key.y, s = Math.round(key.factorSize * sigma);
-            var round = Math.round;
-            var xMin = round(x - s), xMax = round(x + s);
-            var yMin = round(y - s), yMax = round(y + s);
-
-            if (xMin < 0 || yMin < 0) {
-                return null;
-            } else if (xMax > image.getSize(1) - 1) {
-                return null;
-            } else if (yMax > image.getSize(0) - 1) {
-                return null;
-            }
-            
-            var patch = image.get([yMin, yMax], [xMin, xMax]);
-            if (dMin > 1e-2) {
-                var sigmaIm = this.scale[sMin].sigma;
-                sigma = Math.sqrt(sigma * sigma - sigmaIm * sigmaIm);
-                patch = patch.gaussian(sigma);
-            }
-            // return {patch: patch, mean: [1, 1, 1]};
-            return patch;
-        },
         getViewOnImagePatch: function (key, space, type, normalize) {
             var sigma = key.sigma;
             // Looking for closer blured image
@@ -421,12 +326,16 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     }
                     grad = scale[name].colorChannels;
                     view = scale[name].colorChannelsView.restore().select(
-                        [yMin, yMax], [xMin, xMax]
+                        [yMin, yMax], [xMin, xMax], 0
+                    );
+                } else {
+                    view = image.getView().select(
+                        [yMin, yMax], [xMin, xMax], space.channels
                     );
                 }
             }
             if (normalize === true) {
-                patch = this.normalizeColor(patch);
+                // patch = this.normalizeColor(patch);
             }
 
             return {
@@ -464,54 +373,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             this.keypoints = newKeypoints;
             return this;
         },
-        /** Extract the descriptor(s) of all keypoint detected in 
-         * the scalespace.
-         * @param {Array} [Descriptor]
-         *  An Array of descriptors to extract
-         * @chainable
-         */
         extractDescriptors: function (descriptors) {
-            descriptors = descriptors || global.Keypoint.prototype.descriptors;
-
-            // Descriptors memory allocation for n keypoints
-            var getData = function (d, n) {
-                var length =  d.nBin * d.nSector;
-                var data = new Float32Array(n * length);
-                var i, tab = [];
-                for (i = 0; i < n; i++) {
-                    tab.push(data.subarray(i * length, (i + 1) * length));
-                }
-                tab.data = data;
-                return tab;
-            };
-
-            if (!this.keypoints) {
-                throw new Error("ScaleSpace: Keypoints have to be computed.");
-            }
-            var keypoints = this.keypoints;
-            var i, k, ek, descriptorsData = {}, name;
-
-            for (i = 0; i < descriptors.length; i++) {
-                name = descriptors[i].name;
-                descriptorsData[name] = getData(descriptors[i], keypoints.length);
-            }
-
-            this.descriptorsData = descriptorsData;
-
-            for (k = 0, ek = keypoints.length; k < ek; k++) {
-                var key = keypoints[k];
-                var patchRGB = this.getImagePatch_old(key, true);
-                patchRGB = this.normalizePatch(patchRGB);
-                var mem = [];
-                for (i = 0; i < descriptors.length; i++) {
-                    name = descriptors[i].name;
-                    mem[name] = descriptorsData[name][k];
-                }
-                key.extractDescriptors(patchRGB, descriptors, mem);
-            }            
-            return this;
-        },
-        extractDescriptors_new: function (descriptors) {
             descriptors = descriptors || global.Keypoint.prototype.descriptors;
 
             // Descriptors memory allocation for n keypoints
@@ -542,16 +404,16 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 keypoints[k].descriptorsData = keypoints[k].descriptorsData || {};
             }
             for (i = 0; i < descriptors.length; i++) {
-                var descriptor = descriptors[i],
-                    name = descriptor.name,
+                var desc = descriptors[i],
+                    name = desc.name,
                     mem = descriptorsData[name],
-                    space = descriptor.colorspace,
-                    type = descriptor.type;
+                    space = desc.colorspace,
+                    type = desc.type;
                 for (k = 0, ek = keypoints.length; k < ek; k++) {
                     var key = keypoints[k],
                         patch = this.getViewOnImagePatch(key, space, type);
                     key.descriptorsData[name] =
-                        descriptor.extractFromPatch_new(
+                        desc.extractFromPatch(
                             key.orientation, patch, mem[k]
                         );
                 }
