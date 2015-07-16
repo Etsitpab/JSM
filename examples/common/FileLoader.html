@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>File Loader</title>
+    <link rel="stylesheet" type="text/css" href="FileLoader.css"/>
+    <script type="text/javascript" src="FileLoader.class.js"></script>
+    <script type="text/javascript">
+    <!--
+        /* Some help for debugging */
+
+        FL = null;  // The FileLoader object, when created
+
+        // Shortcut for getElmtById
+        $ = function (str) {
+            return document.getElementById(str);
+        };
+
+        // Log any double-clicked elements
+        document.ondblclick = function (evt) {
+            console.log(evt.target);
+        }
+
+        // Listen and log events. Example: listen(FL, 'onchange')
+        listen = function (obj, evtName) {
+            obj[evtName] = function () {
+                var k, array = [evtName];
+                for (k = 0; k < arguments.length; ++k) { array.push(arguments[k]); }
+                console.log(array);
+            }
+        }
+
+    //-->
+    </script>
+  </head>
+  <body onload="FL = new FileLoader('dropzone', FileLoader.MULTIPLE)">
+    <div id="dropzone">
+      File loader not supported
+    </div>
+  </body>
+</html>
