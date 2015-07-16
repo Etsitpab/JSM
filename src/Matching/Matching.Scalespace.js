@@ -48,11 +48,11 @@ var root = typeof window === 'undefined' ? module.exports : window;
     }
 
     ScaleSpace.prototype = {
-        nScale: 13,
+        nScale: 9,
         sigmaInit: 0.63,
         scaleRatio: 1.26,
         lapThresh: 4e-3,
-        harrisThresh: 1e0,
+        harrisThresh: 1e4,
         /** Function to use for exporting the keypoint list 
          * @return {String}
          */
@@ -361,7 +361,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             // return {patch: patch, mean: [1, 1, 1]};
             return patch;
         },
-        getViewOnImagePatch: function (key, space, type) {
+        getViewOnImagePatch: function (key, space, type, normalize) {
             var sigma = key.sigma;
             // Looking for closer blured image
             var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
@@ -425,7 +425,10 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     );
                 }
             }
-            
+            if (normalize === true) {
+                patch = this.normalizeColor(patch);
+            }
+
             return {
                 norm: grad.norm,
                 phase: grad.phase,

@@ -111,14 +111,14 @@ var run = function() {
     var ds = [
         Matching.descriptorDB['SIFT'],
         Matching.descriptorDB['HUE-NORM'],
-        Matching.descriptorDB['OHTA1'],
-        Matching.descriptorDB['OHTA2']
+        // Matching.descriptorDB['OHTA1'],
+        // Matching.descriptorDB['OHTA2']
     ];
     var combinations = {
         "SIFT": ["SIFT"],
         "SIFT+HUE-Norm": ["SIFT", "HUE-NORM"],
-        "Ohta-SIFT": ["SIFT", "OHTA1", "OHTA2"],
-        "Ohta-SIFT+HUE-Norm": ["SIFT", "OHTA1", "OHTA2", "HUE-NORM"]
+        // "Ohta-SIFT": ["SIFT", "OHTA1", "OHTA2"],
+        // "Ohta-SIFT+HUE-Norm": ["SIFT", "OHTA1", "OHTA2", "HUE-NORM"]
     };
     var computeSift = function () {
         Matching.Descriptor.prototype.distance = $("distance").value;
@@ -126,7 +126,7 @@ var run = function() {
         Matching.Keypoint.prototype.criterion = "NN-DR";
         Matching.ScaleSpace.prototype.harrisThresh = $F("harris");
 
-        console.profile();
+        //console.profile();
         var mat, proj = false;
         if (IMAGES.length === 1) {
             IMAGES = IMAGES[0];
@@ -136,7 +136,7 @@ var run = function() {
         }
 
         S = Matching.benchmark(IMAGES, mat, function () {return this;}, proj, {}, combinations);
-        console.profileEnd();
+        //console.profileEnd();
 
         VIEW = S.createView($("image"));
         VIEW.thresholdMatchs(parseFloat($("threshold").value), $V("combination"));

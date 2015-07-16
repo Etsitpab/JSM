@@ -250,9 +250,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
                         continue;
                     }
 
-                    var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin);
-
-
                     var y = i - wSize, x = j - wSize;
                     var ring = 0;
                     while (r2 > rings2[ring]) {
@@ -273,7 +270,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     for (s = 0; s < ring; s++) {
                         his += sectors[s];
                     }
-                    // var his = getHistogramNumber(i - wSize, j - wSize, o, wSize);
+                    var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin)                    // var his = getHistogramNumber(i - wSize, j - wSize, o, wSize);
                     //dNorm[ij] *= exp(c * r2);
                     var norm = dNorm[ij];
                     //var norm = exp(c * r2) * dNorm[ij];
@@ -335,12 +332,13 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * an a gradient phase/norm computation.
          */
         getPatch: function (patch) {
-            if (this.normalize === true) {
-                patch = this.normalizeColor(patch);
-            }
+            
+            // if (this.normalize === true) {
+            //    patch = this.normalizeColor(patch);
+            //}
             var cs = this.colorspace;
             if (cs.name !== "RGB") {
-                patch = patch.patch.applycform(this.convert);
+                patch = patch.applycform(this.convert);
             }
 
             switch (this.type) {
@@ -662,17 +660,17 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
     /** Examples of descriptors */
     global.descriptorDB = {
-        R:    new Descriptor({name: "R", colorspace: {name: "RGB", channels: 0}}),
-        G:    new Descriptor({name: "G", colorspace: {name: "RGB", channels: 1}}),
-        B:    new Descriptor({name: "B", colorspace: {name: "RGB", channels: 2}}),
-        H:    new Descriptor({name: "H", colorspace: {name: "HSL", channels: 0}}),
-        S:    new Descriptor({name: "S", colorspace: {name: "HSL", channels: 1}}),
-        L:    new Descriptor({name: "L", colorspace: {name: "HSL", channels: 2}}),
-        SIFT: new Descriptor({name: "SIFT"}),
-        OHTA1: new Descriptor({name: "OHTA1", colorspace: {name: "Ohta", channels: 1}}),
-        OHTA2: new Descriptor({name: "OHTA2", colorspace: {name: "Ohta", channels: 2}}),
-        OPP1: new Descriptor({name: "OPP1", colorspace: {name: "Opponent", channels: 1}}),
-        OPP2: new Descriptor({name: "OPP2", colorspace: {name: "Opponent", channels: 2}}),
+        R:      new Descriptor({name: "R", colorspace: {name: "RGB", channels: 0}}),
+        G:      new Descriptor({name: "G", colorspace: {name: "RGB", channels: 1}}),
+        B:      new Descriptor({name: "B", colorspace: {name: "RGB", channels: 2}}),
+        H:      new Descriptor({name: "H", colorspace: {name: "HSL", channels: 0}}),
+        S:      new Descriptor({name: "S", colorspace: {name: "HSL", channels: 1}}),
+        L:      new Descriptor({name: "L", colorspace: {name: "HSL", channels: 2}}),
+        SIFT:   new Descriptor({name: "SIFT"}),
+        OHTA1:  new Descriptor({name: "OHTA1", colorspace: {name: "Ohta", channels: 1}}),
+        OHTA2:  new Descriptor({name: "OHTA2", colorspace: {name: "Ohta", channels: 2}}),
+        OPP1:   new Descriptor({name: "OPP1", colorspace: {name: "Opponent", channels: 1}}),
+        OPP2:   new Descriptor({name: "OPP2", colorspace: {name: "Opponent", channels: 2}}),
         OHTAN1: new Descriptor({name: "OHTAN1", colorspace: {name: "OhtaNorm", channels: 1}}),
         OHTAN2: new Descriptor({name: "OHTAN2", colorspace: {name: "OhtaNorm", channels: 2}}),
 

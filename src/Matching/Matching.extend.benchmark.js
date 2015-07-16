@@ -359,12 +359,13 @@ var root = typeof window === 'undefined' ? module.exports : window;
         if (part === "norm") {
             patch = patch[part];
             patch = patch.rdivide(patch.max());
-            mask =  mask.cat(2, mask, mask);
+            // mask =  mask.cat(2, mask, mask);
         } else if (name === "RGB" || name === "RGBNorm") {
-            patch = (name === "RGBNorm") ? global.Descriptor.prototype.normalizeColor(patchRGB) : patchRGB;
-            patch = patch.patch;
+            // patch = (name === "RGBNorm") ? global.Descriptor.prototype.normalizeColor(patchRGB) : patchRGB;
+            patch = patchRGB;
+            // patch = patch.patch;
             patch = patch.cat(2, Matrix.ones(patch.size(0), patch.size(1)));
-            mask = mask.cat(2, mask, mask, mask);
+            // mask = mask.cat(2, mask, mask, mask);
         } else if (name !== undefined) {
             rings = descriptor.rings;
             sectors = descriptor.sectors;
@@ -373,9 +374,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else {
                 patch = phaseNormImage(patch.phase, patch.norm, true);
             }
-            mask = mask.cat(2, mask, mask, mask);
+            // mask = mask.cat(2, mask, mask, mask);
         }
-        patch = patch['.*'](mask);
+        // patch = patch['.*'](mask);
 
         var canvas = document.createElement("canvas");
         sz = sz || 201;
