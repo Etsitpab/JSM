@@ -35,29 +35,32 @@ select {
 
 #resizer {
     position: absolute;
-    width: 5px;
+    width: 4px;
     right: 0px;
     top: 0px;
     bottom: 0px;
-    opacity: 0.1;
-    background-color: gray;
+    background-color: #ddd;
     /* border: 1px solid orange; */
 }
 
 #resizer:hover {
     cursor: e-resize;
-    opacity: 0.5;
+    background-color: #aaa;
 }
 
 
 /* Boxes format */
 
 body {
+    background-color: #fafafa;
     margin: 0px;
     padding: 0px;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 body > div {
+    background-color: white;
     margin: 6px;
     padding: 3px;
     border: 1px solid gray;
@@ -66,6 +69,7 @@ body > div {
 #effects {
     top: 0px;
     bottom: 0px;
+    z-index: +1;
 }
 
 #images {
@@ -75,5 +79,7 @@ body > div {
 }
 
 #outputs {
+    height: 500px;
+    overflow-x: auto;
 }
 
