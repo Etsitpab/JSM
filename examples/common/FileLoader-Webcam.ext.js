@@ -12,6 +12,7 @@ FileLoader.prototype.appendWebcams = function () {
     }
     Webcam.forEach(function (cam) {
         var slot = that.createSlot('Camera: ' + cam.name, null, FileSlot.UNDELETABLE);
+        slot.type = 'webcam';
         slot.data = cam.videoElement;
         cam.onready = function () {
             slot.setVideoThumbnail(cam.videoElement, null, FileSlot.UNDELETABLE);

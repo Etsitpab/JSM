@@ -13,6 +13,7 @@
     <script type="text/javascript" src="../common/FileLoader.class.js"></script>
     <script type="text/javascript" src="../common/Webcam.class.js"></script>
     <script type="text/javascript" src="../common/FileLoader-Webcam.ext.js"></script>
+    <script type="text/javascript" src="EffectUI.class.js"></script>
     <script type="text/javascript" src="effect-designer.js"></script>
     <script type="text/javascript">
     <!--
@@ -26,14 +27,16 @@
   <body onload="init()">
 
     <!-- Effect list -->
-    <div id="effects" class="left-column">
+    <div id="menu" class="left-column">
       <p>
         <label for="effects">Effects</label>:<br/>
         <select id="effects" size="3"
-                title="List of active filters (double-click to turn on/off)">
+                title="List of active filters (double-click to turn on/off)"
+                onchange="Effects.toHTML()">
         </select><br/>
-        <select id="effectlib"
-                title="Import predefined effects">
+        <select id="effect-samples"
+                title="Import predefined effects"
+                onchange="Effects.load(); Effects.run()">
           <option value="">Import...</option>
         </select>
       </p>
@@ -50,9 +53,9 @@
     <div id="images" class="right-column">Images</div>
 
     <!-- Editing area -->
-    <div id="editing" class="right-column">
+    <div id="editing" class="right-column" style="display: none">
       <input type="text" id="name" size="20" class="bold"/>
-      <input type="checkbox"
+      <input type="checkbox" id="enabled"
              title="Toggle the effect"/>
       <input type="button" value="Compile" class="bold"
              title="Compile the effect (Ctrl+Enter)"/>
@@ -64,14 +67,10 @@
              title="Current options"/>
       <input type="button" value="Set options..."
              title="Set optional effect arguments"/><br/>
-      <textarea id="sourceCode" cols="60" rows="15"></textarea>
+      <textarea id="sourceCode" cols="80" rows="15"></textarea>
     </div>
 
     <!-- Output image -->
-    <div id="outputs" class="right-column">
-      <p style="margin: 1em">
-        No ouput yet!
-      </p>
-    </div>
+    <div id="outputs" class="right-column"></div>
   </body>
 </html>

@@ -57,11 +57,11 @@ Webcam.PAUSED = -1;
  * @static @private */
 Webcam._initEventListeners = function (that) {
     'use strict';
-    that.videoElement.oncanplaythrough = function () {
-        that.width = that.videoElement.videoWidth;
-        that.height = that.videoElement.videoHeight;
+    that.videoElement.addEventListener('canplaythrough', function () {
+        that.width = that.videoElement.width = that.videoElement.videoWidth;
+        that.height = that.videoElement.height = that.videoElement.videoHeight;
         that.onready();
-    };
+    });
 };
 
 /** List the available Webcams.

@@ -30,6 +30,7 @@ select {
 }
 
 .right-column {
+    overflow-x: auto;
     margin-left: 220px;  /* = left-column-width + 2 * (margin + padding + border) */
 }
 
@@ -66,7 +67,7 @@ body > div {
     border: 1px solid gray;
 }
 
-#effects {
+#menu {
     top: 0px;
     bottom: 0px;
     z-index: +1;
@@ -79,7 +80,10 @@ body > div {
 }
 
 #outputs {
-    height: 500px;
-    overflow-x: auto;
 }
 
+#outputs:empty::after {
+    content: 'Nothing to be displayed :(';
+    display: block;
+    margin: 1em;
+}

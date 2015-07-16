@@ -836,6 +836,7 @@ FileSlot.Loader.video = function (dataURL) {
                 video.pause();
             }
         };
+        that._dataLoaded(video);
     };
     video.src = dataURL;
 };

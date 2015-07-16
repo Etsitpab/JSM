@@ -1,35 +1,35 @@
 /*global GLEffect, GLReduction */
 
 
-/** Sample effects. @singleton @class GLEffect.sample */
-GLEffect.sample = {};
+/** Sample effects. @singleton @class GLEffect.Sample */
+GLEffect.Sample = {};
 
 /** Identity effect (using the raw source code) */
-GLEffect.sample.id_raw = new GLEffect();
+GLEffect.Sample.identity_GLSL = new GLEffect();
 
 /** Identity effect (using the RGB function form) */
-GLEffect.sample.id_RGB = GLEffect.fromFunction([
+GLEffect.Sample.identity_RGB = GLEffect.fromFunction([
     'vec3 function(vec3 color) {',
     '    return color;',
     '}'
 ].join('\n'));
 
 /** Identity effect (using the RGBA function form) */
-GLEffect.sample.id_RGBA = GLEffect.fromFunction([
+GLEffect.Sample.identity_RGBA = GLEffect.fromFunction([
     'vec4 function(vec4 color) {',
     '    return color;',
     '}'
 ].join('\n'));
 
 /** Pixel-wise absolute value. @type {GLEffect} */
-GLEffect.sample.abs = GLEffect.fromFunction([
+GLEffect.Sample.abs = GLEffect.fromFunction([
     'vec3 function(vec3 color) {',
     '    return abs(color);',
     '}'
 ].join('\n'));
 
 /** Conversion to gray-level images. @type {GLEffect} */
-GLEffect.sample.gray = GLEffect.fromFunction([
+GLEffect.Sample.gray = GLEffect.fromFunction([
     'vec3 function(vec3 color) {',
     '    float gray = dot(color, vec3(0.3, 0.6, 0.1));',
     '    return vec3(gray);',
@@ -43,7 +43,7 @@ GLEffect.sample.gray = GLEffect.fromFunction([
  *  * `mat3 kernel`: the convolution kernel.
  *
  * @type {GLEffect} */
-GLEffect.sample.conv3x3 = new GLEffect(GLEffect.sourceCodeHeader + [
+GLEffect.Sample.conv3x3 = new GLEffect(GLEffect.sourceCodeHeader + [
     'uniform mat3 kernel;  // convolution kernel',
     '',
     'void main(void) {',
@@ -71,7 +71,7 @@ GLEffect.sample.conv3x3 = new GLEffect(GLEffect.sourceCodeHeader + [
  *      For instance, (1,0) is a horizontal convolution.
  *
  * @type {GLEffect} */
-GLEffect.sample.conv3x1 = new GLEffect(GLEffect.sourceCodeHeader + [
+GLEffect.Sample.conv3x1 = new GLEffect(GLEffect.sourceCodeHeader + [
     'uniform vec3 kernel;     // convolution kernel',
     'uniform vec2 direction;  // axis of the convolution',
     '',
@@ -85,23 +85,23 @@ GLEffect.sample.conv3x1 = new GLEffect(GLEffect.sourceCodeHeader + [
 ].join('\n'));
 
 
-/** Sample reductions. @singleton @class GLReduction.sample */
-GLReduction.sample = {};
+/** Sample reductions. @singleton @class GLReduction.Sample */
+GLReduction.Sample = {};
 
 /** Sum of all the RGBA values. */
-GLReduction.sample.sum = GLReduction.fromFunctions(
+GLReduction.Sample.sum = GLReduction.fromFunctions(
     function (a, b) { return a + b; },
     'vec4 function(vec4 a, vec4 b) { return a + b; }'
 );
 
 /** Minimum R/G/B/A values. */
-GLReduction.sample.min = GLReduction.fromFunctions(
+GLReduction.Sample.min = GLReduction.fromFunctions(
     Math.min,
     'vec4 function(vec4 a, vec4 b) { return min(a, b); }'
 );
 
 /** Maximum R/G/B/A values. */
-GLReduction.sample.max = GLReduction.fromFunctions(
+GLReduction.Sample.max = GLReduction.fromFunctions(
     Math.max,
     'vec4 function(vec4 a, vec4 b) { return max(a, b); }'
 );
