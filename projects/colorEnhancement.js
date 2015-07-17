@@ -19,7 +19,15 @@
 (function () {
     'use strict';
 
-    window.USE_CST = true;
+    /* When set to true, allow to reproduce results from the paper.
+     * - The first one appears when adapting the alorithm to image 
+     *   with 0-1 dynamic instead of 0-255. 
+     * - The second apply some processing on approximation coefficients
+     *   that are not described in the paper.
+     */
+    window.USE_CST = true; 
+    window.EDO_RES = false;
+    
     var processCoeffs = function (D, A, K, w, gamma) {
         var max = D[0] > 0 ? D[0] : -D[0];
         for (var i = 1, ei = D.length; i < ei; i++) {
@@ -56,12 +64,11 @@
         K = (K === undefined) ? 20 : K;
         average = (average === undefined) ? "channel" : average;
 
-        var initialMode = Matrix.dwtmode();
-        Matrix.dwtmode("sym");
-
         var im = this.im2double(), out = Matrix.zeros(im.size());
-        var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name) - 1;
-        
+        var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
+        if (window.EDO_RES) {
+            J = J - 1;
+        }
         var nChannel = im.size(2), wt = [];
         var mean = [], max = [], min = [];
         var imApprox;
@@ -91,7 +98,9 @@
                 norm = wNorm * 0.5; 
             }
             // A["-="](imMin)["*="](wNorm / (imMax - imMin));
-            // A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
+            if (window.EDO_RES) {
+                A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
+            }
             A["*="](1 - alpha)["+="](norm * alpha);
         }
 
@@ -109,7 +118,6 @@
             out.set([], [], c, channel);
         }
 
-        Matrix.dwtmode(initialMode);
         return out;
     };
     
@@ -120,9 +128,6 @@
         w = (w === undefined) ? 15 / 255 : w;
         name = (name === undefined) ? 'sym4' : name;
         K = (K === undefined) ? 20 : K;
-
-        var initialMode = Matrix.dwtmode();
-        Matrix.dwtmode("sym");
 
         var im = this.im2double()
         var out = Matrix.zeros(im.size());
@@ -144,7 +149,6 @@
             var channel = wt[0].reshape(wt[1].get(0).getData());
             out.set([], [], c, channel);
         }
-        Matrix.dwtmode(initialMode);
         return out;
     };
 })();
