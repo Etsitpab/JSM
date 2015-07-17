@@ -1,5 +1,5 @@
-/*jslint vars: true, browser: true */
-/*global FileLoader */
+/*jslint vars: true, nomen: true, browser: true */
+/*global FileLoader, FileSlot, Effects, GLEffect */
 
 // Allow the left column to be resized
 function makeColumnResizable() {
@@ -34,27 +34,25 @@ function makeColumnResizable() {
     });
 }
 
-// Initialize the interface
-function init() {
+// Create the file loader
+function createFileLoader() {
     'use strict';
-    makeColumnResizable();
-    Effects.loadSamples();
-
-    // Create the file laoder + webcam
     var fl = new FileLoader('images', FileLoader.MULTIPLE, 'image/*,video/*');
     fl.appendWebcams();
-    fl.onchange = function (slot) {
-        if (slot.type !== 'webcam') {
+
+    // Run when selection change
+    fl.onchange = function (slot, nowSelected) {
+        if (!nowSelected || slot.type !== 'webcam') {
             Effects.run(fl);
-        } else {
-            slot.data.addEventListener('canplaythrough', function () {
-                console.log(slot.data.width);
-                Effects.run(fl);
-            });
+        }
+    };
+    fl.onload = function (slot) {
+        if (slot.type === 'webcam') {
+            Effects.run(fl);
         }
     };
 
-    // Load image on double-clic
+    // Load output image when double-clicked
     var canvas = GLEffect._getDefaultContext().canvas;
     canvas.addEventListener('dblclick', function () {
         var inputs = Effects.getInputs();
@@ -64,5 +62,13 @@ function init() {
             FileSlot.Loader.image.call(slot, image.toCanvas().toDataURL());
         }
     });
+}
+
+// Initialize the interface
+function init() {
+    'use strict';
+    makeColumnResizable();
+    createFileLoader();
+    Effects.loadSamples();
 }
 
