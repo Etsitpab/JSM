@@ -190,7 +190,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 wSize = Math.floor(size / 2),
                 wSize2 = wSize * wSize;
             
-            // var exp = Math.exp, c = -2 / wSize2;
+            var exp = Math.exp, c = -2 / wSize2;
             var oR = this.relativeOrientation === true ? o : 0;
 
             var rings = this.rings, sectors = this.sectors;
@@ -233,9 +233,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     for (s = 0; s < ring; s++) {
                         his += sectors[s];
                     }
-                    //dNorm[ij] *= exp(c * r2);
                     var norm = dNorm[ij];
-                    //var norm = exp(c * r2) * dNorm[ij];
+                    //dNorm[ij] *= exp(c * r2);
+                    var norm = exp(c * r2) * dNorm[ij];
                     pps[his]++;
                     sum[his] += norm;
                     h[his][bin] += norm;
@@ -280,9 +280,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             return {patch: patch, mean: patchRGB.mean, mask: patchRGB.mask};
         },
-        /** Compute from an RGB image patch an patch adapted to the descriptor
-         * computation. This transformation is constituted by a colorspace conversion
-         * an a gradient phase/norm computation.
+        /** Compute from an RGB image patch an patch adapted to the 
+         * descriptor computation. This transformation is constituted by 
+         * a colorspace conversion an a gradient phase/norm computation.
          */
         getPatch: function (patch) {
             if (this.normalize === true) {
@@ -330,6 +330,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 dataStruct.cumulHistograms();
             } else {
                 dataStruct.normalizeHistograms();
+                // dataStruct.thresholdHistograms(0.1);
+                // dataStruct.normalizeHistograms();
             }
 
             return dataStruct;

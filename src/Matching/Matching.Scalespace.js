@@ -18,9 +18,9 @@
 
 var root = typeof window === 'undefined' ? module.exports : window;
 
-////////////////////////////////////////////////////////////////////////////
-//                           Scalespace Class                             //
-////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+//                           Scalespace Class                            //
+///////////////////////////////////////////////////////////////////////////
 
 
 (function (global) {
@@ -48,7 +48,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
     }
 
     ScaleSpace.prototype = {
-        nScale: 10,
+        nScale: 9,
         sigmaInit: 0.63,
         scaleRatio: 1.26,
         lapThresh: 4e-3,

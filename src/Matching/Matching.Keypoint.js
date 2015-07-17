@@ -60,10 +60,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
     /** Number of bins used to compute the histogram of oriented gradient */
     Keypoint.prototype.nBin = 36;
-    /** The algorithm used to compute the main(s) orientation(s) of the keypoint. */
+    /** The algorithm used to compute the main(s) orientation(s) 
+     of the keypoint. */
     Keypoint.prototype.algorithm = "max";
-    /** The factor size used to determine the associated region in the image. */
-    Keypoint.prototype.factorSize = 12;
+    /** The factor size used to determine the associated region 
+     in the image. */
+    Keypoint.prototype.factorSize = 18;
     /** The descriptor(s) used to describe the region of the keypoint. */
     Keypoint.prototype.descriptors = [
         global.descriptorDB["SIFT"],
@@ -140,7 +142,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         var size = view.getSize(0);
         var wSize = Math.floor(size / 2), wSize2 = wSize * wSize;
         var nPoints = 0;
-        var exp = Math.exp, c = -16 / wSize2;
+        var exp = Math.exp, c = -2 / wSize2;
         var i, ei, j, _j, ij, j2, r2;
         for (j = 0, _j = xs; j < size; j++, _j += dx) {
             for (i = 0, ij = _j + ys, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
@@ -154,8 +156,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 }
                 var bin = getIndex(dPhase[ij], nBin);
                 nPoints++;
-                //hist[bin] += exp(c * r2) * dNorm[ij];
-                hist[bin] += dNorm[ij];
+                hist[bin] += exp(c * r2) * dNorm[ij];
+                // hist[bin] += dNorm[ij];
             }
         }
         var orientations = [];

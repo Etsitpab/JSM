@@ -205,7 +205,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         this.matchs = this.matchs || [];
         this.matchs[S1] = this.matchs[S1] || [];
         this.matchs[S1][S2] = matchs;
-        console.log("Matching Benchmark time : ", Tools.toc());
+        console.log("Matching time : ", Tools.toc(), "ms");
         return this;
     };
 
@@ -327,7 +327,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         S.computeDescriptors()
             .computeMatchsBenchmark(0, 1, criterions, combinations);
         S.curves = {};
-        console.log(mat);
         if (mat) {
             var c;
             for (c in S.matchs[0][1]) {
@@ -335,7 +334,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.curves[c] = global.createCurves(S.matchs[0][1][c]);
             }
         }
-        console.log("Benchmark time:", Tools.toc());
+        console.log("Benchmark time:", Tools.toc(), "ms");
 
         return S;
     };
@@ -530,7 +529,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 if (v === "histograms") {
                     pDesc = createHistograms();
                 } else if (v === "curves" && this.curves) {
-                    console.log("toto");
                     plotCurves = createCurves(this.curves);
                 }
             }
