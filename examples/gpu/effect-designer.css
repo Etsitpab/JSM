@@ -1,3 +1,7 @@
+input, select {
+    padding: 2px;
+}
+
 input[type=button] {
     padding-left: 1em;
     padding-right: 1em;
@@ -7,6 +11,10 @@ select {
     min-width: 10em;
     max-width: 95%;
     max-height: 20em;
+}
+
+#chrono {
+    width: 10em;
 }
 
 .bold {
@@ -76,7 +84,7 @@ body > div {
 #images {
 }
 
-#editing {
+#editor {
 }
 
 #outputs {

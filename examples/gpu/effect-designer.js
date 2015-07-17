@@ -57,7 +57,7 @@ function createFileLoader() {
     canvas.addEventListener('dblclick', function () {
         var inputs = Effects.getInputs();
         if (inputs) {
-            var image = Effects.runOnce(inputs, true);
+            var image = Effects._runOnce(inputs, true);
             var slot = fl.createSlot(null, 'js-fileloader-loading');
             FileSlot.Loader.image.call(slot, image.toCanvas().toDataURL());
         }

@@ -278,7 +278,11 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
     str += '}                                                     \n\n';
     str += '/* User function */                                     \n';
     str += functionStr + '\n';
-    return new GLEffect(str);
+
+    // Compile and return the effect
+    var effect = new GLEffect(str);
+    effect.sourceFunction = functionStr;
+    return effect;
 };
 
 /** Check whether {@link GLEffect} is supported.
@@ -808,6 +812,10 @@ GLEffect.prototype.sourceCode = (function() {
     return str;
 }());
 
+/** Code of the source function, for effect created using GLEffect.fromFunction.
+ * @readonly @type {String} */
+GLEffect.prototype.sourceFunction = null;
+
 /** @private @type {HTMLCanvasElement} */
 GLEffect.prototype._canvas = null;
 
@@ -828,7 +836,7 @@ GLEffect.prototype._context = null;
  * @constructor
  *  Create an empt image.
  */
-function GLImage(image) {
+function GLImage() {
     'use strict';
 
     var gl = GLEffect._getDefaultContext();

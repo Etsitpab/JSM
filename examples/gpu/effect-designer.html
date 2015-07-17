@@ -28,6 +28,10 @@
 
     <!-- Effect list -->
     <div id="menu" class="left-column">
+      <div>
+        <input type="text" id="chrono" disabled
+               title="Last running time of the set of effect"/>
+      </div>
       <p>
         <label for="effects">Effects</label>:<br/>
         <select id="effects" size="3"
@@ -49,28 +53,40 @@
       <div id="resizer"></div>
     </div>
 
-    <!-- Image set -->
-    <div id="images" class="right-column">Images</div>
-
     <!-- Editing area -->
-    <div id="editing" class="right-column" style="display: none">
-      <input type="text" id="name" size="20" class="bold"/>
+    <div id="editor" class="right-column" style="display: none">
+      <input type="text" id="name" size="20" class="bold"
+             onkeyup="Effects.updateName()"/>
       <input type="checkbox" id="enabled"
              title="Toggle the effect"/>
       <input type="button" value="Compile" class="bold"
              title="Compile the effect (Ctrl+Enter)"/>
       <input type="button" value="Close"
-             title="Close and discard changes (Escap)"/>
+             title="Close and discard changes (Escap)"
+             onclick="Effects.stopEditing()"/>
       <input type="button" value="Delete"
-             title="Delete the effect"/><br/>
-      <input type="text" id="opts" size="40" disabled readonly
+             title="Delete the effect"
+             onclick="Effects.remove()"/><br/>
+      <input type="text" id="opts" size="40" disabled
              title="Current options"/>
       <input type="button" value="Set options..."
-             title="Set optional effect arguments"/><br/>
+             title="Set optional effect arguments"
+             onclick="Effects.promptOpts()"/><br/>
       <textarea id="sourceCode" cols="80" rows="15"></textarea>
     </div>
 
+    <!-- Image set -->
+    <div id="images" class="right-column">Images</div>
+
     <!-- Output image -->
-    <div id="outputs" class="right-column"></div>
+    <div id="outputs" class="right-column">
+      <h1>TODO</h1>
+      <ul>
+        <li>Enable/disable</li>
+        <li>Compile</li>
+        <li>Shortcuts</li>
+        <li>Test it!</li>
+      </ul>
+    </div>
   </body>
 </html>

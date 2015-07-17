@@ -5,7 +5,7 @@
 GLEffect.Sample = {};
 
 /** Identity effect (using the raw source code) */
-GLEffect.Sample.identity_GLSL = new GLEffect();
+GLEffect.Sample.identity_main = new GLEffect();
 
 /** Identity effect (using the RGB function form) */
 GLEffect.Sample.identity_RGB = GLEffect.fromFunction([
