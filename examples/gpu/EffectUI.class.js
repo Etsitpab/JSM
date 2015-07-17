@@ -137,8 +137,8 @@ Effects.run = function (fileLoader) {
     'use strict';
     var output = document.getElementById('outputs');
     var selection = Effects.getInputs(fileLoader);
-    var runningLoop = Boolean(Effects.runLoop_images);
-    delete Effects.runLoop_images;
+    var runningLoop = Boolean(Effects._runLoop_images);
+    delete Effects._runLoop_images;
     while (output.firstChild) {
         output.removeChild(output.firstChild);
     }
@@ -149,7 +149,7 @@ Effects.run = function (fileLoader) {
         if (!hasVideo) {
             Effects.runOnce(selection);
         } else {
-            Effects.runLoop_images = selection;
+            Effects._runLoop_images = selection;
             if (!runningLoop) {
                 Effects.runLoop();
             }
@@ -176,8 +176,8 @@ Effects.runOnce = function (images, toImage) {
 // Run the effect in a loop (for video)
 Effects.runLoop = function () {
     'use strict';
-    if (Effects.runLoop_images) {
-        Effects.runOnce(Effects.runLoop_images);
+    if (Effects._runLoop_images) {
+        Effects.runOnce(Effects._runLoop_images);
         Webcam.requestAnimationFrame(Effects.runLoop);
     }
 };

@@ -69,7 +69,8 @@ function display(str, ref, value) {
 // Create and run the GLEffect
 function runEffect() {
     var sum = imageSum(IMAGE);
-    var im = new GLImage(IMAGE);
+    var im = new GLImage();
+    im.load(IMAGE);
     tic();
 
     // Check time

@@ -728,11 +728,22 @@ GLEffect.prototype._initOutput = function (input, opts) {
  * @private */
 GLEffect.prototype._setupImages = function (input) {
     'use strict';
-    var asImage = function (img) {
-        return (img instanceof GLImage) ? img : new GLImage(img);
+    if (!GLEffect._setupImages_images) {
+        GLEffect._setupImages_images = [];
+    }
+    var asImage = function (img, k) {
+        if (img instanceof GLImage) {
+            return img;
+        }
+        if (!GLEffect._setupImages_images[k]) {
+            GLEffect._setupImages_images[k] = new GLImage();
+        }
+        var glimg = GLEffect._setupImages_images[k];
+        glimg.load(img);
+        return glimg;
     };
     if (!(input instanceof Array)) {
-        var image = asImage(input);
+        var image = asImage(input, 0);
         this.setParameter('uImage', image._texture);
         return image;
     }
@@ -815,12 +826,11 @@ GLEffect.prototype._context = null;
  *  * This is the output type of {@link GLEffect}'s {@link GLEffect#run run method}.
  *  * The main methods are: #toCanvas and #toArray.
  * @constructor
- *  Create an image.
- * @param {HTMLElement} [image]
- *  Image to be loaded. Can be an `img`, `canvas`, or `video` elements.
+ *  Create an empt image.
  */
 function GLImage(image) {
     'use strict';
+
     var gl = GLEffect._getDefaultContext();
     /** @private @type {WebGLRenderingContext} */
     this._context = gl;
@@ -844,11 +854,14 @@ function GLImage(image) {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._texture, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    if (image) {
-        this.load(image);
-    }
+    ++GLImage.count;
     return this;
 }
+
+/** Total number of GLImages created.
+ *  Hint: if your application is freezing, try to keep it low :)
+ * @readonly @static @type {Number} */
+GLImage.count = 0;
 
 /** Clear and resize the image.
  * @param {Number} width
@@ -868,7 +881,7 @@ GLImage.prototype.resize = function (width, height) {
 
 /** Load the image from an HTML element (image, canvas, or video).
  * @param {HTMLElement} image
- *  Image to be loaded.
+ *  Image to be loaded. Can be an `img`, `canvas`, or `video` elements.
  */
 GLImage.prototype.load = function (image) {
     'use strict';
@@ -1021,8 +1034,11 @@ GLReduction.prototype.run = function (image, opts) {
     var maxIterCPU = GLEffect._readOpt(opts, 'maxIterCPU', 1024);
     GLEffect._readOpt(opts);
     if (!(image instanceof GLImage)) {
-        var input = image;
-        image = new GLImage(input);
+        if (!GLReduction._run_image) {
+            GLReduction._run_image = new GLImage();
+        }
+        GLReduction._run_image.load(image);
+        image = GLReduction._run_image;
     }
     var isPositiveEven = function (n) {
         return (n > 0) && (n % 2 === 0);
