@@ -1,3 +1,7 @@
+optgroup:empty {
+    display: none;
+}
+
 input, select {
     padding: 2px;
 }

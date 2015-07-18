@@ -10,6 +10,7 @@ function EffectUI(name, effect, hidden) {
     this.enabled = true;
     if (!hidden) {
         this.optionElement = document.createElement('option');
+        this.optgroupElement = document.createElement('optgroup');
         this._setupHTML();
     }
     return this;
@@ -19,9 +20,32 @@ function EffectUI(name, effect, hidden) {
 EffectUI.prototype._setupHTML = function () {
     'use strict';
     var list = document.getElementById('effects');
+    var group = document.getElementById('parameters');
     this.optionElement.appendChild(document.createTextNode(this.name));
+    this.optgroupElement.label = this.name;
     list.appendChild(this.optionElement);
+    group.appendChild(this.optgroupElement);
     EffectUI.fitContent(list, 'size', list.options.length);
+    EffectUI.fitContent(group, 'size', group.options.length);
+    this._fillParametersList();
+};
+
+// Update the list of parameters
+EffectUI.prototype._fillParametersList = function() {
+    'use strict';
+    while (this.optgroupElement.firstChild) {
+        this.optgroupElement.removeChild(this.optgroupElement.firstChild);
+    }
+    var parameters = this.effect.parameters;
+    var opt, name;
+    for (name in parameters) {
+        if (parameters.hasOwnProperty(name)) {
+            opt = document.createElement('option');
+            opt.appendChild(document.createTextNode(name));
+            this.optgroupElement.appendChild(opt);
+        }
+    }
+    EffectUI.fitParametersList();
 };
 
 // Display the effect in the HTML fields
@@ -110,6 +134,17 @@ EffectUI.fitSourceCodeArea = function () {
     elmt.rows = lines + 1;
 };
 
+// Fit the list of parameters
+EffectUI.fitParametersList = function () {
+    'use strict';
+    var list = document.getElementById('parameters');
+    var groups = [].slice.call(list.getElementsByTagName('optgroup'));
+    var nonEmptyGroups = groups.filter(function (optgroup) {
+        return optgroup.hasChildNodes();
+    });
+    var size = list.options.length + nonEmptyGroups.length;
+    EffectUI.fitContent(list, 'size', size);
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -230,9 +265,12 @@ Effects.remove = function () {
     'use strict';
     var s = Effects.getSelected();
     if (s && window.confirm('Delete this effect?')) {
+        var remNode = function (node) { node.parentElement.removeChild(node); };
         var list = s.optionElement.parentElement;
         Effects.stopEditing(true);
-        list.removeChild(s.optionElement);
+        remNode(s.optgroupElement);
+        remNode(s.optionElement);
+        EffectUI.fitParametersList();
         EffectUI.fitContent(list, 'size', list.options.length);
         Effects.list.splice(Effects.list.indexOf(s), 1);
         Effects.run();
@@ -266,6 +304,7 @@ Effects.updateName = function () {
     if (s) {
         s.name = document.getElementById('name').value || '(unnamed)';
         s.optionElement.firstChild.nodeValue = s.name;
+        s.optgroupElement.label = s.name;
     }
 };
 
@@ -343,7 +382,7 @@ Effects._getInputs = function (fileLoader) {
     var list = Effects.getListEnabled();
     var nEffects = list.length;
     var nSelected = selection.length;
-    var nExpected = nEffects && list[0].effect.uImageLength;
+    var nExpected = nEffects && list[0].effect._uImageLength;
     if (!nEffects || nSelected !== (nExpected || 1)) {
         return null;  // not selected the right number of files
     }

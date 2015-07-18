@@ -71,8 +71,8 @@
     <div id="outputs" class="right-column">
       <h1>TODO</h1>
       <ul>
-        <li>Shortcuts + autofit source code when editing</li>
         <li>Handle parameters</li>
+        <li>Shortcuts + autofit source code when editing</li>
         <li>Test everything, including Firefox + Android</li>
       </ul>
     </div>
@@ -80,7 +80,8 @@
     <!-- Editing area -->
     <div id="editor" class="right-column" style="display: none">
       <input type="text" id="name" size="20" class="bold"
-             onkeyup="Effects.updateName()"/>
+             onkeyup="Effects.updateName()"
+             onblur="Effects.updateName()"/>
       <input type="checkbox" id="enabled"
              title="Toggle the effect"
              onchange="Effects.toggle()"/>

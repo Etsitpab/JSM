@@ -55,7 +55,7 @@ function createFileLoader() {
     // Load output image when double-clicked
     var canvas = GLEffect._getDefaultContext().canvas;
     canvas.addEventListener('dblclick', function () {
-        var inputs = Effects.getInputs();
+        var inputs = Effects._getInputs();
         if (inputs) {
             var image = Effects._runOnce(inputs, true);
             var slot = fl.createSlot(null, 'js-fileloader-loading');

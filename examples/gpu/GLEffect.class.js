@@ -68,6 +68,8 @@ function GLEffect(sourceCode) {
     this._program = this._createProgram(vShader, fShader);
     /** Expected length of `uImage` uniform array, or 0 if not an array. @private @type {Number} */
     this._uImageLength = 0;
+    /** Current values of the parameters. @readonly @type {Object} */
+    this.parameters = {};
 
     /** Setters for the uniform variables.<br/> _See:_ GLEffect.setParameter @private @type {Object} */
     this._setters = this._createUniformSetters({
@@ -77,9 +79,6 @@ function GLEffect(sourceCode) {
             }
         }
     });
-
-    /** Current values of the parameters. @readonly @type {Object} */
-    this.parameters = {};
 
     /** Number of vertices in the WebGL program. @private @type {Number} */
     this._vertexCount = 4;
@@ -113,7 +112,7 @@ function GLEffect(sourceCode) {
  *      Height of the output image.
  *  - `output`: GLImage | Mixed<br/>
  *      The output image.
- *  - `getSize`: Function<br/>
+ *  - `getSize`: Function | Boolean<br/>
  *      _Argument:_ the `image` argument.<br/>
  *      _Returns:_ the size of the output image, or `false` on error.
  * @return {GLImage}
@@ -167,26 +166,6 @@ GLEffect.prototype.setParameter = function (name, value, storeIt) {
             this.parameters[name] = value;
         }
     }
-};
-
-/** Get a list of the effect's parameters.
- *  Unused parameters are not listed.<br/>
- *  _See:_ GLEffect.setParameter to set a parameter's value.<br/>
- *  _See:_ GLEffect.parameters to get parameters' values.
- * @return {Array}
- *  An array containing the name of the parameters.
- */
-GLEffect.prototype.getParametersList = function () {
-    'use strict';
-    var ignored = {'uImage': 1, 'uSize': 1, 'uPixel': 1};
-    var list = [];
-    var param;
-    for (param in this._setters) {
-        if (this._setters.hasOwnProperty(param) && !ignored[param]) {
-            list.push(param);
-        }
-    }
-    return list;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -566,6 +545,7 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
     var setters = {};
     var uniform, name, setter;
     var k, n = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+    var ignored = {'uImage': 1, 'uSize': 1, 'uPixel': 1};
 
     gl.useProgram(program);
     for (k = 0; k < n; k++) {
@@ -579,6 +559,9 @@ GLEffect.prototype._createUniformSetters = function (initFunctions) {
         }
         setter = createSetter(uniform);
         setters[name] = setter;
+        if (!ignored[name]) {
+            this.parameters[name] = null;
+        }
         if (initFunctions[name]) {
             initFunctions[name](uniform);
         }
