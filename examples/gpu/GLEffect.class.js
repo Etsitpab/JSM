@@ -212,6 +212,7 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
     'use strict';
 
     // Infer prototype
+    functionStr = functionStr || '';
     argCount = (argCount !== undefined) ? argCount : null;
     if (argCount === null || argType) {
         var getVecType = function(str) {
@@ -219,14 +220,14 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
             return match && (match.length === 1) && match.pop();
         };
         var splitted = functionStr.match(/^([\s\S]*?)function\s*\(([\s\S]*?)\)/);
-        if (splitted.length !== 3) {
-            throw new Error('Error: cannot infer GL function prototype.');
+        if (!splitted || splitted.length !== 3) {
+            throw new Error('Cannot infer function prototype.');
         }
 
         // Infer argument type
         argType = argType || getVecType(splitted[1]);
         if (!argType) {
-            throw new Error('Error: cannot infer output type.');
+            throw new Error('Cannot infer function output type.');
         }
 
         // Infer argument count
@@ -277,7 +278,7 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
     str += '    gl_FragColor = ' + fragColor + ';  // Output color  \n';
     str += '}                                                     \n\n';
     str += '/* User function */                                     \n';
-    str += functionStr + '\n';
+    str += functionStr;
 
     // Compile and return the effect
     var effect = new GLEffect(str);
@@ -405,7 +406,9 @@ GLEffect.prototype._compileShader = function (sourceCode, isVertexShader) {
     gl.shaderSource(shader, sourceCode);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        throw new Error('Compilation Error: ' + gl.getShaderInfoLog(shader));
+        var error = new Error('Compilation Error.\n' + gl.getShaderInfoLog(shader));
+        error.sourceCode = sourceCode;
+        throw error;
     }
     return shader;
 };

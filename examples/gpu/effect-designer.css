@@ -7,14 +7,14 @@ input[type=button] {
     padding-right: 1em;
 }
 
-select {
+#menu input[type=text],
+#menu select {
     min-width: 10em;
     max-width: 95%;
-    max-height: 20em;
 }
 
-#chrono {
-    width: 10em;
+#menu select {
+    max-height: 20em;
 }
 
 .bold {
@@ -24,6 +24,23 @@ select {
 .tab {
     display: inline-block;
     width: 2em;
+}
+
+.error {
+    color: darkred;
+}
+
+.error::first-line {
+    font-weight: bold;
+}
+
+.disabled-effect {
+    color: gray;
+}
+
+.arrows {
+    padding-left: 0.5em !important;
+    padding-right: 0.5em !important;
 }
 
 

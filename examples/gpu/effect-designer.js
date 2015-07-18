@@ -69,6 +69,6 @@ function init() {
     'use strict';
     makeColumnResizable();
     createFileLoader();
-    Effects.loadSamples();
+    Effects.loadSampleList();
 }
 

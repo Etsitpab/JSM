@@ -33,24 +33,48 @@
                title="Last running time of the set of effect"/>
       </div>
       <p>
-        <label for="effects">Effects</label>:<br/>
-        <select id="effects" size="3"
-                title="List of active filters (double-click to turn on/off)"
-                onchange="Effects.toHTML()">
-        </select><br/>
-        <select id="effect-samples"
-                title="Import predefined effects"
-                onchange="Effects.load(); Effects.run()">
-          <option value="">Import...</option>
-        </select>
-      </p>
-      <p>
         <label for="parameters">Parameters</label>:<br/>
         <select id="parameters" size="3"
                 title="Parameters of the effects">
         </select>
       </p>
+      <p>
+        <label for="effects">Effects</label>:<br/>
+        <select id="effects" size="3"
+                title="List of active filters (double-click to turn on/off)"
+                onchange="Effects.toHTML()"
+                ondblclick="Effects.toggle(event)">
+        </select><br/>
+        <input type="button" value="&#8657;" class="arrows" title="Move first"
+               onclick="Effects.move(0, false)" />
+        <input type="button" value="&#8639;" class="arrows" title="Move up"
+               onclick="Effects.move(-1, true)" />
+        <input type="button" value="&#8642;" class="arrows" title="Move down"
+               onclick="Effects.move(+1, true)" />
+        <input type="button" value="&#8659;" class="arrows" title="Move last"
+               onclick="Effects.move(-1, false)" />
+
+               <br/>
+        <select id="effect-samples"
+                title="Import predefined effects"
+                onchange="Effects.load()">
+          <option value="">Import...</option>
+        </select>
+      </p>
       <div id="resizer"></div>
+    </div>
+
+    <!-- Image set -->
+    <div id="images" class="right-column">Images</div>
+
+    <!-- Output image -->
+    <div id="outputs" class="right-column">
+      <h1>TODO</h1>
+      <ul>
+        <li>Shortcuts + autofit source code when editing</li>
+        <li>Handle parameters</li>
+        <li>Test everything, including Firefox + Android</li>
+      </ul>
     </div>
 
     <!-- Editing area -->
@@ -58,9 +82,11 @@
       <input type="text" id="name" size="20" class="bold"
              onkeyup="Effects.updateName()"/>
       <input type="checkbox" id="enabled"
-             title="Toggle the effect"/>
-      <input type="button" value="Compile" class="bold"
-             title="Compile the effect (Ctrl+Enter)"/>
+             title="Toggle the effect"
+             onchange="Effects.toggle()"/>
+      <input type="button" value="Compile" class="bold" id="compileButton"
+             title="Compile the effect (Ctrl+Enter)"
+             onclick="Effects.fromHTML()"/>
       <input type="button" value="Close"
              title="Close and discard changes (Escap)"
              onclick="Effects.stopEditing()"/>
@@ -72,21 +98,8 @@
       <input type="button" value="Set options..."
              title="Set optional effect arguments"
              onclick="Effects.promptOpts()"/><br/>
-      <textarea id="sourceCode" cols="80" rows="15"></textarea>
+      <textarea id="sourceCode" cols="80" rows="5"></textarea>
     </div>
 
-    <!-- Image set -->
-    <div id="images" class="right-column">Images</div>
-
-    <!-- Output image -->
-    <div id="outputs" class="right-column">
-      <h1>TODO</h1>
-      <ul>
-        <li>Enable/disable</li>
-        <li>Compile</li>
-        <li>Shortcuts</li>
-        <li>Test it!</li>
-      </ul>
-    </div>
   </body>
 </html>
