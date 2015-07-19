@@ -74,7 +74,14 @@ EffectUI.prototype.fromHTML = function () {
         EffectUI.handleCompilationError(error);
         return false;
     }
+    var param, values = this.effect.parameters;
+    for (param in values) {
+        if (values.hasOwnProperty(param) && values[param]) {
+            effect.setParameter(param, values[param]);
+        }
+    }
     this.effect = effect;
+    this._fillParametersList();
     return true;
 };
 
@@ -188,10 +195,23 @@ Effects.isSelected = function () {
     return (document.getElementById('effects').selectedIndex !== -1);
 };
 
-// Get the selected element or null if no selection.
+// Get the selected EffectUI or null if no selection.
 Effects.getSelected = function () {
     'use strict';
     var k = document.getElementById('effects').selectedIndex;
+    return (k === -1) ? null : Effects.list[k];
+};
+
+// Get the selected EffectUI from the parameter list
+Effects.getSelectedFromParameters = function () {
+    'use strict';
+    var list = document.getElementById('parameters');
+    var n = list.selectedIndex;
+    if (n === -1) {
+        return false;
+    }
+    var optgroups = list.getElementsByTagName('optgroup');
+    var k = [].slice.call(optgroups).indexOf(list.options[n].parentElement);
     return (k === -1) ? null : Effects.list[k];
 };
 
@@ -220,6 +240,7 @@ Effects.fromHTML = function () {
         btn.disabled = true;
         setTimeout(function () { btn.disabled = false; }, 500);
         if (Effects.getSelected().fromHTML()) {
+            Effects.displayParameter();
             Effects.run();
         }
     }
@@ -273,6 +294,7 @@ Effects.remove = function () {
         EffectUI.fitParametersList();
         EffectUI.fitContent(list, 'size', list.options.length);
         Effects.list.splice(Effects.list.indexOf(s), 1);
+        Effects.displayParameter();
         Effects.run();
     }
 };
@@ -305,6 +327,49 @@ Effects.updateName = function () {
         s.name = document.getElementById('name').value || '(unnamed)';
         s.optionElement.firstChild.nodeValue = s.name;
         s.optgroupElement.label = s.name;
+    }
+};
+
+// Update the value of a parameter
+Effects.updateParameter = function (isBlur) {
+    'use strict';
+    var s = Effects.getSelectedFromParameters();
+    if (s) {
+        var list = document.getElementById('parameters');
+        var field = document.getElementById('parameter');
+        var name = list.value;
+        var value;
+        try {
+            value = JSON.parse(field.value);
+        } catch (e) {
+            value = null;
+        }
+        if (value) {
+            s.effect.setParameter(name, value);
+            field.value = JSON.stringify(value);
+            if (!isBlur) {
+                field.select();
+            }
+            Effects.run();
+        } else if (isBlur) {
+            Effects.displayParameter();
+        } else {
+            window.alert('Invalid syntax.');
+        }
+    }
+};
+
+// Display the value of the selected parameter
+Effects.displayParameter = function () {
+    'use strict';
+    var s = Effects.getSelectedFromParameters();
+    var list = document.getElementById('parameters');
+    var field = document.getElementById('parameter');
+    if (s) {
+        var value = s.effect.parameters[list.value || ''];
+        field.value = value ? JSON.stringify(value) : '';
+    } else {
+        field.value = '';
     }
 };
 

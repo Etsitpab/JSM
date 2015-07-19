@@ -10,6 +10,7 @@
 
     <script type="text/javascript" src="GLEffect.class.js"></script>
     <script type="text/javascript" src="GLEffect.more.js"></script>
+    <script type="text/javascript" src="../common/Shortcuts.object.js"></script>
     <script type="text/javascript" src="../common/FileLoader.class.js"></script>
     <script type="text/javascript" src="../common/Webcam.class.js"></script>
     <script type="text/javascript" src="../common/FileLoader-Webcam.ext.js"></script>
@@ -35,8 +36,11 @@
       <p>
         <label for="parameters">Parameters</label>:<br/>
         <select id="parameters" size="3"
-                title="Parameters of the effects">
-        </select>
+                title="Parameters of the effects"
+                onchange="Effects.displayParameter()">
+        </select><br/>
+        <input type="text" id="parameter"
+               onblur="Effects.updateParameter(true)"/>
       </p>
       <p>
         <label for="effects">Effects</label>:<br/>
@@ -45,13 +49,17 @@
                 onchange="Effects.toHTML()"
                 ondblclick="Effects.toggle(event)">
         </select><br/>
-        <input type="button" value="&#8657;" class="arrows" title="Move first"
+        <input type="button" value="&#8657;" class="arrows"
+               title="Move first (Ctrl+Shift+PageUp)"
                onclick="Effects.move(0, false)" />
-        <input type="button" value="&#8639;" class="arrows" title="Move up"
+        <input type="button" value="&#8639;" class="arrows"
+               title="Move up (Ctrl+Shift+ArrowUp)"
                onclick="Effects.move(-1, true)" />
-        <input type="button" value="&#8642;" class="arrows" title="Move down"
+        <input type="button" value="&#8642;" class="arrows"
+               title="Move down (Ctrl+Shift+ArrowDown)"
                onclick="Effects.move(+1, true)" />
-        <input type="button" value="&#8659;" class="arrows" title="Move last"
+        <input type="button" value="&#8659;" class="arrows"
+               title="Move last (Ctrl+Shift+PageDown)"
                onclick="Effects.move(-1, false)" />
 
                <br/>
@@ -69,19 +77,27 @@
 
     <!-- Output image -->
     <div id="outputs" class="right-column">
-      <h1>TODO</h1>
+      <p class="bold">TODO</p>
       <ul>
-        <li>Handle parameters</li>
-        <li>Shortcuts + autofit source code when editing</li>
+        <li>Firefox: bug when double-click to capture image</li>
+        <li>Firefox: setParameters: bug when usec with conv3x1</li>
+        <li>Bug: call "run" when opts has changed</li>
         <li>Test everything, including Firefox + Android</li>
+      </ul>
+      <p class="bold">How to use it:</p>
+      <ul>
+        <li>Load images or video (drag'n'drop them or click the "<tt class="bold">+</tt>" slot).</li>
+        <li>Select a loaded image or video by clicking on it.</li>
+        <li>Import existing effects using the left menu.</li>
+        <li>If any, set parameters using the left menu.</li>
+        <li>Enjoy!</li>
       </ul>
     </div>
 
     <!-- Editing area -->
     <div id="editor" class="right-column" style="display: none">
       <input type="text" id="name" size="20" class="bold"
-             onkeyup="Effects.updateName()"
-             onblur="Effects.updateName()"/>
+             oninput="Effects.updateName()"/>
       <input type="checkbox" id="enabled"
              title="Toggle the effect"
              onchange="Effects.toggle()"/>

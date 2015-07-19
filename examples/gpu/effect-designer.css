@@ -21,6 +21,11 @@ input[type=button] {
     max-height: 20em;
 }
 
+#outputs > p,
+#outputs > ul {
+    margin: 1em;
+}
+
 .bold {
     font-weight: bold;
 }

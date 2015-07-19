@@ -734,11 +734,11 @@ GLEffect.prototype._setupImages = function (input) {
     };
     if (!(input instanceof Array)) {
         var image = asImage(input, 0);
-        this.setParameter('uImage', image._texture);
+        this.setParameter('uImage', image._texture, false);
         return image;
     }
     var images = input.map(asImage);
-    this.setParameter('uImage', images.map(function (im) { return im._texture; }));
+    this.setParameter('uImage', images.map(function (im) { return im._texture; }), false);
     return images[0];
 };
 

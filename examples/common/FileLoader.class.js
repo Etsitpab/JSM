@@ -74,7 +74,7 @@ FileLoader.THUMBNAIL_MAX_WIDTH = 180;
 /** Maximum height for thumbnails.  @readonly @static @type {Number} */
 FileLoader.THUMBNAIL_MAX_HEIGHT = 120;
 /** Default refresh frequency of video's thumbnails, in ms.  @static @type {Number} */
-FileLoader.THUMBNAIL_REFRESH_INTERVAL = 500;
+FileLoader.THUMBNAIL_REFRESH_INTERVAL = 1000;
 /** Time (in ms) after an invalid file is being automatically deleted.  @static @type {Number} */
 FileLoader.INVALID_TYPE_DELAY = 1500;
 /** Flag for multiple selection.  @readonly @static @type {Number} */
