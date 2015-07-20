@@ -42,9 +42,9 @@
         // Pre-defined wavelets
         if (Wavelet.list[this.name]) {
             var wav = Wavelet.list[this.name];
-            var normalize = (wav.normalized !== undefined && !wav.normalized)
-                    ? function (h) { return Wavelet.filter(h, 'norm'); }
-                : function (h) { return h; };
+            var normalize =
+                    (wav.normalized !== undefined && !wav.normalized) ?
+                    function (h) { return Wavelet.filter(h, 'norm'); } : function (h) { return h; };
             /** Low-pass recursive decomposition filter. */
             this.filterL = normalize(wav.filterL);
             /** Is the wavelet orthogonal? */

@@ -1631,36 +1631,14 @@
  * @author Guillaume Tartavel <guillaume.tartavel@telecom-paristech.fr>
  */
 
-
 (function (Matrix, Matrix_prototype) {
     'use strict';
     
     /** @class Matrix */
-    var filter1DPer = function (yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
-        var y, oy, k, s, sumL, sumH, sTmp;
-        for (y = yx0, oy = o + oys; y < nyx; y += dy, oy += ody) {
-            for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
-                sTmp = s;
-                while (sTmp < yx0) {
-                    sTmp += ly;
-                }
-                while (sTmp >= nyx) {
-                    sTmp -= ly;
-                }
-                if (isOdd && sTmp === nyx - kdy) {
-                    sTmp -= kdy; 
-                }
-                sumL += kernelL[k] * idL[sTmp];
-                sumH += kernelH[k] * idH[sTmp];
-            }
-            odL[oy] += sumL;
-            odH[oy] += sumH;
-        }
-    };
-    var filter1DSym = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
-        var y, oy, k, s, sumL, sumH, sTmp;
+    var filter1DPad = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+        var y, oy, k, s, sumL, sumH;
         y0 += (K - 1) * kdy - orig;
-        ny -= orig;// + (isOdd ? 1 : 0)
+        ny -= orig;
         for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
             for (k = 0, s = y + orig, sumL = 0, sumH = 0; k < K; k++, s -= kdy) {
                 sumL += kernelL[k] * idL[s];
@@ -1670,8 +1648,20 @@
             odH[oy] += sumH;
         }
     };
-    var filter1DSymDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
-        var y, oy, k, s, sumL, sumH, sTmp;
+    var filter1DPadMono = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernel, id, od) {
+        var y, oy, k, s, sum;
+        y0 += (K - 1) * kdy - orig;
+        ny -= orig;
+        for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
+            for (k = 0, s = y + orig, sum = 0; k < K; k++, s -= kdy) {
+                sum += kernel[k] * id[s];
+            }
+            od[oy] += sum;
+        }
+    };
+
+    var filter1DPadDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+        var y, oy, k, s, sumL, sumH;
         console.log("y0", y0, "ny", ny, "dy", dy, "oys", oys, "ody", ody);
         console.log("orig", orig, "K", K, "Kdy", kdy);
         y0 += (K - 1) * kdy - orig;
@@ -1696,8 +1686,8 @@
         }
         console.log("");
     };
-    var filter1DSymCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
-        var y, oy, k, s, sumL, sumH, sTmp;
+    var filter1DPadCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+        var y, oy, k, s, sumL, sumH;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
         if (odL.length !== odH.length) {
@@ -1724,7 +1714,41 @@
             odH[oy] += sumH;
         }
     };
-    var filter1D, dwtmode;
+    var filter1DPadMonoCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernel, id, od) {
+        var y, oy, k, s, sum;
+        y0 += (K - 1) * kdy - orig;
+        ny -= orig;
+        for (y = y0, oy = o + oys; y < ny; y += dy, oy += ody) {
+            for (k = 0, s = y + orig, sum = 0; k < K; k++, s -= kdy) {
+                if (k < 0 || k >= kernel.length) {
+                    throw new Error("Kernel error");
+                }
+                if (s < 0 || s >= id.length) {
+                    throw new Error("Input error");
+                }
+                sum += kernel[k] * id[s];
+            }
+            if (oy < 0 || oy >= od.length) {
+                throw new Error("Output error");
+            }
+            od[oy] += sum;
+        }
+    };
+    var filter1D, filter1DMono, dwtmode;
+    
+    /** Select or return the mode used for bordering management.
+     *   Available modes are :
+     *   - "per", for periodic, it leads to the shortest representation,
+     *   - "sym", for symmetric boundary (default mode),
+     *   - "nn", for nearest neighbour boundary,
+     *   - "symw", for symmetric boundary with whole point,
+     *   - "zpd". zero padding boundary.
+     *
+     *  @param {string} mode
+     *   The mode to be used.
+     *  @return {String} 
+     *   Returns the current or new mode.
+     */
     Matrix.dwtmode = function (mode) {
         if (mode === undefined) {
             return dwtmode;
@@ -1732,47 +1756,47 @@
         mode = mode.toLowerCase();
         switch (mode) {
         case "per":
-            filter1D = filter1DPer;
-            break;
         case "sym":
         case "symw":
         case "zpd":
         case "nn":
-            filter1D = filter1DSym;
+            filter1D = filter1DPad;
+            filter1DMono = filter1DPadMono;
             break;
         case "debug_sym":
         case "debug_symw":
         case "debug_zpd":
         case "debug_nn":
             mode = mode.substr(6);
-            filter1D = filter1DSymDebug;
+            filter1D = filter1DPadDebug;
             break;
         case "check_sym":
         case "check_symw":
         case "check_zpd":
         case "check_nn":
+        case "check_per":
             mode = mode.substr(6);
-            filter1D = filter1DSymCheck;
+            filter1D = filter1DPadCheck;
+            filter1DMono = filter1DPadMonoCheck;
             break;
         default:
             throw new Error("Matrix.dwtmode: invalid mode " + mode + "."); 
         }
         dwtmode = mode;
+        return dwtmode;
     };
-    Matrix.dwtmode("per");
-    
-    var filterND = function (inL, inH, vI, kL, kH, origin, sub, outL, outH, vO) {
+    Matrix.dwtmode("sym");
 
-        var K = kL.length;
+    var filterND = function (inL, inH, vI, name, forward, origin, sub, outL, outH, vO) {
+        var wav = Matrix.wfilters(name, forward ? 'd' : 'r');
+        var kL = wav[0].getData(), kH = wav[1].getData(), K = kL.length;
+        
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
         var isOdd = vI.getSize(0) % 2 ? true : false; 
      
         var ys = vI.getFirst(0), dy = vI.getStep(0);
-        var ly = vI.getEnd(0) + ((isOdd && dwtmode === "per") ? dy : 0);
+        var ly = vI.getEnd(0);
         var oys = vO.getFirst(0), ody = vO.getStep(0);
-
-        var idL = inL.getData(),  idH = inH.getData(),
-            odL = outL.getData(), odH = outH.getData();
 
         var orig = origin * dy;
         var kdy = dy;
@@ -1782,16 +1806,34 @@
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
 
-        var k, s, sTmp, sumL, sumH;
-        for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
-            var yx0 = ys + i, nyx = ly + i;
-            filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, kH, idL, idH, odL, odH);
+        var s, sTmp, sumL, sumH;
+        var yx0, nyx;
+        if (!inL || !inH) {
+            var id = (inL || inH).getData(), 
+                od = (inL ? outL : outH).getData(),
+                k = inL ? kL : kH;
+            for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
+                yx0 = ys + i;
+                nyx = ly + i;
+                filter1DMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, k, id, od);
+            }
+        } else {
+            var idL = inL.getData(),  idH = inH.getData(),
+                odL = outL.getData(), odH = outH.getData();
+            for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
+                yx0 = ys + i;
+                nyx = ly + i;
+                filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, kH, idL, idH, odL, odH);
+            }
         }
     };
 
     var zeros = Matrix.zeros;
     
-    var getPaddingInfos = function (K, s) {
+    var getPaddingInfos = function (name, s) {
+        var wav = Matrix.wfilters(name, 'd');
+        var K = wav[0].getData().length;
+
         var isOdd = s % 2 ? true : false;
         var f = Math.floor, c = Math.ceil;
         // left and right part of filter (computed on reversed filter)
@@ -1800,19 +1842,17 @@
         var li = K - 2, ri = K - 2 + (isOdd ? 1 : 0);
         // Left and right output padding
         var lo = f(li / 4), ro = c(ri / 4);
+        // On odd signal, the length of output corresponding to
+        // the signal without considering padding depend if we start
+        // on the first or on the second value. This starting point
+        // depends itself on if we have K % 4 equal to zero or not. 
         if (isOdd && (K % 4) !== 0) {
             ro--;
         }
         if (dwtmode === 'per') {
-            return {
-                "lk": lk, "rk": rk,
-                "li": 0, "ri": 0,
-                "lo": 0, "ro": 0
-            };
-        }
+        } 
         return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
     };
-    
     var padTest = function (isOdd) {
         console.log("For " + (isOdd ? "odd" : "even") + " signal");
         var data = {}, f = Math.floor, c = Math.ceil;
@@ -1823,59 +1863,77 @@
     };
 
     var dwt = function (s, name, dim) {
-        var wav = Matrix.wfilters(name, 'd');
-        var fL = wav[0].getData(), fH = wav[1].getData();
+        dim = dim || 0;
         var size = s.getSize();
-        var p = getPaddingInfos(fL.length, size[dim]);
+        var p = getPaddingInfos(name, size[dim]);
         size[dim] = Math.ceil(size[dim] / 2) + p.ro + p.lo;
         if (p.li !== 0 || p.ri !== 0) {
-            s = s.paddim(dwtmode, dim, [p.li, p.ri]);
+            s = s.paddim(dwtmode === "per" ? "per2" : dwtmode, dim, [p.li, p.ri]);
         }
         // Create output data
         var dL = zeros(size), dH = zeros(size);
         var v = dL.getView().swapDimensions(0, dim);
         var iV = s.getView().swapDimensions(0, dim);
         // H filtering from signal to output
-        filterND(s, s, iV, fL, fH, 'cr', 2, dL, dH, v);
+        filterND(s, s, iV, name, true, 'cr', 2, dL, dH, v);
+        if (dwtmode === "per") {
+            var K = Matrix.wfilters(name)[0].numel();
+            var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+            v = v.restore().selectDimension(dim, [lc, -rc - 1]);
+            dL = dL.extractViewFrom(v);
+            dH = dH.extractViewFrom(v);
+        }   
         return [dL, dH];
     };
+    var idwt = function (bands, name, dim, out) {
+        dim = dim || 0;
+        var n = bands[0] ? 0 : 1;
+        var bL = bands[0], bH = bands[1];
+        if (dwtmode === "per") {
+            var K = Matrix.wfilters(name)[0].numel();
+            var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+            bL = bL ? bL.paddim(dwtmode, dim, [lc, rc]) : undefined;
+            bH = bH ? bH.paddim(dwtmode, dim, [lc, rc]) : undefined;
+        }   
 
-    var idwt = function (bands, name, dim) {
-        var wav = Matrix.wfilters(name, 'r');
-        var fL = wav[0].getData(), fH = wav[1].getData();
+        var p = getPaddingInfos(name, (bL || bH).getSize(dim));
+        var offset = p.lk + p.rk;
 
-        var size = bands[0].getSize();
-        var start = dwtmode === 'per' ? 0 : 1;
-        size[dim] = size[dim] * 2 + start; 
+        var size = (bL || bH).getSize();
+        size[dim] = 2 * size[dim] + 1; 
+        var dL = bL ? zeros(size) : undefined,
+            dH = bH ? zeros(size) : undefined,
+            dV = new MatrixView(size).selectDimension(dim, [1, 2, -1]);
 
-        var L = zeros(size), H = zeros(size);
-        var v = L.getView().selectDimension(dim, [start, 2, -1]);
-        bands[0].extractViewTo(v, L);
-        bands[1].extractViewTo(v, H);
-        v.restore().swapDimensions(0, dim);
-
-        if (dwtmode !== 'per') {
-            var p = getPaddingInfos(fL.length, bands[0].getSize(dim));
-            size[dim] -= p.rk + p.lk;
+        if (dL) {
+            bL.extractViewTo(dV, dL);
+        }
+        if (dH) {
+            bH.extractViewTo(dV, dH);
         }
 
         // Out array
-        var out = zeros(size), vO = out.getView().swapDimensions(0, dim);
+        dV.restore().swapDimensions(0, dim);
+        size[dim] -= offset;
+        if (out !== undefined && !Tools.checkSizeEquals(out.getSize(), size)) {
+            throw new Error("idwt: Wrong output size.");
+        }
+        out = out || zeros(size);
+        var vO = out.getView().swapDimensions(0, dim);
 
         // Process scale
-        filterND(L, H, v, fL, fH, 'cl', 1, out, out, vO);
+        filterND(dL, dH, dV, name, false, 'cl', 1, out, out, vO);
         return out;
     };
+    
     var dwt2 = function (im, name) {
-        var wav = Matrix.wfilters(name, 'd');
-        var fL = wav[0].getData(), fH = wav[1].getData();
         var h = im.getSize(0), w = im.getSize(1), c = im.getSize(2);
         
         // Create output image
-        var ph = getPaddingInfos(fL.length, h);
+        var ph = getPaddingInfos(name, h);
         var hh = Math.ceil(h / 2) + ph.ro + ph.lo;
         if (ph.li !== 0 || ph.ri !== 0) {
-            im = im.paddim(dwtmode, 0, [ph.li, ph.ri]);
+            im = im.paddim(dwtmode === "per" ? "per2" : dwtmode, 0, [ph.li, ph.ri]);
         }
         
         // Buffer image
@@ -1884,9 +1942,9 @@
 
         // H filtering from image to buffer
         var vI = im.getView();
-        filterND(im, im, vI, fL, fH, 'cr', 2, bL, bH, vB);
+        filterND(im, im, vI, name, true, 'cr', 2, bL, bH, vB);
 
-        var pw = getPaddingInfos(fL.length, w);
+        var pw = getPaddingInfos(name, w);
         var hw = Math.ceil(w / 2) + pw.ro + pw.lo;
         if (pw.li !== 0 || pw.ri !== 0) {
             bH = bH.paddim(dwtmode, 1, [pw.li, pw.ri]);
@@ -1901,50 +1959,140 @@
         var v = dA.getView().swapDimensions(0, 1);
 
         vB.swapDimensions(0, 1);
-        filterND(bL, bL, vB, fL, fH, 'cr', 2, dA, dH, v);
-        filterND(bH, bH, vB, fL, fH, 'cr', 2, dV, dD, v);
+        filterND(bL, bL, vB, name, true, 'cr', 2, dA, dH, v);
+        filterND(bH, bH, vB, name, true, 'cr', 2, dV, dD, v);
+        if (dwtmode === "per") {
+            var K = Matrix.wfilters(name)[0].numel();
+            var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+            dA = dA.get([lc, -rc - 1], [lc, -rc - 1]);
+            dH = dH.get([lc, -rc - 1], [lc, -rc - 1]);
+            dV = dV.get([lc, -rc - 1], [lc, -rc - 1]);
+            dD = dD.get([lc, -rc - 1], [lc, -rc - 1]);
+        }         
         return [dA, dH, dV, dD];
     };
-
     var idwt2 = function (bands, name) {
-        var wav = Matrix.wfilters(name, 'r');
-        var fL = wav[0].getData(), fH = wav[1].getData();
+        bands = bands.slice();
+        if (dwtmode === "per") {
+            var K = Matrix.wfilters(name)[0].numel();
+            var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+            for (var b = 0; b < 4; b++) {
+                bands[b] = bands[b] ? bands[b].padarray(dwtmode === "per" ? "per" : dwtmode, [lc, rc], [lc, rc]) : undefined;
+            }
+        }   
+        var size = (bands[0] || bands[1] || bands[2] || bands[3]).getSize();
 
-        var ph = getPaddingInfos(fL.length, bands[0].getSize(0));
-        var pw = getPaddingInfos(fL.length, bands[0].getSize(1));
-        var oh = 0, ow = 0, start = 0;
-        if (dwtmode !== 'per') {
-            oh = ph.rk + ph.lk;
-            ow = pw.rk + pw.lk;
-            start = 1;
+        var ph = getPaddingInfos(name, size[0]),
+            pw = getPaddingInfos(name, size[1]);
+        var oh = ph.rk + ph.lk;
+        var ow = pw.rk + pw.lk;
+
+        size[0] = 2 * size[0] + 1;
+        var dL = (bands[0] || bands[1]) ? zeros(size) : undefined,
+            dH = (bands[2] || bands[3]) ? zeros(size) : undefined,
+            dV = new MatrixView(size);
+
+        size[0] -= oh;
+        size[1] = 2 * size[1] + 1;
+        var bL = (bands[0] || bands[2]) ? zeros(size) : undefined, 
+            bH = (bands[1] || bands[3]) ? zeros(size) : undefined,
+            bV = new MatrixView(size).select([], [1, 2, -1]);
+        
+        if (bL) {
+            if (dL) {
+                dL.set([1, 2, -1], bands[0]);
+            }
+            if (dH) {
+                dH.set([1, 2, -1], bands[2]);
+            }
+            filterND(dL, dH, dV, name, false, 'cl', 1, bL, bL, bV);
+        }
+        if (bH) {
+            if (dL) {
+                dL.set([1, 2, -1], bands[1]);
+            }
+            if (dH) {
+                dH.set([1, 2, -1], bands[3]);
+            }      
+            filterND(dL, dH, dV, name, false, 'cl', 1, bH, bH, bV);
         }
 
-        var size = bands[0].getSize();
-        size[0] = 2 * size[0] + start
-
-        var dL = zeros(size), dH = zeros(size);
-        size[0] -= oh;
-        size[1] = 2 * size[1] + start;
-
-        var bL = zeros(size), bH = zeros(size);
-        var dV = dL.getView(), B = bL.getView();
-
-        B.select([], [start, 2, -1]);
-        dL.set([start, 2, -1], bands[0]);
-        dH.set([start, 2, -1], bands[2]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bL, bL, B);
-
-        dL.set([start, 2, -1], [], bands[1]);
-        dH.set([start, 2, -1], [], bands[3]);
-        filterND(dL, dH, dV, fL, fH, 'cl', 1, bH, bH, B);
-
         size[1] -= ow;
-        var out = zeros(size), vO = out.getView().swapDimensions(0, 1);
-        B.restore().swapDimensions(0, 1);
-        filterND(bL, bH, B, fL, fH, 'cl', 1, out, out, vO);
+        var out = zeros(size), oV = new MatrixView(size).swapDimensions(0, 1);
+        bV.restore().swapDimensions(0, 1);
+        filterND(bL, bH, bV, name, false, 'cl', 1, out, out, oV);
         return out;
     };
-    
+
+    /** Returns the maximum level of the decomposition according 
+     * to a mother wavelet name.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec2},
+     * {@link Matrix#waverec2},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Matrix} sizes
+     *  Matrix containing the size(s) of the signal to decompose.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Number}
+     * @matlike
+     */
+    Matrix.dwtmaxlev = function (s, name) {
+        s = Matrix.toMatrix(s).min().getDataScalar();
+        var wav = Matrix.wfilters(name);
+        var dl = wav[0].numel(),
+            dh = wav[1].numel(),
+            rl = wav[2].numel(),
+            rh = wav[3].numel();
+        var w = Math.max(dl, dh, rl, rh);
+        var maxlev = Math.floor(Math.log(s / (w - 1)) / Math.log(2));
+        return maxlev < 0 ? 0 : maxlev;
+    };
+  
+    var createStruct1D = function (s, n, name, dim) {
+        var sizes = new Uint16Array(n + 2);
+        sizes[n + 1] = s.getSize(dim);
+
+        var K = Matrix.wfilters(name)[0].numel();
+        var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+        
+        for (var l = n; l >= 1; l--) {
+            var py = getPaddingInfos(name, sizes[l + 1]);
+            sizes[l] = Math.ceil(sizes[l + 1] / 2) + py.ro + py.lo - (dwtmode === "per" ? lc + rc : 0);
+        }
+        sizes[0] = sizes[1];
+        return Matrix.toMatrix(sizes);
+    };
+    var getSubbandsCoordinates1D = function (wt, dim) {
+        var sizes = wt.get([], 0).getData();
+
+        var outSize = sizes[0];
+        var bands = [0, outSize], subSizes = [];
+        
+        var j, J = sizes.length - 2;
+        for (j = 1; j < J + 1; j++) {
+            subSizes.push(sizes[j]);
+            outSize += sizes[j];
+            bands.push(outSize);
+        }
+        return {
+            "bands": bands,
+            "outSize": outSize,
+            "subSizes": subSizes,
+            "sizes": sizes,
+            "J": J
+        };
+    };
+    var resizeMatrix1d = function (A, ds, l, dim) {
+        if (A.getSize(dim) !== ds.sizes[l + 1]) {
+            var AView = A.getView().selectDimension(dim, [0, ds.sizes[l + 1] - 1]);
+            A = A.extractViewFrom(AView);
+        }
+        return A;
+    };
+   
     /** Compute the 1D DWT (Discrete Wavelet Transform)
      * of a column vector.
      * __See also :__
@@ -1960,12 +2108,9 @@
      *  Array containing approximation coefficients and details.
      * @matlike
      */
-    Matrix.dwt = function (im, name, dim) {
-        dim = dim || 0;
-        return dwt(im, name, dim);
-    };
+    Matrix.dwt = dwt;
     /** Compute the 1D inverse DWT (Discrete Wavelet Transform).
-     *n
+     *
      * __See also :__
      * {@link Matrix#dwt},
      * {@link Matrix#idwt2}.
@@ -1979,11 +2124,299 @@
      *  Matrix with the reconstructed signal.
      * @matlike
      */
-    Matrix.idwt = function (bands, name, dim) {
+    Matrix.idwt = idwt;
+    
+    /** Perform a DWT (Discrete Wavelet Transform)
+     * on each vector presents on a given Matrix dimension.
+     *
+     * __See also :__
+     * {@link Matrix#waverec},
+     * {@link Matrix#dwt}.
+     *
+     * @param {Matrix} signal
+     * @param {Number} n
+     *  Number of level of the decomposition.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} [dimension=0] 
+     *  Dimension on which the transformation is performed.
+     * @return {Array}
+     *  Array of two elements, one contains the coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @matlike
+     */
+    Matrix.wavedec = function (s, n, name, dim) {
         dim = dim || 0;
-        return idwt(bands, name, dim);
+        var sd = createStruct1D(s, n, name, dim);
+        var ds = getSubbandsCoordinates1D(sd, dim);
+
+        var size = s.getSize();
+        size[dim] = ds.outSize;
+        var matOut = zeros(size), outView = matOut.getView();
+        var matIn = s, dL, dH, wt;
+        for (var l = n; l >= 1; l--) {
+            wt = dwt(matIn, name, dim);
+            outView.selectDimension(dim, [ds.bands[l], ds.bands[l + 1] - 1]);
+            wt[1].extractViewTo(outView, matOut);
+            outView.restore();
+            matIn = wt[0];
+        }
+        outView.selectDimension(dim, [ds.bands[0], ds.bands[1] - 1]);
+        wt[0].extractViewTo(outView, matOut);
+        return [matOut, sd];
     };
+    /** Reconstruct the signal from a DWT (Discrete Wavelet Transform)
+     * on many of a column vector.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec},
+     * {@link Matrix#idwt}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds concontains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} [dimension=0] 
+     *  Dimension on which the transformation has been performed.
+     * @return {Matrix}
+     *  The reconstructed signal.
+     * @matlike
+     */
+    Matrix.waverec = function (wt, name, dim) {
+        dim = dim || 0;
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
+        var input = wt[0], iV = input.getView();
+        var dLView = iV.selectDimension(dim, [ds.bands[0], ds.bands[1] - 1]);
+        var dL = input.extractViewFrom(dLView);
+
+        for (var l = 1; l < ds.bands.length - 1; l++) {
+            var dHView = iV.restore().selectDimension(dim, [ds.bands[l], ds.bands[l + 1] - 1]);
+            var dH = input.extractViewFrom(dHView);
+            dL = idwt([dL, dH], name, dim);
+            dL = resizeMatrix1d(dL, ds, l, dim);
+        }
+        return dL;
+    };
+    /** Reconstruct the signal from a 1D DWT (Discrete Wavelet Transform)
+     * at the coarsest level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec},
+     * {@link Matrix#idwt}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @return {Array}
+     *  Array of three elements, one contains the coefficients 
+     *  the second contains the sizes of each subbands, and the third 
+     *  contains the approximation coefficients at the scale j-1.
+     * @matlike
+     */
+    Matrix.upwlev = function (wt, name, dim) {
+        if (wt[1].getSize(0) === 2) {
+            return [new Matrix(), new Matrix()];
+        }
+        dim = dim || 0;
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
+        var input = wt[0], iV = input.getView();
+        var dLView = iV.selectDimension(dim, [ds.bands[0], ds.bands[1] - 1]);
+        var dLm = input.extractViewFrom(dLView);
+        var dHView = iV.restore().selectDimension(dim, [ds.bands[1], ds.bands[2] - 1]);
+        var dH = input.extractViewFrom(dHView);
+        var dL = idwt([dLm, dH], name, dim);
+        dL = resizeMatrix1d(dL, ds, 1, dim);
+
+        var bSize = dL.getSize(dim);
+        var oV = iV.restore().selectDimension(dim, [ds.bands[2] - bSize, -1]);
+        var o = input.extractViewFrom(oV);
+        oV = o.getView().selectDimension(dim, [0, bSize - 1]);
+        dL.extractViewTo(oV, o);
+
+        var sizes = wt[1].get([1, -1]);
+        sizes.set(0, [], sizes.get(1, []));
+
+        return [o, sizes, dLm];
+    };
+    /** Returns the coefficients corresponding to the approximation subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#wrcoef},
+     * {@link Matrix#detcoef},
+     * {@link Matrix#upwlev},
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec},
+     * {@link Matrix#idwt2}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  Wavelet name.
+     * @param {Number} dim
+     *  Dimension along which the signal must be reconstructed.
+     * @param {Number} level
+     *  The level of the subband between 0 (the original signal) and 
+     *  N the decomposition level.
+     * @return {Matrix}
+     *  If the level corresponds to the last level of decomposition, 
+     *  the coefficients returned will be a view on the coefficient
+     *  provided. Therefore, a modification on one will affect both.
+     * @matlike
+     */
+    Matrix.appcoef = function (wt, name, dim, j) {
+        j = j === undefined ? wt[1].size()[0] - 2 : j;
+        var J = wt[1].size(0) - 2;
+        if (j > J || j < 0) {
+            throw new Error("Matrix.appcoef: Invalid decomposition level.");
+        }
+        while (J > j) {
+            wt = Matrix.upwlev(wt, name);
+            J = wt[1].size(0) - 2;
+        }
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
+        var input = wt[0], iV = input.getView();
+        var dLView = iV.selectDimension(dim, [ds.bands[0], ds.bands[1] - 1]);
+        return input.extractViewFrom(dLView);
+    };
+    /** Returns the coefficients corresponding to a detail subband
+     * at a given level.
+     *
+     * __See also :__
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec},
+     * {@link Matrix#wrcoef},
+     * {@link Matrix#appcoef}.
+     *
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {Number} level
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
+     * @matlike
+     */
+    Matrix.detcoef = function (wt, dim, j) {
+        var ds = getSubbandsCoordinates1D(wt[1], dim);
+        if (j > ds.J || j < 1) {
+            throw new Error("Matrix.detcoef2: Invalid decomposition level.");
+        }
+        var scale = ds.J - j;
+        var input = wt[0], iV = input.getView();
+        var dHView = iV.selectDimension(dim, [ds.bands[1 + scale], ds.bands[2 + scale] - 1]);
+        return input.extractViewFrom(dHView);
+    };
+    /** Reconstruct the signal using only one subband.
+     *
+     * __See also :__
+     * {@link Matrix#appcoef},
+     * {@link Matrix#detcoef},
+     * {@link Matrix#upwlev},
+     * {@link Matrix#wavedec},
+     * {@link Matrix#waverec}.
+     *
+     * @param {String} type
+     *  Give the subband to use for the reconstruction ('l' or 'h').
+     *  The value 'l' corresponds to the approximation coefficients (low-pass filter)
+     *  while the seconds corresponds to the detail coefficients (high-pass filter).
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
+     * @param {String} name
+     *  The wavelet filters to use for the reconstruction.
+     * @param {Number} dimension
+     *  Dimension along which the reconstruction will occur.
+     * @param {Number} level
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
+     * @matlike
+     */
+    Matrix.wrcoef = function (type, wt, name, dim, N) {
+        var L, H;
+        if (type === 'l') {
+            L = Matrix.appcoef(wt, name, dim, N);
+        }  else if (type === 'h') {
+            H = Matrix.detcoef(wt, dim, N);
+        } 
+        var ds = getSubbandsCoordinates1D(wt[1]);
+        for (var n = 0; n < N; n++) {
+            L = idwt([L, H], name, dim);
+            L = resizeMatrix1d(L, ds, ds.J - N + n + 1, dim);
+            H = undefined; 
+        }
+        return L;
+    };
+   
+    var createStruct = function (s, n, name) {
+        var K = Matrix.wfilters(name)[0].numel();
+        var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
+        var xSizes = new Array(n + 2);  
+        var ySizes = new Array(n + 2);
+        var cSizes = new Array(n + 2);
+        ySizes[n + 1] = s.getSize(0);
+        xSizes[n + 1] = s.getSize(1);
+        cSizes[n + 1] = s.getSize(2);
+        for (var l = n; l >= 1; l--) {
+            var py = getPaddingInfos(name, ySizes[l + 1]),
+                px = getPaddingInfos(name, xSizes[l + 1]);
+            ySizes[l] = Math.ceil(ySizes[l + 1] / 2) + py.ro + py.lo - (dwtmode === "per" ? lc + rc : 0);
+            xSizes[l] = Math.ceil(xSizes[l + 1] / 2) + px.ro + px.lo - (dwtmode === "per" ? lc + rc : 0);
+            cSizes[l] = cSizes[l + 1];
+        }
+        ySizes[0] = ySizes[1];
+        xSizes[0] = xSizes[1];
+        cSizes[0] = cSizes[1];
+        return Matrix.toMatrix([ySizes, xSizes, cSizes]);
+    };
+    var getSubbandsCoordinates = function (wt) {
+        var ySizes = wt.get([], 0).getData(),
+            xSizes = wt.get([], 1).getData(),
+            cSizes = wt.get([], 2).getData();
+
+        var outSize = xSizes[0] * ySizes[0] * cSizes[0];
+        var bands = [0, outSize], subSizes = [];
         
+        var j, J = ySizes.length - 2;
+        for (j = 1; j < J + 1; j++) {
+            subSizes.push([ySizes[j], xSizes[j], cSizes[j]]);
+            var subBandSize = ySizes[j] * xSizes[j] * cSizes[j];
+            for (var b = 0; b < 3; b++) {
+                outSize += subBandSize;
+                bands.push(outSize);
+            }
+        }
+        return {
+            "bands": bands,
+            "outSize": outSize,
+            "subSizes": subSizes,
+            "ySizes": ySizes,
+            "xSizes": xSizes,
+            "cSizes": cSizes,
+            "J": J
+        };
+    };
+    // Function used to resize approximation coefficient matrix
+    // to its original size after reconstruction.
+    var resizeMatrix = function (A, ds, l) {
+        if (A.getSize(0) !== ds.ySizes[l + 1] || A.getSize(1) !== ds.xSizes[l + 1]) {
+            A = A.get([0, ds.ySizes[l + 1] - 1], [0, ds.xSizes[l + 1] - 1], []);
+        }
+        return A;
+    };
+
     /** Compute the 2D DWT (Discrete Wavelet Transform)
      * of a column vector.
      * __See also :__
@@ -2012,171 +2445,7 @@
      * @matlike
      */
     Matrix.idwt2 = idwt2;
-    
-    /** Perform a DWT (Discrete Wavelet Transform)
-     * on each vector presents on a given Matrix dimension.
-     *
-     * __See also :__
-     * {@link Matrix#waverec},
-     * {@link Matrix#dwt}.
-     *
-     * @param {Matrix} signal
-     * @param {Number} n
-     *  Number of level of the decomposition.
-     * @param {String} name
-     *  Wavelet name.
-     * @param {Number} [dimension=0] 
-     *  Dimension on which the transformation is performed.
-     * @return {Array}
-     *  Array of two elements, one contains the coefficients 
-     *  while the seconds contains the sizes of each subbands.
-     * @matlike
-     */
-    Matrix.wavedec = function (s, n, name, dim) {
-        dim = dim || 0;
-        var wav = Matrix.wfilters(name, 'd');
-        var fL = wav[0].getData();
 
-        var sd = new Uint16Array(n + 2), outSize = 0;
-        sd[n + 1] = s.getSize(dim);
-        var l;
-        
-        for (l = n; l >= 1; l--) {
-            var p = getPaddingInfos(fL.length, sd[l + 1]);
-            sd[l] = Math.ceil(sd[l + 1] / 2) + p.ro + p.lo;
-            outSize += sd[l];
-        }
-        sd[0] = sd[1];
-        outSize += sd[0];
-
-        var cumsize = [0, sd[0]];
-        for (l = 2; l < n + 2; l++) {
-            cumsize[l] = sd[l - 1] + cumsize[l - 1];
-        }
-
-        var size = s.getSize();
-        size[dim] = outSize;
-        var matOut = zeros(size), outView = matOut.getView();
-        var matIn = s, dL, dH;
-        for (l = n; l >= 1; l--) {
-            var wt = dwt(matIn, name, dim);
-            outView.selectDimension(dim, [cumsize[l], cumsize[l + 1] - 1]);
-            wt[1].extractViewTo(outView, matOut);
-            outView.restore();
-            matIn = wt[0];
-        }
-        outView.selectDimension(dim, [cumsize[0], cumsize[1] - 1]);
-        wt[0].extractViewTo(outView, matOut);
-        return [matOut, new Matrix([sd.length], sd)];
-    };
-    /** Reconstruct the signal from a DWT (Discrete Wavelet Transform)
-     * on many of a column vector.
-     *
-     * __See also :__
-     * {@link Matrix#wavedec},
-     * {@link Matrix#idwt}.
-     *
-     * @param {Array} dwt
-     *  Array of two elements, one contains the dwt coefficients 
-     *  while the seconds concontains the sizes of each subbands.
-     * @param {String} name
-     *  Wavelet name.
-     * @param {Number} [dimension=0] 
-     *  Dimension on which the transformation has been performed.
-     * @return {Matrix}
-     *  The reconstructed signal.
-     * @matlike
-     */
-    Matrix.waverec = function (lc, name, dim) {
-        dim = dim || 0;
-        var sd = lc[1].getData();
-        var cumsize = [0, sd[0]];
-        var l, n = sd.length - 2;
-        for (l = 2; l < n + 2; l++) {
-            cumsize[l] = sd[l - 1] + cumsize[l - 1];
-        }
-        var input = lc[0];
-        var dLView = input.getView().selectDimension(dim, [cumsize[0], cumsize[1] - 1]);
-        var dL = input.extractViewFrom(dLView);
-
-        for (l = 1; l < cumsize.length - 1; l++) {
-            var dHView = input.getView().selectDimension(dim, [cumsize[l], cumsize[l + 1] - 1]);
-            var dH = input.extractViewFrom(dHView);
-            if (dL.size(dim) === dH.size(dim) + 1) {
-                dLView = dL.getView().selectDimension(dim, [0, -2]);
-                dL = dL.extractViewFrom(dLView);
-            }
-            dL = idwt([dL, dH], name, dim);
-        }
-        
-        if (dL.size(dim) === sd[sd.length - 1] + 1) {
-            dLView = dL.getView().selectDimension(dim, [0, -2]);
-            dL = dL.extractViewFrom(dLView);
-        }
-        return dL;
-    };
-
-    
-    var createStruct = function (s, n, name) {
-        var wav = Matrix.wfilters(name, 'd');
-        var K = wav[0].numel();
-
-        var xSizes = new Array(n + 2);
-        var ySizes = new Array(n + 2);
-        var cSizes = new Array(n + 2);
-        ySizes[n + 1] = s.getSize(0);
-        xSizes[n + 1] = s.getSize(1);
-        cSizes[n + 1] = s.getSize(2);
-        for (var l = n; l >= 1; l--) {
-            var py = getPaddingInfos(K, ySizes[l + 1]),
-                px = getPaddingInfos(K, xSizes[l + 1]);
-            ySizes[l] = Math.ceil(ySizes[l + 1] / 2) + py.ro + py.lo;
-            xSizes[l] = Math.ceil(xSizes[l + 1] / 2) + px.ro + px.lo;
-            cSizes[l] = cSizes[l + 1];
-        }
-        ySizes[0] = ySizes[1];
-        xSizes[0] = xSizes[1];
-        cSizes[0] = cSizes[1];
-        return Matrix.toMatrix([ySizes, xSizes, cSizes])
-    };
-
-    var getSubbandsCoordinates = function (lc) {
-        var ySizes = lc.get([], 0).getData(),
-            xSizes = lc.get([], 1).getData(),
-            cSizes = lc.get([], 2).getData();
-
-        var outSize = xSizes[0] * ySizes[0] * cSizes[0];
-        var bands = [0, outSize], subSizes = [];
-        
-        var j, J = ySizes.length - 2;
-        for (j = 1; j < J + 1; j++) {
-            subSizes.push([ySizes[j], xSizes[j], cSizes[j]]);
-            var subBandSize = ySizes[j] * xSizes[j] * cSizes[j];
-            for (var b = 0; b < 3; b++) {
-                outSize += subBandSize;
-                bands.push(outSize)
-            }
-        }
-        return {
-            "bands": bands,
-            "outSize": outSize,
-            "subSizes": subSizes,
-            "ySizes": ySizes,
-            "xSizes": xSizes,
-            "cSizes": cSizes,
-            "J": J
-        };
-    };
-    
-    // Function used to resize approximation coefficient matrix
-    // to its original size after reconstruction.
-    var resizeMatrix = function (A, ds, l) {
-        if (A.getSize(0) !== ds.ySizes[l + 1] || A.getSize(1) !== ds.xSizes[l + 1]) {
-            A = A.get([0, ds.ySizes[l + 1] - 1], [0, ds.xSizes[l + 1] - 1], [])
-        }
-        return A;
-    };
-    
     /** Perform a 2D DWT (Discrete Wavelet Transform)
      *
      * __See also :__
@@ -2194,11 +2463,12 @@
      * @matlike
      */
     Matrix.wavedec2 = function (input, n, name) {
-        var sizes = createStruct(input, n, name);
-        var ds = getSubbandsCoordinates(sizes);
-        var out = new Float64Array(ds.outSize);
+        var sizes = createStruct(input, n, name),
+            ds = getSubbandsCoordinates(sizes),
+            out = new Float64Array(ds.outSize),
+            wt;
         for (var l = n - 1, s = 3 * l; l >= 0; l--, s -= 3) {
-            var wt = dwt2(input, name);
+            wt = dwt2(input, name);
             out.subarray(ds.bands[s + 1], ds.bands[s + 2]).set(wt[1].getData());
             out.subarray(ds.bands[s + 2], ds.bands[s + 3]).set(wt[2].getData());
             out.subarray(ds.bands[s + 3], ds.bands[s + 4]).set(wt[3].getData());
@@ -2222,14 +2492,15 @@
      *  The reconstructed signal.
      * @matlike
      */
-    Matrix.waverec2 = function (lc, name) {
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
+    Matrix.waverec2 = function (wt, name) {
+        var ds = getSubbandsCoordinates(wt[1]), data = wt[0].getData();
         var A, H, V, D;
-        A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
+        A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]));
         for (var l = 0, s = 0, J = ds.J; l < J; l++, s += 3) {
-            H = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 1], ds.bands[s + 2]));
-            V = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 2], ds.bands[s + 3]));
-            D = new Matrix(ds.subSizes[l], data.subarray(ds.bands[s + 3], ds.bands[s + 4]));
+            var size = ds.subSizes[l];
+            H = new Matrix(size, data.subarray(ds.bands[s + 1], ds.bands[s + 2]));
+            V = new Matrix(size, data.subarray(ds.bands[s + 2], ds.bands[s + 3]));
+            D = new Matrix(size, data.subarray(ds.bands[s + 3], ds.bands[s + 4]));
             A = idwt2([A, H, V, D], name);
             A = resizeMatrix(A, ds, l + 1);
         }
@@ -2254,20 +2525,20 @@
      *  contains the approximation coefficients at the scale j-1.
      * @matlike
      */
-    Matrix.upwlev2 = function (lc, name) {
-        if (lc[1].getSize(0) === 2) {
+    Matrix.upwlev2 = function (wt, name) {
+        if (wt[1].getSize(0) === 2) {
             return [new Matrix(), new Matrix()];
         }
 
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
-        var Am = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
+        var ds = getSubbandsCoordinates(wt[1]), data = wt[0].getData();
+        var Am = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]));
         var H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
         var V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
         var D = new Matrix(ds.subSizes[0], data.subarray(ds.bands[3], ds.bands[4]));
         var A = idwt2([Am, H, V, D], name);
         A = resizeMatrix(A, ds, 1);
 
-        var sizes = lc[1].get([1, -1]);
+        var sizes = wt[1].get([1, -1]);
         sizes.set(0, [], sizes.get(1, []));
 
         var Asize = A.numel(), remaining = data.length - ds.bands[4];
@@ -2276,10 +2547,8 @@
         out.subarray(Asize).set(data.subarray(ds.bands[4]));
         return [new Matrix([out.length], out), sizes, Am];
     };
-
     /** Returns the coefficients corresponding to the approximation subband
      * at a given level.
-
      *
      * __See also :__
      * {@link Matrix#detcoef2},
@@ -2293,22 +2562,28 @@
      * @param {String} name
      *  Wavelet name.
      * @param {Number} level
-     *  Wavelet name.
+     *  The level of the subband between 0 (the original signal) and 
+     *  N the decomposition level.
      * @return {Matrix}
      *  If the level corresponds to the last level of decomposition, 
      *  the coefficients returned will be a view on the coefficient
      *  provided. Therefore, a modification on one will affect both.
      * @matlike
      */
-    Matrix.appcoef2 = function (lc, name, j) {
-        var J = lc[1].size(0) - 2;
-        while (J > j + 1) {
-            lc = Matrix.upwlev2(lc, name);
-            J = lc[1].size(0) - 2;
+    Matrix.appcoef2 = function (wt, name, j) {
+        j = j === undefined ? wt[1].size()[0] - 2 : j;
+        var J = wt[1].size(0) - 2;
+        if (j > J || j < 0) {
+            throw new Error("Matrix.appcoef2: Invalid decomposition level.");
         }
-        var sizes = lc[1].get([1, -1]).prod(1).getData();
-        var data = lc[0].getData();
-        var size = lc[1].get(0).getData();
+        while (J > j) {
+            console.log("upwlev");
+            wt = Matrix.upwlev2(wt, name);
+            J = wt[1].size(0) - 2;
+        }
+        var sizes = wt[1].get([1, -1]).prod(1).getData();
+        var data = wt[0].getData();
+        var size = wt[1].get(0).getData();
         return new Matrix(size, data.subarray(0, sizes[0]));
     };
     /** Returns the coefficients corresponding to a detail subband
@@ -2325,24 +2600,28 @@
      *  Array of two elements, one contains the dwt coefficients 
      *  while the seconds contains the sizes of each subbands.
      * @param {Number} level
-     *  The level of the subband.
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
      * @return {Matrix}
      *  Returns the coefficients required. The Matrix returned is a 
      *  view on the coefficient provided. Therefore, a modification 
      *  on one will affect both.
      * @matlike
      */
-    Matrix.detcoef2 = function (type, lc, j) {
+    Matrix.detcoef2 = function (type, wt, j) {
         if (type === 'all') {
             return [
-                Matrix.detcoef2('h', lc, j),
-                Matrix.detcoef2('v', lc, j),
-                Matrix.detcoef2('d', lc, j)
+                Matrix.detcoef2('h', wt, j),
+                Matrix.detcoef2('v', wt, j),
+                Matrix.detcoef2('d', wt, j)
             ];
         }
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
-        var scale = ds.J - (j + 1);
-        var size = lc[1].get([scale + 1], []).getData();
+        var ds = getSubbandsCoordinates(wt[1]), data = wt[0].getData();
+        if (j > ds.J || j < 1) {
+            throw new Error("Matrix.detcoef2: Invalid decomposition level.");
+        }
+        var scale = ds.J - j;
+        var size = wt[1].get([scale + 1], []).getData();
         var band = 1 + scale * 3;
         if (type === 'v') {
             band += 1;
@@ -2353,72 +2632,51 @@
         }
         return new Matrix(size, data.subarray(ds.bands[band], ds.bands[band + 1]));
     };
-
-    /** Reconstruct a signal from a given subband. 
-     * To be implemented efficiently.
-     */
-    Matrix.wrcoef2 = function (type, lc, name, N) {
-        var ds = getSubbandsCoordinates(lc[1]), J = ds.J;
-        for (var l = 0; l < N; l++) {
-            lc = Matrix.upwlev2(lc, name);
-        }
-
-        var ds = getSubbandsCoordinates(lc[1]), data = lc[0].getData();
-        var A, H, V, D;
-        var Z = new Matrix(ds.subSizes[0]);
-        A = H = V = D = Z;
-        if (type === 'a') {
-            A = new Matrix(ds.subSizes[0], data.subarray(ds.bands[0], ds.bands[1]))
-        } else if (type === 'h') {
-            H = new Matrix(ds.subSizes[0], data.subarray(ds.bands[1], ds.bands[2]));
-        } else if (type === 'v') {
-            V = new Matrix(ds.subSizes[0], data.subarray(ds.bands[2], ds.bands[3]));
-        } else if (type === 'd') {
-            D = new Matrix(ds.subSizes[0], data.subarray(ds.bands[3], ds.bands[4]));
-        }
-
-        var A = idwt2([A, H, V, D], name);
-        A = resizeMatrix(A, ds, 1);
-
-        var sizes = lc[1].get([1, -1]);
-        sizes.set(0, [], sizes.get(1, []));
-
-        var Asize = A.numel(), remaining = data.length - ds.bands[4];
-        var out = new Float64Array(Asize + remaining);
-        out.subarray(0, Asize).set(A.getData());
-
-        lc = [new Matrix([out.length], out), sizes, A];
-
-        for (var l = N + 1; l < J; l++) {
-            lc = Matrix.upwlev2(lc, name);
-        }
-        return lc[0].reshape(lc[1].get(0).getData());
-    };
-    /** Returns the maximum level of the decomposition according 
-     * to a mother wavelet name.
+    /** Reconstruct the image using only one subband.
      *
      * __See also :__
+     * {@link Matrix#appcoef2},
+     * {@link Matrix#detcoef2},
+     * {@link Matrix#upwlev2},
      * {@link Matrix#wavedec2},
-     * {@link Matrix#waverec2},
-     * {@link Matrix#idwt2}.
+     * {@link Matrix#waverec2}.
      *
-     * @param {Matrix} sizes
-     *  Matrix containing the size(s) of the signal to decompose.
+     * @param {String} type
+     *  Give the subband to use for the reconstruction ('a' or 'h', 'v' or 'd').
+     *  The value 'a' corresponds to the approximation coefficients (low-pass filter)
+     *  while the others correspond to the detail coefficients (horizontal, vertical and diagonal).
+     * @param {Array} dwt
+     *  Array of two elements, one contains the dwt coefficients 
+     *  while the seconds contains the sizes of each subbands.
      * @param {String} name
-     *  Wavelet name.
-     * @return {Number}
+     *  The wavelet filters to use for the reconstruction.
+     * @param {Number} level
+     *  The level of the subband between 1 (the coarser) and N the 
+     *  decomposition level.
+     * @return {Matrix}
+     *  Returns the coefficients required. The Matrix returned is a 
+     *  view on the coefficient provided. Therefore, a modification 
+     *  on one will affect both.
      * @matlike
      */
-    Matrix.dwtmaxlev = function (s, name) {
-        s = Matrix.toMatrix(s).min().getDataScalar();
-        var wav = Matrix.wfilters(name);
-        var dl = wav[0].numel(),
-            dh = wav[1].numel(),
-            rl = wav[2].numel(),
-            rh = wav[3].numel();
-        var w = Math.max(dl, dh, rl, rh);
-        var maxlev = Math.floor(Math.log(s / (w - 1)) / Math.log(2));
-        return maxlev;
+    Matrix.wrcoef2 = function (type, wt, name, N) {
+        var A, H, V, D;
+        if (type === 'a') {
+            A = Matrix.appcoef2(wt, name, N);
+        }  else if (type === 'h') {
+            H = Matrix.detcoef2('h', wt, N);
+        } else if (type === 'v') {
+            V = Matrix.detcoef2('v', wt, N);
+        } else if (type === 'd') {
+            D = Matrix.detcoef2('d', wt, N);
+        }
+        var ds = getSubbandsCoordinates(wt[1]);
+        for (var l = 0; l < N; l++) {
+            A = idwt2([A, H, V, D], name);
+            A = resizeMatrix(A, ds, ds.J - N + l + 1);
+            H = V = D = undefined; 
+        }
+        return A;
     };
 
     (function () {
@@ -2457,17 +2715,40 @@
                 return sel;
             },
             per: function (s, l, r) {
-                var length = s + l + r, sel = new Uint32Array(length);
+                var length = s + l + r, sel = new Int32Array(length);
                 var i, j;
-                i = 0;
-                for (j = l; j > 0; j--, i++) {
-                    sel[i] = s - j;
+                for (i = 0, j = l; j > 0; j--, i++) {
+                    sel[i] = s - (j - 1) % s - 1;
                 }
                 for (j = 0; j < s; j++, i++) {
                     sel[i] = j;
                 }
                 for (j = 0; j < r; j++, i++) {
+                    sel[i] = j % s;
+                }
+                return sel;
+            },
+            per2: function (s, l, r) {
+                var isOdd = s % 2;
+                s += isOdd ? 1 : 0;
+                r -= isOdd ? 1 : 0;
+                var length = s + l + r, sel = new Int32Array(length);
+                var i, j;
+                for (i = 0, j = l; j > 0; j--, i++) {
+                    sel[i] = s - (j - 1) % s - 1;
+                }
+                for (j = 0; j < s; j++, i++) {
                     sel[i] = j;
+                }
+                for (j = 0; j < r; j++, i++) {
+                    sel[i] = j % s;
+                }
+                if (isOdd) {
+                    for (i = 0; i < sel.length; i++) {
+                        if (sel[i] == s - 1) {
+                            sel[i]--;
+                        }
+                    }                    
                 }
                 return sel;
             },
@@ -2499,27 +2780,28 @@
         
         Matrix_prototype.padarray = function () {
             var mode = Array.prototype.shift.apply(arguments);
+            var sel, args = [], d, s;
             if (mode !== 'zpd') {
                 var fun = padIndices[mode];
                 if (fun === undefined) {
                     throw new Error("Matrix.padarray: Unimplemented mode " + mode + ".");
                 }
-                for (var args = [], d = 0; d < arguments.length; d++) {
-                    var s = arguments[d], sel;
+                for (d = 0; d < arguments.length; d++) {
+                    s = arguments[d];
                     if (Tools.isInteger(s)) {
-                        sel = [fun(this.getSize(d), s, s)]
+                        sel = [fun(this.getSize(d), s, s)];
                     } else if (Tools.isArrayLike(s) && s.length === 0) {
                         sel = [];
                     } else {
-                        sel = [fun(this.getSize(d), s[0], s[1])]
+                        sel = [fun(this.getSize(d), s[0], s[1])];
                     }
                     args.push(sel);
                 }
                 return this.get.apply(this, args);
             }
-            var args = [], size = this.getSize();
-            for (var d = 0; d < arguments.length; d++) {
-                var s = arguments[d];
+            var size = this.getSize();
+            for (d = 0; d < arguments.length; d++) {
+                s = arguments[d];
                 size[d] = size[d] ? size[d] : 1;
                 if (Tools.isInteger(s)) {
                     sel = [s, -s - 1];
@@ -2537,283 +2819,7 @@
             return out.set.apply(out, args);
         };
     })();
-    
-    window.addEventListener("load", function () {
 
-        var wNames = [
-            'haar',
-            'sym2', 'sym4', 'sym8',
-            'db2', 'db4', 'db8',
-            'coif1', 'coif2', 'coif4', 'coif4', 
-            'bi13', 'bi31', 'bi68', 'bi97',
-            'rbio31', 'rbio33', 'rbio35', 'rbio39'
-        ], wModes = [
-            "sym", "symw", "per", "zpd", "nn"
-        ];
-        var tests_1Ddwt = function () {
-            var tests = {}, time;
-            var max = 256;
-            for (var m = 0; m < Math.max(wNames.length, wModes.length); m++) {
-                var mode = wModes[m % wModes.length];
-                var name = wNames[m % wNames.length];
-                Matrix.dwtmode(mode);
-                Tools.tic();
-                for (var sz = 2; sz <= max; sz *= 2) {
-                    var s = Matrix.rand(sz, sz);
-
-                    Tools.tic();
-                    var wt1 = dwt(s, name, 0);
-                    var iwt = idwt(wt1, name, 0);
-                    var wt2 = dwt(wt1[0], name, 1).concat(dwt(wt1[1], name, 1));
-                    var iwt1 = idwt([wt2[0], wt2[1]], name, 1);
-                    var iwt2 = idwt([wt2[2], wt2[3]], name, 1);
-                    var iwt3 = idwt([iwt1, iwt2], name, 0);
-                    time = Tools.toc();
-
-                    var n1 = Matrix.minus(iwt1, wt1[0]).norm(),
-                        n2 = Matrix.minus(iwt2, wt1[1]).norm(),
-                        n3 = Matrix.minus(iwt, s).norm(),
-                        n4 = Matrix.minus(iwt3, s).norm();
-                    var err = ((n1 + n2 + n3 + n4) / 4);
-                    var status =  err < 1e-7 ? "ok": "NOK";
-                    if (status === "NOK") {
-                        console.log(err);
-                        console.error("There is a problem somewhere !");
-                    }
-                    tests[sz] = {
-                        "n1": parseFloat(n1.toExponential(2)),
-                        "n2": parseFloat(n2.toExponential(2)),
-                        "n3": parseFloat(n3.toExponential(2)), 
-                        "n4": parseFloat(n4.toExponential(2)),
-                        "status": status,
-                        "time": time
-                    };
-                }
-                time = Tools.toc();
-                console.log(name, mode, time);
-                // console.log(tests);
-                // console.table(tests, ["status", "time", "n1", "n2", "n3", "n4"]);
-            }
-
-            Matrix.dwtmode("per");
-        };
-        var tests_2Ddwt = function () {
-            var tests = {}, time;
-            var max = 512;
-            for (var m = 0; m < Math.max(wNames.length, wModes.length); m++) {
-                var mode = wModes[m % wModes.length];
-                var name = wNames[m % wNames.length];
-                Matrix.dwtmode(mode);
-                Tools.tic();
-                for (var sz = 2; sz <= max; sz *= 2) {
-                    var s = Matrix.rand(sz, sz, 3);
-
-                    Tools.tic();
-                    var wt = dwt2(s, name);
-                    var iwt = idwt2(wt, name);
-                    time = Tools.toc();
-
-                    var err = Matrix.minus(iwt, s).norm();
-                    var status =  err < 1e-7 ? "ok": "NOK";
-                    if (status === "NOK") {
-                        console.log(err);
-                        console.error("There is a problem somewhere !");
-                    }
-                    tests[sz] = {
-                        "err": parseFloat(err.toExponential(2)),
-                        "status": status,
-                        "time": time
-                    };
-                }
-                time = Tools.toc();
-                console.log(name, mode, time);
-            }
-
-            Matrix.dwtmode("per");
-        };
-        var test_bis = function () {
-            var tests = {}, time;
-            var max = 1024;
-            for (var m = 0; m < wModes.length; m++) {
-                for (var n = 0; n < wNames.length; n++) {
-                    var mode = wModes[m];
-                    var name = wNames[n];
-                    Matrix.dwtmode(mode);
-                    tests[n] = {};
-                    Tools.tic();
-                    for (var sz = 128, ind = []; sz <= max; sz *= 2) {
-                        ind.push(sz);
-                        var s = Matrix.rand(sz, sz, 3);
-
-                        Tools.tic();
-                        var wt1 = dwt(s, name, 0);
-                        var iwt = idwt(wt1, name, 0);
-                        var wt2 = dwt(wt1[0], name, 1).concat(dwt(wt1[1], name, 1));
-                        var iwt1 = idwt([wt2[0], wt2[1]], name, 1);
-                        var iwt2 = idwt([wt2[2], wt2[3]], name, 1);
-                        var iwt3 = idwt([iwt1, iwt2], name, 0);
-                        time = Tools.toc();
-                        tests[n][sz] = time;
-                    }
-                    time = Tools.toc();
-                }
-                console.log(name, mode);
-                console.table(tests, ind);
-            }
-
-            Matrix.dwtmode("per");
-        };
-
-        var test2 = function () {
-            var name = 'coif1', mode = "per"; 
-            // var mode = "check_zpd"; 
-            Matrix.dwtmode(mode);
-            var s = Matrix.ones(3, 2).cumsum(0).cumsum(1);
-            s.display("s");
-            var wt1 = dwt(s, name, 0);
-            wt1[0].display("L");
-            var iwt = idwt(wt1, name, 0);
-            iwt.display("iwt");
-            Matrix.dwtmode("per");
-        };
-
-        var test3 = function () {
-            var name = 'coif1', mode = "zpd"; 
-            Matrix.dwtmode(mode);
-            var s = Matrix.ones(3, 5).cumsum(0).cumsum(1);
-            s.display("s");
-            var wt = dwt2(s, name);
-            wt[0].display("LL");
-            wt[1].display("LH");
-            wt[2].display("HL");
-            wt[3].display("HH");
-            var iwt = idwt2(wt, name);
-            iwt.display("iwt");
-            Matrix.dwtmode("per");
-        };
-
-        var test4 = function () {
-            var name = 'coif1', mode = "zpd"; 
-            Matrix.dwtmode(mode);
-            var tests = {}, time;
-            for (var n = 0; n < wNames.length; n++) {
-                var name = wNames[n]; 
-                for (var m = 0; m < wModes.length; m++) {
-                    Matrix.dwtmode(wModes[m]);
-                    for (var sz = 1; sz < 16; sz++) {
-                        var s = Matrix.rand(sz, sz + 1);
-                        console.log("Modes", wModes[m], "name", name);
-                        Tools.tic();
-                        var wt = Matrix.wavedec(s, 10, name, 0);
-                        var iwt = Matrix.waverec(wt, name, 0);
-                        time = Tools.toc();
-                        var psnr = Matrix.psnr(s, iwt).getDataScalar();
-                        console.log("\t\tPSNR", psnr, "Time", time);
-                    }
-                }
-            }
-            Matrix.dwtmode("per");
-        };
-
-        var test5 = function () {
-            var tests = {}, time;
-            for (var n = 0; n < wNames.length; n++) {
-                var name = wNames[n];
-                for (var m = 0; m < wModes.length; m++) {
-                    Matrix.dwtmode(wModes[m]);
-                    console.log(
-                        "Name:", name,
-                        "Modes:", Matrix.dwtmode()
-                    )
-                    for (var sz = 1; sz < 16; sz++) {
-                        var s = Matrix.rand(sz, sz + 1, 3);
-                        Tools.tic();
-                        var wt1 = Matrix.wavedec(s, 10, name, 0);
-                        var iwt1 = Matrix.waverec(wt1, name, 0);
-                        var wt2 = Matrix.wavedec(s, 10, name, 1);
-                        var iwt2 = Matrix.waverec(wt2, name, 1);
-                        time = Tools.toc();
-                        var err1 = Matrix.minus(s, iwt1).norm(); 
-                        var err2 = Matrix.minus(s, iwt2).norm();
-                        var err1Disp = parseFloat(err1.toExponential(2))
-                        var err2Disp = parseFloat(err2.toExponential(2))
-                        console.log(
-                            "\t\t",
-                            "Size", [sz, sz + 1],
-                            "Errors:", [err1Disp, err2Disp],
-                            "Time:", time
-                        );
-                        if (err1 > 1e-8 || err2 > 1e-8)  {
-                            throw new Error("Error is too high: " + [err1, err2]);
-                        }
-                    }
-                }
-            }
-            Matrix.dwtmode("per");
-        };
-        var test6 = function () {
-            var tests = {}, time;
-            for (var n = 0; n < wNames.length; n++) {
-                var name = wNames[n];
-                for (var m = 0; m < wModes.length; m++) {
-                    Matrix.dwtmode(wModes[m]);
-                    console.log(
-                        "Name:", name,
-                        "Modes:", Matrix.dwtmode()
-                    )
-                    for (var sz = 1; sz < 16; sz++) {
-                        var s = Matrix.rand(sz, sz + 1, 3);
-                        Tools.tic();
-                        var wt = Matrix.wavedec2(s, 10, name);
-                        var iwt = Matrix.waverec2(wt, name);
-                        time = Tools.toc();
-                        var err = Matrix.minus(s, iwt).norm(); 
-                        var errDisp = parseFloat(err.toExponential(2))
-                        console.log(
-                            "\t\t",
-                            "Size", [sz, sz + 1],
-                            "Error:", errDisp,
-                            "Time:", time
-                        );
-                        if (err > 1e-8)  {
-                            throw new Error("Error is too high: " + err);
-                        }
-                    }
-                }
-            }
-            Matrix.dwtmode("per");
-        };
-
-        var test7 = function (name) {
-            Matrix.dwtmode("zpd");
-            //console.log(getPaddingInfos(, 1));
-            var s = Matrix.ones(1, 1).cumsum(0).cumsum(1);
-            s.display("s");
-            Tools.tic();
-            // var wt = Matrix.dwt2(s, name);
-            // var iwt = Matrix.idwt2(wt, name);
-            var wt = Matrix.wavedec2(s, 2, name);
-            var iwt = Matrix.waverec2(wt, name);
-            var time = Tools.toc();
-            iwt.display("out")
-            Matrix.dwtmode("per");
-        };
-        // tests_1D();
-        // tests_2D();
-        // test_bis();
-        // test2();
-        // test3();
-        // test5();
-        // test6("haar");
-        // test6("sym2");
-        // test6("coif1");
-        // test6("sym4");
-        // test6("bi97");
-        // test6("coif2");
-        // padTest(false);
-        // padTest(true);
-
-    }, false);
 })(Matrix, Matrix.prototype);
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -3227,9 +3233,9 @@
         // Pre-defined wavelets
         if (Wavelet.list[this.name]) {
             var wav = Wavelet.list[this.name];
-            var normalize = (wav.normalized !== undefined && !wav.normalized)
-                    ? function (h) { return Wavelet.filter(h, 'norm'); }
-                : function (h) { return h; };
+            var normalize =
+                    (wav.normalized !== undefined && !wav.normalized) ?
+                    function (h) { return Wavelet.filter(h, 'norm'); } : function (h) { return h; };
             /** Low-pass recursive decomposition filter. */
             this.filterL = normalize(wav.filterL);
             /** Is the wavelet orthogonal? */
@@ -3295,11 +3301,11 @@
             'name': 'Daubechies 4',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.010597401784997278,
+               -0.010597401784997278,
                 0.032883011666982945,
                 0.030841381835986965,
-                    -0.18703481171888114,
-                    -0.027983769416983849,
+               -0.18703481171888114,
+               -0.027983769416983849,
                 0.63088076792959036,
                 0.71484657055254153,
                 0.23037781330885523
@@ -3309,18 +3315,18 @@
             'name': 'Daubechies 8',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.00011747678400228192,
+               -0.00011747678400228192,
                 0.00067544940599855677,
-                    -0.00039174037299597711,
-                    -0.0048703529930106603,
+               -0.00039174037299597711,
+               -0.0048703529930106603,
                 0.0087460940470156547,
                 0.013981027917015516,
-                    -0.044088253931064719,
-                    -0.017369301002022108,
+               -0.044088253931064719,
+               -0.017369301002022108,
                 0.12874742662018601,
                 0.00047248457399797254,
-                    -0.28401554296242809,
-                    -0.015829105256023893,
+               -0.28401554296242809,
+               -0.015829105256023893,
                 0.58535468365486909,
                 0.67563073629801285,
                 0.31287159091446592,
@@ -3332,7 +3338,7 @@
             'name': 'Symlets 2',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.12940952255092145,
+               -0.12940952255092145,
                 0.22414386804185735,
                 0.83651630373746899,
                 0.48296291314469025
@@ -3342,13 +3348,13 @@
             'name': 'Symlets 4',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.075765714789273325,
-                    -0.02963552764599851,
+               -0.075765714789273325,
+               -0.02963552764599851,
                 0.49761866763201545,
                 0.80373875180591614,
                 0.29785779560527736,
-                    -0.099219543576847216,
-                    -0.012603967262037833,
+               -0.099219543576847216,
+               -0.012603967262037833,
                 0.032223100604042702
             ])
         },
@@ -3356,21 +3362,21 @@
             'name': 'Symlets 8',
             'orthogonal': true,
             'filterL': ([
-                    -0.0033824159510061256,
-                    -0.00054213233179114812,
+               -0.0033824159510061256,
+               -0.00054213233179114812,
                 0.031695087811492981,
                 0.0076074873249176054,
-                    -0.14329423835080971,
-                    -0.061273359067658524,
+               -0.14329423835080971,
+               -0.061273359067658524,
                 0.48135965125837221,
                 0.77718575170052351,
                 0.3644418948353314,
-                    -0.051945838107709037,
-                    -0.027219029917056003,
+               -0.051945838107709037,
+               -0.027219029917056003,
                 0.049137179673607506,
                 0.0038087520138906151,
-                    -0.014952258337048231,
-                    -0.0003029205147213668,
+               -0.014952258337048231,
+               -0.0003029205147213668,
                 0.0018899503327594609
             ])
         },
@@ -3379,29 +3385,29 @@
             'name': 'Coiflets 1',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.01565572813546454,
-                    -0.072732619512853897,
+               -0.01565572813546454,
+               -0.072732619512853897,
                 0.38486484686420286,
                 0.85257202021225542,
                 0.33789766245780922,
-                    -0.072732619512853897
+               -0.072732619512853897
             ])
         },
         'coif2': {
             'name': 'Coiflets 2',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -0.00072054944536451221,
-                    -0.0018232088707029932,
+               -0.00072054944536451221,
+               -0.0018232088707029932,
                 0.0056114348193944995,
                 0.023680171946334084,
-                    -0.059434418646456898,
-                    -0.076488599078306393,
+               -0.059434418646456898,
+               -0.076488599078306393,
                 0.41700518442169254,
                 0.81272363544554227,
                 0.38611006682116222,
-                    -0.067372554721963018,
-                    -0.041464936781759151,
+               -0.067372554721963018,
+               -0.041464936781759151,
                 0.016387336463522112
             ])
         },
@@ -3409,29 +3415,29 @@
             'name': 'Coiflets 4',
             'orthogonal': true,
             'filterL': new Float64Array([
-                    -1.7849850030882614e-06,
-                    -3.2596802368833675e-06,
+               -1.7849850030882614e-06,
+               -3.2596802368833675e-06,
                 3.1229875865345646e-05,
                 6.2339034461007128e-05,
-                    -0.00025997455248771324,
-                    -0.00058902075624433831,
+               -0.00025997455248771324,
+               -0.00058902075624433831,
                 0.0012665619292989445,
                 0.0037514361572784571,
-                    -0.0056582866866107199,
-                    -0.015211731527946259,
+               -0.0056582866866107199,
+               -0.015211731527946259,
                 0.025082261844864097,
                 0.039334427123337491,
-                    -0.096220442033987982,
-                    -0.066627474263425038,
+               -0.096220442033987982,
+               -0.066627474263425038,
                 0.4343860564914685,
                 0.78223893092049901,
                 0.41530840703043026,
-                    -0.056077313316754807,
-                    -0.081266699680878754,
+               -0.056077313316754807,
+               -0.081266699680878754,
                 0.026682300156053072,
                 0.016068943964776348,
-                    -0.0073461663276420935,
-                    -0.0016294920126017326,
+               -0.0073461663276420935,
+               -0.0016294920126017326,
                 0.00089231366858231456
             ])
         },
@@ -3440,17 +3446,17 @@
             'name': 'Biorthogonal 1-3',
             'orthogonal': false,
             'filterL': new Float64Array([
-                    -0.088388347648318447,
+               -0.088388347648318447,
                 0.088388347648318447,
                 0.70710678118654757,
                 0.70710678118654757,
                 0.088388347648318447,
-                    -0.088388347648318447
+               -0.088388347648318447
             ]),
             'filterH': new Float64Array([
                 0,
                 0,
-                    -0.70710678118654757,
+               -0.70710678118654757,
                 0.70710678118654757,
                 0,
                 0
@@ -3478,21 +3484,21 @@
             'filterL': new Float64Array([
                 0.0,
                 0.0019088317364812906,
-                    -0.0019142861290887667,
-                    -0.016990639867602342,
+               -0.0019142861290887667,
+               -0.016990639867602342,
                 0.01193456527972926,
                 0.04973290349094079,
-                    -0.077263173167204144,
-                    -0.09405920349573646,
+               -0.077263173167204144,
+               -0.09405920349573646,
                 0.42079628460982682,
                 0.82592299745840225,
                 0.42079628460982682,
-                    -0.09405920349573646,
-                    -0.077263173167204144,
+               -0.09405920349573646,
+               -0.077263173167204144,
                 0.04973290349094079,
                 0.01193456527972926,
-                    -0.016990639867602342,
-                    -0.0019142861290887667,
+               -0.016990639867602342,
+               -0.0019142861290887667,
                 0.0019088317364812906
             ]),
             'filterH': new Float64Array([
@@ -3500,15 +3506,15 @@
                 0.0,
                 0.0,
                 0.014426282505624435,
-                    -0.014467504896790148,
-                    -0.078722001062628819,
+               -0.014467504896790148,
+               -0.078722001062628819,
                 0.040367979030339923,
                 0.41784910915027457,
-                    -0.75890772945365415,
+               -0.75890772945365415,
                 0.41784910915027457,
                 0.040367979030339923,
-                    -0.078722001062628819,
-                    -0.014467504896790148,
+               -0.078722001062628819,
+               -0.014467504896790148,
                 0.014426282505624435,
                 0.0,
                 0.0,
@@ -3516,30 +3522,31 @@
                 0.0
             ])
         },
-        'bi97': {
-            'name': 'Biorthogonal 9-7',
+        // Cohen-Daubechies-Feauveau
+        'cdf97': {
+            'name': 'Cohen-Daubechies-Feauveau 9-7',
             'orthogonal': false,
             'filterL': new Float64Array([
                 0.0,
                 0.02674875741080976,
-                    -0.01686411844287495,
-                    -0.07822326652898785,
+               -0.01686411844287495,
+               -0.07822326652898785,
                 0.2668641184428723,
                 0.6029490182363579,
                 0.2668641184428723,
-                    -0.07822326652898785,
-                    -0.01686411844287495,
+               -0.07822326652898785,
+               -0.01686411844287495,
                 0.02674875741080976
             ]),
             'filterH': new Float64Array([
                 0.0,
-                    -0.09127176311424948,
+               -0.09127176311424948,
                 0.05754352622849957,
                 0.5912717631142470,
-                    -1.115087052456994,
+               -1.115087052456994,
                 0.5912717631142470,
                 0.05754352622849957,
-                    -0.09127176311424948,
+               -0.09127176311424948,
                 0.0,
                 0.0
             ])
@@ -3559,10 +3566,10 @@
             'filterH': new Float64Array([
                 0.08838834764831845,
                 0.08838834764831845,
-                    -0.7071067811865476,
+               -0.7071067811865476,
                 0.7071067811865476,
-                    -0.08838834764831845,
-                    -0.08838834764831845
+               -0.08838834764831845,
+               -0.08838834764831845
             ])
         },
         'rbio31': {
@@ -3577,8 +3584,8 @@
             'filterH': new Float64Array([
                 0.3535533905932738,
                 1.0606601717798214,
-                    -1.0606601717798214,
-                    -0.3535533905932738
+               -1.0606601717798214,
+               -0.3535533905932738
             ])
         },
         'rbio33': {
@@ -3595,12 +3602,12 @@
                 0.0
             ]),
             'filterH': new Float64Array([
-                    -0.06629126073623884,
-                    -0.19887378220871652,
+               -0.06629126073623884,
+               -0.19887378220871652,
                 0.15467960838455727,
                 0.9943689110435825,
-                    -0.9943689110435825,
-                    -0.15467960838455727,
+               -0.9943689110435825,
+               -0.15467960838455727,
                 0.19887378220871652,
                 0.06629126073623884
             ])
@@ -3625,16 +3632,16 @@
             'filterH': new Float64Array([
                 0.013810679320049757,
                 0.04143203796014927,
-                    -0.052480581416189075,
-                    -0.26792717880896527,
+               -0.052480581416189075,
+               -0.26792717880896527,
                 0.07181553246425874,
                 0.966747552403483,
-                    -0.966747552403483,
-                    -0.07181553246425874,
+               -0.966747552403483,
+               -0.07181553246425874,
                 0.26792717880896527,
                 0.052480581416189075,
-                    -0.04143203796014927,
-                    -0.013810679320049757
+               -0.04143203796014927,
+               -0.013810679320049757
             ])
         },
         'rbio39': {
@@ -3665,24 +3672,24 @@
             'filterH': new Float64Array([
                 0.000679744372783699,
                 0.002039233118351097,
-                    -0.005060319219611981,
-                    -0.020618912641105536,
+               -0.005060319219611981,
+               -0.020618912641105536,
                 0.014112787930175846,
                 0.09913478249423216,
-                    -0.012300136269419315,
-                    -0.32019196836077857,
-                    -0.0020500227115698858,
+               -0.012300136269419315,
+               -0.32019196836077857,
+               -0.0020500227115698858,
                 0.9421257006782068,
-                    -0.9421257006782068,
+               -0.9421257006782068,
                 0.0020500227115698858,
                 0.32019196836077857,
                 0.012300136269419315,
-                    -0.09913478249423216,
-                    -0.014112787930175846,
+               -0.09913478249423216,
+               -0.014112787930175846,
                 0.020618912641105536,
                 0.005060319219611981,
-                    -0.002039233118351097,
-                    -0.000679744372783699
+               -0.002039233118351097,
+               -0.000679744372783699
             ])
         }
     };

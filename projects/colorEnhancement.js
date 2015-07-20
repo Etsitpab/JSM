@@ -39,7 +39,7 @@
         var T = Math.max(1.01 / 255, max / K);
         var y, yp, pow = Math.pow;
         var c = window.USE_CST ? 1 / (pow(255, gamma - 1)) : 1;
-        for (var i = 0; i < ei; i++) {
+        for (i = 0; i < ei; i++) {
             var sign = D[i] > 0 ? 1 : -1, d0 = sign === 1 ? D[i] : -D[i];
             if (d0 <= T) {
                 continue;
@@ -71,25 +71,24 @@
         }
         var nChannel = im.size(2), wt = [];
         var mean = [], max = [], min = [];
-        var imApprox;
         var wNorm = Matrix.wfilters(name, 'd')[0].sum().getDataScalar();
         wNorm = Math.pow(wNorm, 2 * J);
         var norm;
 
-        var imMean = 0;
+        var A, imMean = 0;
         for (var c = 0; c < nChannel; c++) {
             wt[c] = Matrix.wavedec2(im.get([], [], c), J, name);
-            var A = Matrix.appcoef2(wt[c], name, J);
+            A = Matrix.appcoef2(wt[c], name, J);
             mean[c] = A.mean().getDataScalar();
             min[c] = A.min().getDataScalar();
             max[c] = A.max().getDataScalar();
             imMean += mean[c] / nChannel;
         }
-        var imMin = Math.min(min[0], min[1], min[2]);
-        var imMax = Math.max(max[0], max[1], max[2]);
+        // var imMin = Math.min(min[0], min[1], min[2]);
+        // var imMax = Math.max(max[0], max[1], max[2]);
    
-        for (var c = 0; c < nChannel; c++) {
-            var A = Matrix.appcoef2(wt[c], name, J);
+        for (c = 0; c < nChannel; c++) {
+            A = Matrix.appcoef2(wt[c], name, J);
             if (average === "image") {
                 norm = imMean;
             } else if (average === "channel") {
@@ -104,7 +103,7 @@
             A["*="](1 - alpha)["+="](norm * alpha);
         }
 
-        for (var c = 0; c < nChannel; c++) {
+        for (c = 0; c < nChannel; c++) {
             for (var j = J - 1; j >= 0; j--) { 
                 var d = wt[c][0].getData();
                 var sb = wt[c][1].value([0, 0]) * wt[c][1].value([0, 1]);
@@ -129,7 +128,7 @@
         name = (name === undefined) ? 'sym4' : name;
         K = (K === undefined) ? 20 : K;
 
-        var im = this.im2double()
+        var im = this.im2double();
         var out = Matrix.zeros(im.size());
         var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
         for (var c = 0; c < im.size(2); c++) {
@@ -146,7 +145,7 @@
                 processCoeffs(d.subarray(3 * sb, 4 * sb), A, K, w, gamma);
                 wt = Matrix.upwlev2(wt, name);
             }
-            var channel = wt[0].reshape(wt[1].get(0).getData());
+            channel = wt[0].reshape(wt[1].get(0).getData());
             out.set([], [], c, channel);
         }
         return out;
