@@ -267,14 +267,19 @@ Effects.move = function (to, relative) {
 
     // Apply it to the list
     var list = document.getElementById('effects');
+    var params = document.getElementById('parameters');
     var k = list.selectedIndex;
     if (k !== -1) {
         var pos = moveArrayElmt(Effects.list, k, to, relative);
         while (list.firstChild) {
             list.removeChild(list.firstChild);
         }
+        while (params.firstChild) {
+            params.removeChild(params.firstChild);
+        }
         for (k = 0; k < Effects.list.length; ++k) {
             list.appendChild(Effects.list[k].optionElement);
+            params.appendChild(Effects.list[k].optgroupElement);
         }
         list.selectedIndex = pos;
         Effects.run();
@@ -331,7 +336,7 @@ Effects.updateName = function () {
 };
 
 // Update the value of a parameter
-Effects.updateParameter = function (isBlur) {
+Effects.updateParameter = function () {
     'use strict';
     var s = Effects.getSelectedFromParameters();
     if (s) {
@@ -347,12 +352,8 @@ Effects.updateParameter = function (isBlur) {
         if (value) {
             s.effect.setParameter(name, value);
             field.value = JSON.stringify(value);
-            if (!isBlur) {
-                field.select();
-            }
+            field.select();
             Effects.run();
-        } else if (isBlur) {
-            Effects.displayParameter();
         } else {
             window.alert('Invalid syntax.');
         }
@@ -476,7 +477,12 @@ Effects._runOnce = function (images, toImage) {
 Effects._runLoop = function () {
     'use strict';
     if (Effects._runLoop_images) {
-        Effects._runOnce(Effects._runLoop_images);
+        try {
+            Effects._runOnce(Effects._runLoop_images);
+        } catch (e) {
+            delete Effects._runLoop_images;
+            throw e;
+        }
         Webcam.requestAnimationFrame(Effects._runLoop);
     }
 };

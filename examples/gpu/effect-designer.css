@@ -13,8 +13,8 @@ input[type=button] {
 
 #menu input[type=text],
 #menu select {
-    min-width: 10em;
-    max-width: 95%;
+    min-width: 11em;
+    max-width: 90%;
 }
 
 #menu select {
@@ -28,6 +28,10 @@ input[type=button] {
 
 .bold {
     font-weight: bold;
+}
+
+.small {
+    font-size: 0.8em;
 }
 
 .tab {
@@ -60,12 +64,12 @@ input[type=button] {
     overflow-x: hidden;
     overflow-y: auto;
     left: 0px;
-    width: 200px;
+    width: 180px;
 }
 
 .right-column {
     overflow-x: auto;
-    margin-left: 220px;  /* = left-column-width + 2 * (margin + padding + border) */
+    margin-left: 200px;  /* = left-column-width + 2 * (margin + padding + border) */
 }
 
 #resizer {

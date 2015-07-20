@@ -35,16 +35,16 @@
       </div>
       <p>
         <label for="parameters">Parameters</label>:<br/>
-        <select id="parameters" size="3"
+        <select id="parameters" size="4"
                 title="Parameters of the effects"
                 onchange="Effects.displayParameter()">
         </select><br/>
         <input type="text" id="parameter"
-               onblur="Effects.updateParameter(true)"/>
+               onblur="Effects.displayParameter()"/>
       </p>
       <p>
         <label for="effects">Effects</label>:<br/>
-        <select id="effects" size="3"
+        <select id="effects" size="4"
                 title="List of active filters (double-click to turn on/off)"
                 onchange="Effects.toHTML()"
                 ondblclick="Effects.toggle(event)">
@@ -77,13 +77,6 @@
 
     <!-- Output image -->
     <div id="outputs" class="right-column">
-      <p class="bold">TODO</p>
-      <ul>
-        <li>Firefox: bug when double-click to capture image</li>
-        <li>Firefox: setParameters: bug when usec with conv3x1</li>
-        <li>Bug: call "run" when opts has changed</li>
-        <li>Test everything, including Firefox + Android</li>
-      </ul>
       <p class="bold">How to use it:</p>
       <ul>
         <li>Load images or video (drag'n'drop them or click the "<tt class="bold">+</tt>" slot).</li>
@@ -91,6 +84,11 @@
         <li>Import existing effects using the left menu.</li>
         <li>If any, set parameters using the left menu.</li>
         <li>Enjoy!</li>
+      </ul>
+      <p class="bold">Known bugs:</p>
+      <ul class="small">
+        <li>Firefox does not prevent default when using Ctrl+Shift+Arrow on the list of effects.</li>
+        <li>Firefox throws an error when double-clicking the output, but the format/type pair is correct.</li>
       </ul>
     </div>
 

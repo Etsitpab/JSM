@@ -22,6 +22,8 @@ Shortcuts.create = function (elmt, shortcut, callback) {
     if (!elmt._shortcuts) {
         elmt._shortcuts = {};
         elmt.addEventListener('keydown', Shortcuts._handleEvent);
+        //elmt.addEventListener('keyup', Shortcuts._handleDefaultPrevention);
+        //elmt.addEventListener('keypress', Shortcuts._handleDefaultPrevention);
     }
     var code = Shortcuts._str2code(shortcut);
     elmt._shortcuts[code] = callback;
@@ -98,19 +100,43 @@ Shortcuts._code2str = function (code) {
     return array.join('+');
 };
 
-/** Callback function when a key is pressed on an element with shortcuts.
+/** Get the key code from an event.
  * @param {KeyboardEvent} evt
- * @private */
-Shortcuts._handleEvent = function (evt) {
+ * @return {Number}
+ * @private*/
+Shortcuts._event2code = function (evt) {
     'use strict';
     var key = evt.which || evt.keyCode;
     if (evt.altKey) { key |= Shortcuts.FlagCodes.ALT; }
     if (evt.ctrlKey) { key |= Shortcuts.FlagCodes.CTRL; }
     if (evt.shiftKey) { key |= Shortcuts.FlagCodes.SHIFT; }
+    return key;
+};
+
+/** Callback function when a key is pressed on an element with shortcuts.
+ * @param {KeyboardEvent} evt
+ * @private */
+Shortcuts._handleEvent = function (evt) {
+    'use strict';
+    var key = Shortcuts._event2code(evt);
     if (this._shortcuts[key]) {
         evt.preventDefault();
         evt.stopPropagation();
         this._shortcuts[key].call(this, evt);
+        return false;
+    }
+};
+
+/** Callback function to prevent default action of shortcuts.
+ * @param {KeyboardEvent} evt
+ * @private */
+Shortcuts._handleDefaultPrevention = function (evt) {
+    'use strict';
+    var key = Shortcuts._event2code(evt);
+    if (this._shortcuts[key]) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        return false;
     }
 };
 
