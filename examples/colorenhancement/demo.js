@@ -169,6 +169,14 @@ window.onload = function () {
             addImage.bind(this.src)();
         });
     };
+
+    var paperResults = function () {
+        if ($V("paperResults") === "YES") {
+            window.EDO_RES = true;
+        } else {
+            window.EDO_RES = false;
+        }
+    };
     
     initFileUpload("loadFile", addImage);
     initInputs();
@@ -179,6 +187,8 @@ window.onload = function () {
     $("view").addEventListener("change", updateOutput, false);
     $('stretchDyn').addEventListener("change", updateOutput, false);
     $('pinImage').addEventListener("click", pinImage, false);
+    $('paperResults').addEventListener("change", paperResults, false);
+    
     document.body.onresize = updateOutput;
     //hideFieldset();
 };
