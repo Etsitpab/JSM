@@ -285,33 +285,56 @@
         return Y.transpose();
     };
 
-    /** This function moves the zero-frequency of the fft of a 
-     * signal to the center of the array.
-     *
-     * @param {Integer} [dimension] It defines the dimension 
-     *  along which the signal is rearranged. Otherwise, the 
-     *  operation is done along all dimension.
-     *
-     * __See also :__
-     * {@link Matrix#fft},
-     * {@link Matrix#fft2}.
-     *
-     * @chainable
-     */
-    Matrix.prototype.fftshift = function (dim) {
-        var size = this.getSize();
-        if (Tools.isSet(dim)) {
-            if (!Tools.isInteger(dim, 0)) {
-                throw new Error("Matrix.fftshift: Dimension must be a positive integer");
+    (function () {
+        var shift = function (fft, dim, fun) {
+            var size = fft.getSize();
+            if (Tools.isSet(dim)) {
+                if (!Tools.isInteger(dim, 0)) {
+                    throw new Error("Matrix.fftshift: Dimension must be a positive integer");
+                }
+                return this.circshift(fun(size[dim] / 2), dim);
             }
-            return this.circshift(Math.floor(size[dim] / 2), dim);
-        }
-        for (var i = 0, ie = size.length; i < ie ; i++) {
-            size[i] = Math.floor(size[i] / 2)
-        }
-        return this.circshift(size);
-     };
+            for (var i = 0, ie = size.length; i < ie ; i++) {
+                size[i] = fun(size[i] / 2)
+            }
+            return fft.circshift(size);
+        };
+        /** This function moves the zero-frequency of the fft of a 
+         * signal to the center of the array.
+         *
+         * @param {Integer} [dimension] It defines the dimension 
+         *  along which the signal is rearranged. Otherwise, the 
+         *  operation is done along all dimension.
+         *
+         * __See also :__
+         * {@link Matrix#ifftshift},
+         * {@link Matrix#fft},
+         * {@link Matrix#fft2}.
+         *
+         * @chainable
+         */
+        Matrix.prototype.fftshift = function (dim) {
+            return shift(this, dim, Math.floor);
+        };
 
+        /** This function inverts the action of fftshift.
+         *
+         * @param {Integer} [dimension] It defines the dimension 
+         *  along which the signal is rearranged. Otherwise, the 
+         *  operation is done along all dimension.
+         *
+         * __See also :__
+         * {@link Matrix#fftshift},
+         * {@link Matrix#fft},
+         * {@link Matrix#fft2}.
+         *
+         * @chainable
+         */
+        Matrix.prototype.ifftshift = function (dim) {
+            return shift(this, dim, Math.ceil);
+        };
+    })();
+    
     /** Compute the inverse FFT of a vector.
      *
      * __See also :__

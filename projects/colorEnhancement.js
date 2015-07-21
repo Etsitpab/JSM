@@ -19,7 +19,15 @@
 (function () {
     'use strict';
 
-    window.USE_CST = true;
+    /* When set to true, allow to reproduce results from the paper.
+     * - The first one appears when adapting the alorithm to image 
+     *   with 0-1 dynamic instead of 0-255. 
+     * - The second apply some processing on approximation coefficients
+     *   that are not described in the paper.
+     */
+    window.USE_CST = true; 
+    window.EDO_RES = false;
+    
     var processCoeffs = function (D, A, K, w, gamma) {
         var max = D[0] > 0 ? D[0] : -D[0];
         for (var i = 1, ei = D.length; i < ei; i++) {
@@ -31,7 +39,7 @@
         var T = Math.max(1.01 / 255, max / K);
         var y, yp, pow = Math.pow;
         var c = window.USE_CST ? 1 / (pow(255, gamma - 1)) : 1;
-        for (var i = 0; i < ei; i++) {
+        for (i = 0; i < ei; i++) {
             var sign = D[i] > 0 ? 1 : -1, d0 = sign === 1 ? D[i] : -D[i];
             if (d0 <= T) {
                 continue;
@@ -58,27 +66,29 @@
 
         var im = this.im2double(), out = Matrix.zeros(im.size());
         var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
-        
+        if (window.EDO_RES) {
+            J = J - 1;
+        }
         var nChannel = im.size(2), wt = [];
         var mean = [], max = [], min = [];
-        var imApprox;
         var wNorm = Matrix.wfilters(name, 'd')[0].sum().getDataScalar();
         wNorm = Math.pow(wNorm, 2 * J);
         var norm;
 
+        var A, imMean = 0;
         for (var c = 0; c < nChannel; c++) {
             wt[c] = Matrix.wavedec2(im.get([], [], c), J, name);
-            var A = Matrix.appcoef2(wt[c], name, J - 1);
+            A = Matrix.appcoef2(wt[c], name, J);
             mean[c] = A.mean().getDataScalar();
-            // min[c] = A.min().getDataScalar();
-            // max[c] = A.max().getDataScalar();
+            min[c] = A.min().getDataScalar();
+            max[c] = A.max().getDataScalar();
+            imMean += mean[c] / nChannel;
         }
-        var imMean = (mean[0] + mean[1] + mean[2]) / 3;
         // var imMin = Math.min(min[0], min[1], min[2]);
         // var imMax = Math.max(max[0], max[1], max[2]);
    
-        for (var c = 0; c < nChannel; c++) {
-            var A = Matrix.appcoef2(wt[c], name, J - 1);
+        for (c = 0; c < nChannel; c++) {
+            A = Matrix.appcoef2(wt[c], name, J);
             if (average === "image") {
                 norm = imMean;
             } else if (average === "channel") {
@@ -87,10 +97,13 @@
                 norm = wNorm * 0.5; 
             }
             // A["-="](imMin)["*="](wNorm / (imMax - imMin));
+            if (window.EDO_RES) {
+                A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
+            }
             A["*="](1 - alpha)["+="](norm * alpha);
         }
 
-        for (var c = 0; c < nChannel; c++) {
+        for (c = 0; c < nChannel; c++) {
             for (var j = J - 1; j >= 0; j--) { 
                 var d = wt[c][0].getData();
                 var sb = wt[c][1].value([0, 0]) * wt[c][1].value([0, 1]);
@@ -103,6 +116,7 @@
             var channel = wt[c][0].reshape(wt[c][1].get(0).getData());
             out.set([], [], c, channel);
         }
+
         return out;
     };
     
@@ -113,8 +127,8 @@
         w = (w === undefined) ? 15 / 255 : w;
         name = (name === undefined) ? 'sym4' : name;
         K = (K === undefined) ? 20 : K;
-        
-        var im = this.im2double()
+
+        var im = this.im2double();
         var out = Matrix.zeros(im.size());
         var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
         for (var c = 0; c < im.size(2); c++) {
@@ -131,7 +145,7 @@
                 processCoeffs(d.subarray(3 * sb, 4 * sb), A, K, w, gamma);
                 wt = Matrix.upwlev2(wt, name);
             }
-            var channel = wt[0].reshape(wt[1].get(0).getData());
+            channel = wt[0].reshape(wt[1].get(0).getData());
             out.set([], [], c, channel);
         }
         return out;

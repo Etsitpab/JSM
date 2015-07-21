@@ -12,6 +12,7 @@ var stretchLuminance = function (im) {
     var e = ld.length;
     for (var r = 0, g = e, b = 2 * e; r < e; r++, g++, b++) {
         var cst = ld[r] <= 0 ? 0 : lsd[r] / ld[r];
+        cst = cst > 1 ? 1 : cst;
         od[r] *= cst;
         od[g] *= cst;
         od[b] *= cst;
@@ -64,7 +65,7 @@ function updateOutput() {
 
 var colEn = function () {
     "use strict";
-    
+    Matrix.dwtmode("sym");
     var getParameters = function () {
         return {
             K: $F("K"),
@@ -92,7 +93,14 @@ var colEn = function () {
     };
 
     colEn.fun = function (img, p) {
-        if (p.colorspace !== "RGB") {
+        console.log(p.colorspace);
+        if (p.colorspace === "Gray") {
+            img = Matrix.applycform(img, "RGB to Ohta");
+            var L = img.get([], [], 0);
+            L = L.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
+            return img.set([], [], 0, L).applycform("Ohta to RGB");
+        }
+        if(p.colorspace !== "RGB") {
             img = Matrix.applycform(img, "RGB to " + p.colorspace);
         }
         img = img.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
@@ -161,6 +169,14 @@ window.onload = function () {
             addImage.bind(this.src)();
         });
     };
+
+    var paperResults = function () {
+        if ($V("paperResults") === "YES") {
+            window.EDO_RES = true;
+        } else {
+            window.EDO_RES = false;
+        }
+    };
     
     initFileUpload("loadFile", addImage);
     initInputs();
@@ -171,6 +187,8 @@ window.onload = function () {
     $("view").addEventListener("change", updateOutput, false);
     $('stretchDyn').addEventListener("change", updateOutput, false);
     $('pinImage').addEventListener("click", pinImage, false);
+    $('paperResults').addEventListener("change", paperResults, false);
+    
     document.body.onresize = updateOutput;
     //hideFieldset();
 };

@@ -5,6 +5,7 @@
     <script src="../../modules/JSM.js"></script>
     <script src="../../modules/Image.js"></script>
     <script src="../../modules/Linalg.js"></script>
+    <script src="../../src/Image/Image.wavelets.js"></script>
 
     <script src="../base.js"></script>
     <script src="../Disk.js"></script>
@@ -52,6 +53,11 @@
             <label class="val"> &Gamma; </label>
             <input type="range" id="Gamma" class="val" min="0.1" step="0.1" max="1.5" value="1.0"/>
             <input type="text" id="GammaVal" class="val" value="" readonly>
+            <label> Paper results </label>
+            <select id="paperResults">
+              <option value="YES"> YES </option>
+              <option value="NO" selected> NO </option>
+            </select>
           </fieldset>
           <hr></hr>
 
@@ -59,7 +65,7 @@
             <legend>Color enhancement</legend>
             <label> Average value </label>
             <select id="averageValue">
-              <option value="channel"> Channel average </option>
+              <option value="channel" selected> Channel average </option>
               <option value="image"> Image average </option>
               <option value="half"> 1/2 </option>
             </select>
@@ -79,13 +85,16 @@
             <select id="wavelet" style="width:62%;">
               <option value="sym4"> SYM4 </option>
               <option value="sym8"> SYM8 </option>
+              <option value="coif1"> COIF1 </option>
+              <option value="coif2"> COIF2 </option>
               <option value="haar"> HAAR </option>
-              <option value="bi97"> BI97 </option>
+              <option value="sym2"> SYM2 </option>
+              <option value="cdf97"> CDF97 </option>
             </select>
             <label> Colorspace </label>
             <select id="colorspace">
               <option value="RGB"> RGB </option>
-              <option value="GRAY"> Gray </option>
+              <option value="Gray"> Gray </option>
               <option value="HSV"> HSV </option>
               <option value="HSL"> HSL </option>
               <option value="Opponent"> Opponent </option>
@@ -94,7 +103,7 @@
               <option value="XYZ"> CIE XYZ </option>
               <option value="xyY"> CIE xyY </option>
               <option value="1960 uvY"> CIE 1960 uvY </option>
-	      <option value="1976 u'v'Y"> CIE 1976 u'v'Y </option>	
+              <option value="1976 u'v'Y"> CIE 1976 u'v'Y </option>	
               <option value="Lab"> CIE Lab </option>	
               <option value="Luv"> CIE Luv </option>	
               <option value="Lch"> CIE Lch </option>	

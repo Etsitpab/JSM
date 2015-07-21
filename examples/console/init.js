@@ -17,12 +17,6 @@ window.onbeforeunload = function (e) {
 };
 
 // Raccourci $(id) pour getElementById
-window.$ = function (id) {
-    'use strict';
-    return document.getElementById(id);
-};
-
-// Raccourci $(id) pour getElementById
 window.$M = function (data) {
     'use strict';
     return Matrix.toMatrix(data);
@@ -35,6 +29,13 @@ function include(jsFile) {
     var newNode = Dom.createNode('script', 'type', 'text/javascript', 'src', jsFile);
     header.appendChild(newNode);
 }
+
+var clear = function () {
+    var myNode = document.getElementById("tableCanvas");
+    while (myNode.firstChild) {
+        myNode.removeChild(myNode.firstChild);
+    }
+};
 
 // Ajout d'une zone d'affichage
 function createCanvas(size, id, onclick) {
