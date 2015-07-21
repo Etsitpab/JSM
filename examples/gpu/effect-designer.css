@@ -30,6 +30,10 @@ input[type=button] {
     font-weight: bold;
 }
 
+.italic {
+    font-style: italic;
+}
+
 .small {
     font-size: 0.8em;
 }
@@ -51,9 +55,20 @@ input[type=button] {
     color: gray;
 }
 
-.arrows {
+.narrow {
     padding-left: 0.5em !important;
     padding-right: 0.5em !important;
+}
+
+.param-button {
+    position:relative;
+    left:-3.5em;
+    opacity: 0.3;
+    background-color: transparent;
+}
+
+.param-button:hover {
+    opacity: 1;
 }
 
 

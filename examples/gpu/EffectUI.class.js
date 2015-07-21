@@ -281,8 +281,10 @@ Effects.move = function (to, relative) {
             list.appendChild(Effects.list[k].optionElement);
             params.appendChild(Effects.list[k].optgroupElement);
         }
-        list.selectedIndex = pos;
         Effects.run();
+        setTimeout(function () {  // Hack for FF, which does not preventDefault() here
+            list.selectedIndex = pos;
+        }, 1);
     }
 };
 

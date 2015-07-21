@@ -19,7 +19,7 @@ function createShortcuts() {
 // Create the file loader
 function createFileLoader() {
     'use strict';
-    var fl = new FileLoader('images', FileLoader.MULTIPLE, 'image/*,video/*');
+    var fl = new FileLoader('images', null, 'image/*,video/*');
     fl.appendWebcams();
 
     // Run when selection change

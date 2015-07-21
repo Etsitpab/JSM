@@ -39,8 +39,11 @@
                 title="Parameters of the effects"
                 onchange="Effects.displayParameter()">
         </select><br/>
-        <input type="text" id="parameter"
-               onblur="Effects.displayParameter()"/>
+        <nobr>
+          <input type="text" id="parameter"/>
+          <input type="button" value="OK" class="narrow param-button"
+                 onclick="Effects.updateParameter()"/>
+          </nobr>
       </p>
       <p>
         <label for="effects">Effects</label>:<br/>
@@ -49,16 +52,16 @@
                 onchange="Effects.toHTML()"
                 ondblclick="Effects.toggle(event)">
         </select><br/>
-        <input type="button" value="&#8657;" class="arrows"
+        <input type="button" value="&#8657;" class="narrow"
                title="Move first (Ctrl+Shift+PageUp)"
                onclick="Effects.move(0, false)" />
-        <input type="button" value="&#8639;" class="arrows"
+        <input type="button" value="&#8639;" class="narrow"
                title="Move up (Ctrl+Shift+ArrowUp)"
                onclick="Effects.move(-1, true)" />
-        <input type="button" value="&#8642;" class="arrows"
+        <input type="button" value="&#8642;" class="narrow"
                title="Move down (Ctrl+Shift+ArrowDown)"
                onclick="Effects.move(+1, true)" />
-        <input type="button" value="&#8659;" class="arrows"
+        <input type="button" value="&#8659;" class="narrow"
                title="Move last (Ctrl+Shift+PageDown)"
                onclick="Effects.move(-1, false)" />
 
@@ -89,6 +92,18 @@
       <ul class="small">
         <li>Firefox does not prevent default when using Ctrl+Shift+Arrow on the list of effects.</li>
         <li>Firefox throws an error when double-clicking the output, but the format/type pair is correct.</li>
+      </ul>
+      <p class="bold">To do:</p>
+      <ul class="small">
+        <li class="bold">Effects.run: do NOT create temporary images!</li>
+        <li class="bold">Effects.run: output image should be a formal parameter.</li>
+        <li class="bold">Default values for parameters.</li>
+        <li class="bold">Implement conv9x1.</li>
+        <li>GLEffects: do not create temporary images</li>
+        <li>Allow GLReduction on the result</li>
+        <li>Handle multiple selection (and provide slot functions for it).</li>
+        <li class="italic">Write interesting stuff here.</li>
+        <li class="italic">Create a mobile version.</li>
       </ul>
     </div>
 
