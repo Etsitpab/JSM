@@ -50,8 +50,8 @@ var root = typeof window === &#39;undefined&#39; ? module.exports : window;
         return (k &gt;= nBin) ? (k - nBin) : k;
     };
 
-<span id='Maxtching-Keypoint-method-constructor'><span id='Maxtching-Keypoint'>    /**
-</span></span>     * @class Maxtching.Keypoint
+<span id='Matching-Keypoint-method-constructor'><span id='Matching-Keypoint'>    /**
+</span></span>     * @class Matching.Keypoint
      *
      * This class creates `Keypoint` objects which contains the
      * information on keypoint extracted from an image.
@@ -75,22 +75,22 @@ var root = typeof window === &#39;undefined&#39; ? module.exports : window;
         this.laplacian = laplacian;
     }
 
-<span id='Maxtching-Keypoint-property-nBin'>    /** Number of bins used to compute the histogram of oriented gradient */
+<span id='Matching-Keypoint-property-nBin'>    /** Number of bins used to compute the histogram of oriented gradient */
 </span>    Keypoint.prototype.nBin = 36;
-<span id='Maxtching-Keypoint-property-algorithm'>    /** The algorithm used to compute the main(s) orientation(s) 
+<span id='Matching-Keypoint-property-algorithm'>    /** The algorithm used to compute the main(s) orientation(s) 
 </span>     of the keypoint. */
     Keypoint.prototype.algorithm = &quot;max&quot;;
-<span id='Maxtching-Keypoint-property-factorSize'>    /** The factor size used to determine the associated region 
+<span id='Matching-Keypoint-property-factorSize'>    /** The factor size used to determine the associated region 
 </span>     in the image. */
     Keypoint.prototype.factorSize = 18;
-<span id='Maxtching-Keypoint-property-descriptors'>    /** The descriptor(s) used to describe the region of the keypoint. */
+<span id='Matching-Keypoint-property-descriptors'>    /** The descriptor(s) used to describe the region of the keypoint. */
 </span>    Keypoint.prototype.descriptors = [
         global.descriptorDB[&quot;SIFT&quot;],
     ];
-<span id='Maxtching-Keypoint-property-criterion'>    /** The criterion used to compare the Keypoint to others. */
+<span id='Matching-Keypoint-property-criterion'>    /** The criterion used to compare the Keypoint to others. */
 </span>    Keypoint.prototype.criterion = &quot;NN-DR&quot;;
 
-<span id='Maxtching-Keypoint-method-toString'>    /** Convert the Keypoint to String for export purposes.
+<span id='Matching-Keypoint-method-toString'>    /** Convert the Keypoint to String for export purposes.
 </span>     * The fields to export can be specified as parameters.
      * @param {Boolean} [x = true]
      * @param {Boolean} [y = true]
@@ -119,7 +119,7 @@ var root = typeof window === &#39;undefined&#39; ? module.exports : window;
         return str;
     };
 
-<span id='Maxtching-Keypoint-method-getCopy'>    /** Return a copy of the keypoint */
+<span id='Matching-Keypoint-method-getCopy'>    /** Return a copy of the keypoint */
 </span>    Keypoint.prototype.getCopy = function () {
         var newKeypoint = new Keypoint(this.x, this.y, this.sigma, this.laplacian);
         newKeypoint.nScale = this.nScale;
@@ -139,7 +139,7 @@ var root = typeof window === &#39;undefined&#39; ? module.exports : window;
         return newKeypoint;
     };
 
-<span id='Maxtching-Keypoint-method-extractMainOrientation'>    /** Extract the main(s) orientation(s) from a patch.
+<span id='Matching-Keypoint-method-extractMainOrientation'>    /** Extract the main(s) orientation(s) from a patch.
 </span>     * @param {Object} patch
      * @param {String} [algo]
      */
@@ -207,7 +207,7 @@ var root = typeof window === &#39;undefined&#39; ? module.exports : window;
         }
     };
 
-<span id='Maxtching-Keypoint-method-extractDescriptors'>    /** Extract the Descriptors from a patch.
+<span id='Matching-Keypoint-method-extractDescriptors'>    /** Extract the Descriptors from a patch.
 </span>     * @param {Object} patch
      * @param {String} [descriptors]
      */
@@ -227,7 +227,7 @@ var root = typeof window === &#39;undefined&#39; ? module.exports : window;
         return this;
     };
 
-<span id='Maxtching-Keypoint-method-computeDistances'>    /** Compute distance between the descriptor(s) of a Keypoint and the
+<span id='Matching-Keypoint-method-computeDistances'>    /** Compute distance between the descriptor(s) of a Keypoint and the
 </span>     * descriptors of an Array of keypoints.
      * @param {Array} Keypoints
      * @param {Array} [names]
@@ -538,7 +538,7 @@ var root = typeof window === &#39;undefined&#39; ? module.exports : window;
     Keypoint.NNDR = NNDR;
     Keypoint.AC = AC;
 
-<span id='Maxtching-Keypoint-method-match'>    /** Compute the distances between the keypoint and a list of candidates
+<span id='Matching-Keypoint-method-match'>    /** Compute the distances between the keypoint and a list of candidates
 </span>     * then attribute a disimilarity measure to the matches according to
      * a criterion.
      * @param {Array} keypoints
