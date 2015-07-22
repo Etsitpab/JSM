@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <script src="../../modules/JSM.js"></script>
+
+    <script src="../base.js"></script>
+    <script src="illusion.js"></script>
+    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <title>Color illusion</title>
+  </head>
+
+  <body>
+
+    <div id="demo">
+      <h1>Color Illusion</h1>
+      <input type="file" id="loadFile"/>
+      <div id="interface">
+        
+        <div id="ui">
+          <hr></hr>
+          <input type="button" value="Export image" id="export">
+          <input type="button" value="Start" id="start">
+          <hr></hr>
+          <label> Inverse color time </label>
+          <input type="range" id="time" min="5" step="5" max="60" value="15"/>
+          <label> Inverse color contrast </label>
+          <input type="range" id="contrast" min="1" step="1" max="4" value="1"/>
+          <label> Inverse color luminosity </label>
+          <input type="range" id="luminosity" min="0.1" step="0.05" max="1" value="0.75"/>
+          <hr></hr>
+          <b>Instructions</b>
+          <p>
+            Upload an image, click on the start button and look at the black point at the center of the picture.
+            After some time, you should see the color image you uploaded. 
+            This is in fact a black and white version of your picture. 
+          <p>
+        </div>
+        
+        <div id="image">
+          <canvas id="outputImage"></canvas>
+        </div>
+
+      </div>
+
+    </div>
+
+  </body>
+</html>

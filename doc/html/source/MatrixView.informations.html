@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ *
+ * @author Baptiste Mazin     &lt;baptiste.mazin@telecom-paristech.fr&gt;
+ * @author Guillaume Tartavel &lt;guillaume.tartavel@telecom-paristech.fr&gt;
+ */
+
+<span id='MatrixView'>/** @class MatrixView */
+</span>
+(function (MatrixView, MatrixView_prototype) {
+    &#39;use strict&#39;;
+
+<span id='MatrixView-method-ndims'>    /** Returns the number of array dimensions.
+</span>     * It is a Matlab alias for {@link MatrixView#getDimLength},
+     *
+     * @return {Number}
+     */
+    MatrixView_prototype.ndims = function () {
+        return this.getDimLength();
+    };
+
+<span id='MatrixView-method-isrow'>    /** Test if a the view corresponds to a row vector or not.
+</span>     *
+     * @return{Boolean}
+     */
+    MatrixView_prototype.isrow = function () {
+        var size = this.getSize();
+        return (size.length === 2 &amp;&amp; size[0] === 1);
+    };
+
+<span id='MatrixView-method-iscolumn'>    /** Test if the view correponds to a column vector or not.
+</span>     *
+     * @return{Boolean}.
+     */
+    MatrixView_prototype.iscolumn = function () {
+        var size = this.getSize();
+        return (size.length === 2 &amp;&amp; size[1] === 1);
+    };
+
+<span id='MatrixView-method-isvector'>    /** Test if the view corresponds to a vector or not.
+</span>     *
+     * @return{Boolean}
+     */
+    MatrixView_prototype.isvector = function () {
+        var size = this.getSize();
+        return (size.length === 2 &amp;&amp; (size[1] === 1 || size[0] === 1));
+    };
+
+<span id='MatrixView-method-ismatrix'>    /** Test if the view corresponds to a matrix or not.
+</span>     *
+     * @return{Boolean}
+     */
+    MatrixView_prototype.ismatrix = function () {
+        return this.getSize().length === 2;
+    };
+
+})(MatrixView, MatrixView.prototype);
+</pre>
+</body>
+</html>

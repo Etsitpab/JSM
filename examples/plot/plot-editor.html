@@ -1,0 +1,427 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">
+    <title></Title>
+
+    <script type="text/javascript" src="../../modules/JSM.js"></script>
+    <script type="text/javascript" src="../../modules/Image.js"></script>
+    <script type="text/javascript" src="../../modules/Linalg.js"></script>
+    <script type="text/javascript" src="../../src/Plot/Plot.class.js"> </script>
+
+    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <script  type="text/javascript" src="../base.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="plot.css" media="screen" />
+    <script type="text/javascript" src="plot-editor.js"> </script>
+    
+
+    <body>
+
+    <div id="demo">
+      <h1>Demonstration of the Plot class abilities</h1>
+      <input type="file" id="loadFile" multiple/>
+      <div id="interface">
+        <div id="uiLeft">
+          <input type="button" value="Clear" onclick="restart();" />
+          <input type="button" value="Auto axis" onclick="plot.setAxis();" />
+          <hr/>
+          <fieldset>
+            <legend>Display Properties</legend>
+            <label> Title : </label>
+            <input id="title" type="text" value="" onchange="setTitle();" />
+            <label> x label : </label>
+            <input id="xLabel" type="text" value="" onchange="setXLabel();" />
+            <label> y label : </label>
+            <input id="yLabel" type="text" value="" onchange="setYLabel();" />
+        
+            <hr/>
+        
+            <label> Width : </label>
+            <input id="width" type="text" value="" onchange="setWidth();" /><br />
+            <label> Height : </label>
+            <input id="height" type="text" value="" onchange="setHeight();" /><br />
+            
+            <hr/>
+            
+            <label> Ticks : </label>
+            <select id="displayTicks"
+                    onclick="setDisplayTicks();"
+                    onchange="setDisplayTicks();">
+              <option value="yes"> Yes </option>
+              <option value="none"> None </option>
+            </select> 
+            
+            <label> Axis : </label>
+            <select id="displayAxis"
+                onchange="setDisplayAxis();"
+                    onclick="setDisplayAxis();" >
+              <option value="box"> Box </option>
+              <option value="xy"> XY </option>
+              <option value="none"> None </option>
+            </select> 
+            
+            <label> Legend : </label>
+            <select id="displayLegend"
+                    onchange="setLegend();"
+                    onclick="setLegend();" >
+              <option value="none"> None </option>
+              <option value="auto"> Auto </option>
+              <option value="nw"> North-West </option>
+              <option value="n"> North </option>
+              <option value="ne"> North-East </option>
+              <option value="w"> West </option>
+              <option value="c"> Center </option>
+              <option value="e"> East </option>
+              <option value="sw"> Sud-West </option>
+              <option value="s"> Sud </option>
+              <option value="se"> Sud-East </option>
+            </select> 
+            
+            <label> Preserve ratio : </label>
+            <select id="preserveRatio"
+                    onclick="setPreserveRatio();" 
+                    onchange="setPreserveRatio();">
+              <option value="yes"> Yes </option>
+              <option value="none" selected> None </option>
+            </select> 
+          </fieldset>
+          <a href="csv/example-trigo.csv"> 
+            Download csv example file
+          </a>
+          <a href="images/bird.jpg"> 
+            Download image example file
+          </a>
+          <p>
+            Mouse wheel and Shift+Click will zoom on image. Click is used to select curve and to translate curves.
+          </p>
+        </div>
+
+        <div id="image">
+        </div>
+
+        <div id="uiRight">
+          <fieldset>
+          <legend>Line properties</legend>
+          
+          <label> Curve : </label>
+          <select style="width:100%;" id="curvesIds" onclick="" onchange="">
+          </select> 
+          <input style="width:100%;" type="button" value="Remove" onclick="remove();" />
+          
+          
+          <label> Legend : </label>
+          <input id="legendId" type="text" value=""
+                 onchange="changeLineProperty('legendId', 'id');" />
+          <br />
+          
+          <label> Line stroke: </label>
+          <select id="lineStrokeColor" onclick=""
+                  onchange="changeLineProperty('lineStrokeColor', 'stroke');">
+            <option value="auto" selected>  Auto    </option>
+            <option value="none">           None    </option>
+            <option value="maroon">         Maroon  </option>
+            <option value="red">            Red     </option>
+            <option value="purple">         Purple  </option>
+            <option value="fuchsia">        Fuchsia </option>
+            <option value="green">          Green   </option>
+            <option value="lime">           Lime    </option>
+            <option value="olive">          Olive   </option>
+            <option value="yellow">         Yellow  </option>
+            <option value="navy">           Navy    </option>
+            <option value="blue">           Blue    </option>
+            <option value="teal">           Teal    </option>
+            <option value="aqua">           Aqua    </option>
+            <option value="black">          Black   </option>
+            <option value="grey">           Grey    </option>
+            <option value="silver">         Silver  </option>
+            <option value="white">          White   </option>
+          </select> 
+          
+          <label> Line dash: </label>
+          <select id="lineStyle" onclick=""
+                  onchange="changeLineProperty('lineStyle', 'stroke-dasharray');">
+            <option value="none" selected>     Solid   </option>
+            <option value="1 3">            ....  </option>
+            <option value="5 3">            - - - -  </option>
+            <option value="5 3 1 3">        -.-.  </option>
+          </select> 
+      
+          <label> Line width: </label>
+          <select id="lineWidth"
+                  onchange="changeLineProperty('lineWidth', 'stroke-width');">
+            <option value="0.5">            0.5     </option>
+            <option value="1" selected>     1       </option>
+            <option value="2">              2       </option>
+            <option value="3">              3       </option>
+          </select> 
+          
+          <label> Marker shape: </label>
+          <select id="markerShape"
+                  onchange="changeMarkerProperty('markerShape', 'shape');">
+            <option value="none" selected>  None      </option>
+            <option value="circle">         Circle    </option>
+            <option value="triangle">       Triangle  </option>
+            <option value="rect">           Rectangle </option>
+          </select> 
+          
+          <label> Marker fill: </label>
+          <select id="markerFillColor"
+              onchange="changeMarkerProperty('markerFillColor', 'fill');">
+            <option value="auto" selected>  Auto    </option>
+            <option value="none">           None    </option>
+            <option value="maroon">         Maroon  </option>
+            <option value="red">            Red     </option>
+            <option value="purple">         Purple  </option>
+            <option value="fuchsia">        Fuchsia </option>
+            <option value="green">          Green   </option>
+            <option value="lime">           Lime    </option>
+            <option value="olive">          Olive   </option>
+            <option value="yellow">         Yellow  </option>
+            <option value="navy">           Navy    </option>
+            <option value="blue">           Blue    </option>
+            <option value="teal">           Teal    </option>
+            <option value="aqua">           Aqua    </option>
+            <option value="black">          Black   </option>
+            <option value="grey">           Grey    </option>
+            <option value="silver">         Silver  </option>
+            <option value="white">          White   </option>
+          </select> 
+          
+          <label> Marker orientation: </label>
+          <select id="markerOrientation" onclick=""
+                  onchange="changeMarkerProperty('markerOrientation', 'orient');">
+            <option value="0" selected>    0 (none)     </option>
+            <option value="-90">          90            </option>
+            <option value="-180">        180            </option>
+            <option value="-270">        270            </option>
+            <option value="auto">       Auto            </option>
+          </select>
+      
+          <label> Marker size: </label>
+          <select id="markerSize" onclick=""
+                  onchange="changeMarkerProperty('markerSize', 'size');">
+            <option value="0.1">            0.1     </option>
+            <option value="0.25">           0.25    </option>
+            <option value="0.5">            0.5     </option>
+            <option value="1" selected>     1       </option>
+            <option value="3">              3       </option>
+            <option value="5">              5       </option>
+            <option value="5">              7       </option>
+            <option value="5">              10       </option>
+          </select>
+      
+        </fieldset>
+
+        </div>
+
+      </div>
+
+    </div>
+
+<!--
+      <center>
+        <h1 id="mainTitle"></h1>
+      </center>
+      
+      <div style="margin-left: auto;margin-right: auto; width: 980px">
+        
+        <div style="width: 200px; display: inline-block; position: relative; vertical-align:top;">
+
+          <input type="button" value=" Clear" onclick="restart();" />
+          <input type="button" value=" Auto axis " onclick="plot.setAxis();" />
+          <hr/>
+          <fieldset>
+            <legend>Display Properties</legend>
+            <label> Title : </label>
+            <input id="title" type="text" value="" onchange="setTitle();" />
+            <label> x label : </label>
+            <input id="xLabel" type="text" value="" onchange="setXLabel();" />
+            <label> y label : </label>
+            <input id="yLabel" type="text" value="" onchange="setYLabel();" />
+        
+            <hr/>
+        
+            <label> Width : </label>
+            <input id="width" type="text" value="" onchange="setWidth();" /><br />
+            <label> Height : </label>
+            <input id="height" type="text" value="" onchange="setHeight();" /><br />
+            
+            <hr/>
+            
+            <label> Ticks : </label>
+            <select id="displayTicks"
+                    onclick="setDisplayTicks();"
+                    onchange="setDisplayTicks();">
+              <option value="yes"> Yes </option>
+              <option value="none"> None </option>
+            </select> 
+            
+            <label> Axis : </label>
+            <select id="displayAxis"
+                onchange="setDisplayAxis();"
+                    onclick="setDisplayAxis();" >
+              <option value="box"> Box </option>
+              <option value="xy"> XY </option>
+              <option value="none"> None </option>
+            </select> 
+            
+            <label> Legend : </label>
+            <select id="displayLegend"
+                    onchange="setLegend();"
+                    onclick="setLegend();" >
+              <option value="none"> None </option>
+              <option value="auto"> Auto </option>
+              <option value="nw"> North-West </option>
+              <option value="n"> North </option>
+              <option value="ne"> North-East </option>
+              <option value="w"> West </option>
+              <option value="c"> Center </option>
+              <option value="e"> East </option>
+              <option value="sw"> Sud-West </option>
+              <option value="s"> Sud </option>
+              <option value="se"> Sud-East </option>
+            </select> 
+            
+            <label> Preserve ratio : </label>
+            <select id="preserveRatio"
+                    onclick="setPreserveRatio();" 
+                    onchange="setPreserveRatio();">
+              <option value="yes"> Yes </option>
+              <option value="none" selected> None </option>
+            </select> 
+          </fieldset>
+          <a href="csv/example-trigo.csv"> 
+            Download csv example file
+          </a>
+          <a href="images/bird.jpg"> 
+            Download image example file
+          </a>
+          <p>
+            Mouse wheel and Shift+Click will zoom on image. Click is used to select curve and to translate curves.
+          </p>
+
+        </div>
+        
+        <div id="graphBox">
+        </div>
+        
+        <fieldset style="width: 200px; display: inline-block; position: relative; vertical-align:top;">
+          <legend>Line properties</legend>
+          
+          <label> Curve : </label>
+          <div style="display: inline-block; width:65%;">
+            <select style="width:100%;" id="curvesIds" onclick="" onchange="">
+            </select> 
+          </div>
+          <div style="display: inline-block; width:33%;" >
+            <input style="width:100%;" type="button" value="Remove" onclick="remove();" />
+          </div>
+          
+          
+          <label> Legend : </label>
+          <input id="legendId" type="text" value=""
+                 onchange="changeLineProperty('legendId', 'id');" />
+          <br />
+          
+          <label> Line stroke: </label>
+          <select id="lineStrokeColor" onclick=""
+                  onchange="changeLineProperty('lineStrokeColor', 'stroke');">
+            <option value="auto" selected>  Auto    </option>
+            <option value="none">           None    </option>
+            <option value="maroon">         Maroon  </option>
+            <option value="red">            Red     </option>
+            <option value="purple">         Purple  </option>
+            <option value="fuchsia">        Fuchsia </option>
+            <option value="green">          Green   </option>
+            <option value="lime">           Lime    </option>
+            <option value="olive">          Olive   </option>
+            <option value="yellow">         Yellow  </option>
+            <option value="navy">           Navy    </option>
+            <option value="blue">           Blue    </option>
+            <option value="teal">           Teal    </option>
+            <option value="aqua">           Aqua    </option>
+            <option value="black">          Black   </option>
+            <option value="grey">           Grey    </option>
+            <option value="silver">         Silver  </option>
+            <option value="white">          White   </option>
+          </select> 
+          
+          <label> Line dash: </label>
+          <select id="lineStyle" onclick=""
+                  onchange="changeLineProperty('lineStyle', 'stroke-dasharray');">
+            <option value="none" selected>     Solid   </option>
+            <option value="1 3">            ....  </option>
+            <option value="5 3">            - - - -  </option>
+            <option value="5 3 1 3">        -.-.  </option>
+          </select> 
+      
+          <label> Line width: </label>
+          <select id="lineWidth"
+                  onchange="changeLineProperty('lineWidth', 'stroke-width');">
+            <option value="0.5">            0.5     </option>
+            <option value="1" selected>     1       </option>
+            <option value="2">              2       </option>
+            <option value="3">              3       </option>
+          </select> 
+          
+          <label> Marker shape: </label>
+          <select id="markerShape"
+                  onchange="changeMarkerProperty('markerShape', 'shape');">
+            <option value="none" selected>  None      </option>
+            <option value="circle">         Circle    </option>
+            <option value="triangle">       Triangle  </option>
+            <option value="rect">           Rectangle </option>
+          </select> 
+          
+          <label> Marker fill: </label>
+          <select id="markerFillColor"
+              onchange="changeMarkerProperty('markerFillColor', 'fill');">
+            <option value="auto" selected>  Auto    </option>
+            <option value="none">           None    </option>
+            <option value="maroon">         Maroon  </option>
+            <option value="red">            Red     </option>
+            <option value="purple">         Purple  </option>
+            <option value="fuchsia">        Fuchsia </option>
+            <option value="green">          Green   </option>
+            <option value="lime">           Lime    </option>
+            <option value="olive">          Olive   </option>
+            <option value="yellow">         Yellow  </option>
+            <option value="navy">           Navy    </option>
+            <option value="blue">           Blue    </option>
+            <option value="teal">           Teal    </option>
+            <option value="aqua">           Aqua    </option>
+            <option value="black">          Black   </option>
+            <option value="grey">           Grey    </option>
+            <option value="silver">         Silver  </option>
+            <option value="white">          White   </option>
+          </select> 
+          
+          <label> Marker orientation: </label>
+          <select id="markerOrientation" onclick=""
+                  onchange="changeMarkerProperty('markerOrientation', 'orient');">
+            <option value="0" selected>    0 (none)     </option>
+            <option value="-90">          90            </option>
+            <option value="-180">        180            </option>
+            <option value="-270">        270            </option>
+            <option value="auto">       Auto            </option>
+          </select>
+      
+          <label> Marker size: </label>
+          <select id="markerSize" onclick=""
+                  onchange="changeMarkerProperty('markerSize', 'size');">
+            <option value="0.1">            0.1     </option>
+            <option value="0.25">           0.25    </option>
+            <option value="0.5">            0.5     </option>
+            <option value="1" selected>     1       </option>
+            <option value="3">              3       </option>
+            <option value="5">              5       </option>
+            <option value="5">              7       </option>
+            <option value="5">              10       </option>
+          </select>
+      
+        </fieldset>
+      </div> 
+-->
+    </body> 
+</html>

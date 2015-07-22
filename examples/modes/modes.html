@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <script type="text/javascript" src="../../modules/JSM.js"></script>
+    <script type="text/javascript" src="../../modules/Image.js"></script>
+    <script type="text/javascript" src="../../modules/Linalg.js"></script>
+    <script type="text/javascript" src="../../modules/Plot.js"></script>
+    <script type="text/javascript" src="../../projects/Math.object.js"></script>
+
+    <script src="../../projects/drawHistogram.js"></script>
+
+
+    <script src="../base.js"></script>
+    <script src="modes.js"></script>
+    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <title></title>
+  </head>
+
+  <body>
+
+    <div id="demo">
+      <h1><i>A contrario</i> modes detection</h1>
+      <input type="file" id="loadFile"/>
+      <div id="interface">
+        
+        <div id="ui">
+
+          <fieldset id="histogram">
+            <legend>Histogram properties</legend>
+
+            <label> Bins </label>
+            <input type="range" id="bin" min="0" step="2" max="256" value="32"/>
+            <label> Circular histogram </label>
+            <select id="circular">
+              <option value="no"> NO </option>
+              <option value="yes"> YES </option>
+            </select>
+            <hr>
+
+
+          </fieldset>
+
+          <fieldset id="addPoints">
+            <legend>Add points</legend>
+           
+            <label> Points </label>
+            <input type="range" id="points" min="0" step="1" max="6" value="1"/>
+            <hr>
+            <label> &mu; </label>
+            <input type="range" id="mu" min="0" step="0.001" max="1" value="0.5"/>
+            <label> &sigma; </label>
+            <input type="range" id="sigma" min="0.1" step="0.1" max="5" value="1"/>
+            <input type="button" value="Gaussian" id="addGaussian">
+            <input type="button" value="Uniform" id="addUniform">
+            <hr>
+            <input type="button" value="Reset" id="reset">
+
+          </fieldset>
+
+          <fieldset id="view">
+            <legend>View</legend>
+
+            <label> Color space </label>
+            <select id="cs">
+              <option value="HSV"> HSV </option>
+              <option value="HSL"> HSL </option>
+            </select>
+
+            <label> Modes detection </label>
+            <select id="method">
+              <option value="0"> HISTOGRAM </option>
+              <option value="1"> WEIGHTED HISTOGRAM </option>
+              <option value="2"> WEIGHTED HISTOGRAM + PRIOR </option>
+            </select>
+
+            <label> Image view </label>
+            <select id="imageView">
+              <option value="mask"> MASK </option>
+              <option value="original"> ORIGINAL </option>
+              <option value="segmented"> SEGMENTED </option>
+              <option value="histogram"> HISTOGRAM </option>
+            </select>
+            <label> Modes </label>
+            <select id="modes">
+            </select>
+            <hr>
+            <input type="button" value="Print histogram" id="print">
+
+          </fieldset>
+          
+        </div>
+        
+        <div id="image">
+          <canvas id="outputImage"></canvas>
+        </div>
+
+      </div>
+
+    </div>
+
+  </body>
+</html>

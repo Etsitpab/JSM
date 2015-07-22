@@ -1,0 +1,3738 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">/*global console, Tools, HTMLElement, document, Vector, Image, Tree2d, HTMLImageElement*/
+
+// Bugs:    - Histogrammes ne fonctionnent pas avec des valeurs négatives
+//          - legend quand stroke est donné par default
+//
+// To do:   - verifier les arguments des fonctions, throw Error si invalides
+//          - doc
+//          - curseur en croix sur tout le graphe
+//          - events à creer :
+//               - &#39;changeaxis&#39; pour pouvoir asservir plusieurs plot à
+//                 une vue donnée.
+//               - &#39;addcurve&#39; lorsqu&#39;une courbe est ajoutée
+//               - &#39;removecurve&#39; lorsqu&#39;une courbe est supprimée
+//               - &#39;resize&#39; lorsque le plot est redimensionné.
+//               - &#39;onselect&#39; lorsque une courbe est selectionnée, texte en
+//                  rouge dans la légende.
+
+/*
+ * @fileOverview Plot class and base function.
+ * @author &lt;a href=&quot;mailto:gtartavel@gmail.com&quot;&gt;Guillaume Tartavel&lt;/a&gt;
+ * @author &lt;a href=&quot;mailto:baptiste.mazin@gmail.com&quot;&gt;Baptiste Mazin&lt;/a&gt;
+ */
+
+var global = typeof window === &#39;undefined&#39; ? module.exports : window;
+
+(function (global) {
+    &#39;use strict&#39;;
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    //                               CONSTRUCTOR                              //
+    ////////////////////////////////////////////////////////////////////////////
+
+
+<span id='Plot-method-constructor'><span id='Plot'>    /**
+</span></span>     * @class
+     *  Create a new plot.
+     * @constructor
+     *  Plot is a JavaScript class allowing user to dynamically generating chart
+     *  SVG chart.
+     *
+     *     // Create a new Plot
+     *     var myPlot = new Plot(&#39;myPlot&#39;, 400, 400)
+     *     // Insert plot into web page
+     *     document.body.appendChild (myPlot.getDrawing ());
+     *     // Add an Histogram
+     *     var histogramProperties = {
+     *        &#39;id&#39;: &#39;myHistogram&#39;,
+     *        &#39;fill&#39;: &#39;lightseagreen&#39;,
+     *        &#39;stroke&#39;: &#39;lightslategray&#39;,
+     *        &#39;stroke-width&#39;: 4,
+     *        &#39;rx&#39;: 0.1,
+     *        &#39;ry&#39;: 0.1
+     *     };
+     *     myPlot.addHistogram([1,2,3,4,5], [4,6,7,1,5], histogramProperties);
+     *     // Add a new Path
+     *     var pathProperties = {
+     *        &#39;id&#39;: &#39;myPath&#39;,
+     *        &#39;stroke&#39;: &#39;green&#39;,
+     *        &#39;stroke-width&#39;: 2,
+     *        &#39;stroke-dasharray&#39;: &#39;5 2&#39;
+     *     };
+     *     myPlot.addPath([1, 2, 3, 4, 5],
+     *                    [7, 4, 5, 8, 2],
+     *                    pathProperties);
+     *     // Add a new scatter plot
+     *     var scatterProperties = {
+     *        &#39;id&#39;: &#39;myScatter&#39;,
+     *        &#39;stroke&#39;: &#39;blue&#39;,
+     *        &#39;marker&#39;: {&#39;shape&#39;: &#39;circle&#39;,
+     *                   &#39;fill&#39;: &#39;white&#39;,
+     *                   &#39;stroke-width&#39;: 0.5,
+     *                   &#39;stroke&#39;: &#39;red&#39;,
+     *                   &#39;size&#39;: 3
+     *                  }
+     *     };
+     *     myPlot.addPath([1, 2, 3, 4, 5],
+     *                     [3, 2, 2, 7, 1],
+     *                     scatterProperties);
+     *     myPlot.setTitle(&#39;My plot !&#39;);
+     *
+     * @param {String} id
+     *  Plot identifiant.
+     * @param {Number} width
+     *  Plot width.
+     * @param {Number} height
+     *  Plot height
+     * @param {Object} args
+     *  Plot arguments
+     * @return {Object}
+     *  The new plot.
+     *
+     */
+    function Plot(id, size, parent, args) {
+        id = id || &#39;plot 1&#39;;
+        var width, height;
+        if (typeof size === Number) {
+            width = size;
+            height = size;
+        } else if (size instanceof Array &amp;&amp; size.length === 2) {
+            width = size[0];
+            height = size[1];
+        }
+        if (parent) {
+            if (!(parent instanceof HTMLElement)) {
+                parent = document.getElementById(parent);
+                parent = parent || document.body;
+            }
+            var THIS = this;
+            if (!size) {
+                var resize = function () {
+                    THIS.setWidth(parent.clientWidth);
+                    THIS.setHeight(parent.clientHeight);
+                    THIS.autoDisplay();
+                };
+                window.addEventListener(&quot;resize&quot;, resize);
+                width = parent.clientWidth;
+                height = parent.clientHeight;
+            }
+        }
+        args = args || {};
+
+        var param = {
+            &#39;width&#39;: width,
+	    &#39;height&#39;: height,
+	    &#39;id&#39;: id
+        };
+        var drawing = Tools.createSVGNode(&#39;svg&#39;, param);
+        // Allow to retrieve plot from SVG element;
+        drawing.getPlot = function () {
+            return this;
+        }.bind(this);
+
+<span id='Plot-method-getParentNode'>        /** Returns parent node if defined.
+</span>         * @return {Object}
+         */
+        this.getParentNode = function () {
+            return parent;
+        };
+
+<span id='Plot-method-getId'>        /** Returns the plot id.
+</span>         * @return {String}
+         */
+        this.getId = function () {
+            return id;
+        };
+
+<span id='Plot-method-getWidth'>        /** Returns the width of the plot.
+</span>         * @return {Number}
+         */
+        this.getWidth = function () {
+            return parseFloat(drawing.getAttribute(&#39;width&#39;));
+        };
+
+<span id='Plot-method-setWidth'>        /** Set the width of the plot.
+</span>         * @param {Number} w
+         * @chainable
+         */
+        this.setWidth = function (w) {
+            drawing.setAttributeNS(null, &#39;width&#39;, w);
+            this.autoDisplay();
+            return this;
+        };
+
+<span id='Plot-method-getHeight'>        /** Returns the width of the plot.
+</span>         * @return {Number}
+         */
+        this.getHeight = function () {
+            return parseFloat(drawing.getAttribute(&#39;height&#39;));
+        };
+
+<span id='Plot-method-setHeight'>        /** Set the width of the plot.
+</span>         * @param {Number} w
+         * @chainable
+         */
+        this.setHeight = function (h) {
+            drawing.setAttributeNS(null, &#39;height&#39;, h);
+            this.autoDisplay();
+            return this;
+        };
+
+<span id='Plot-method-getDrawing'>        /** Returns the svg element associeted to the plot.
+</span>         * @return {Object}
+         */
+        this.getDrawing = function () {
+            return drawing;
+        };
+
+        var currentAxis = {&#39;x&#39;: 0, &#39;y&#39;: 0, &#39;width&#39;: 1, &#39;height&#39;: 1};
+
+<span id='Plot-method-getCurrentAxis'>        /** Returns the current axisof the plot.
+</span>         * @return {Object}
+         *  Object with the following properties :
+         *
+         * + x,
+         * + y,
+         * + width,
+         * + height.
+         */
+        this.getCurrentAxis = function () {
+            var i, propOut = {};
+            for (i in currentAxis) {
+                if (currentAxis.hasOwnProperty(i)) {
+                    propOut[i] = currentAxis[i];
+                }
+            }
+            return propOut;
+        };
+
+<span id='Plot-method-setCurrentAxis'>        /** Set the current axis of the plot.
+</span>         * @param {Object} BBox
+         *  Object with the following properties :
+         *
+         * + x,
+         * + y,
+         * + width,
+         * + height.
+         *
+         * @chainable
+         */
+        this.setCurrentAxis = function (BBox) {
+            currentAxis.x = BBox.x;
+            currentAxis.y = BBox.y;
+            currentAxis.width = BBox.width;
+            currentAxis.height = BBox.height;
+            return this;
+        };
+
+        // Plot specific properties
+        var ownProperties = this.getProperties(&#39;ownProperties&#39;);
+
+<span id='Plot-method-getOwnProperty'>        /** Get a property of the plot.
+</span>         * @param {String} name
+         * @return {String}
+         */
+        this.getOwnProperty = function (name) {
+            return ownProperties[name];
+        };
+<span id='Plot-method-setOwnProperty'>        /** Set a property of the plot.
+</span>         * @param {String} name
+         * @param {String} value
+         * @chainable
+         */
+        this.setOwnProperty = function (name, value) {
+            ownProperties[name] = value;
+            this.autoDisplay();
+            return this;
+        };
+
+        var i;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                ownProperties[i] = args[i];
+            }
+        }
+
+        // Init svg element
+        this.initialize();
+        return this;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                              DEFAULT PROPERTIES                             //
+    /////////////////////////////////////////////////////////////////////////////////
+
+<span id='Plot-property-properties'>    /**
+</span>     * Object describing defaults properties of plot&#39;s elements.
+     */
+    Plot.prototype.properties = {
+        &#39;ownProperties&#39; : {
+            // Force to conserve x/y = 1
+            &#39;preserve-ratio&#39;: false,
+            // Display ticks.
+            &#39;ticks-display&#39;: true,
+            // Display Title.
+            &#39;title-display&#39;: false,
+            // Display x label.
+            &#39;xLabel-display&#39;: false,
+            // Display y label.
+            &#39;yLabel-display&#39;: false,
+            // Display Legend.
+            &#39;legend-display&#39;: &#39;none&#39;,
+            // Below are private properties
+            // Create a tree for efficient nearest neighbor.
+            &#39;compute-closest&#39;: true,
+            // Used for curves auto-id
+            &#39;autoId-curves&#39;: 0,
+            // Used for marker auto-id
+            &#39;autoId-marker&#39;: 0
+        },
+        &#39;title&#39;: {
+            &#39;id&#39;: &#39;title&#39;,
+            &#39;font-size&#39;: &#39;16pt&#39;,
+            &#39;font-family&#39;: &#39;Sans-Serif&#39;,
+            &#39;fill&#39;: &#39;gray&#39;,
+            &#39;style&#39;: &#39;text-anchor: middle;&#39;
+        },
+        &#39;drawingArea&#39;: {
+            &#39;id&#39;: &#39;drawingArea&#39;,
+            &#39;preserveAspectRatio&#39;: &#39;none&#39;
+        },
+        &#39;front&#39;: {
+            &#39;id&#39;: &#39;front&#39;,
+            &#39;fill&#39;: &#39;white&#39;,
+            &#39;fill-opacity&#39;: 0,
+            &#39;stroke&#39;: &#39;none&#39;,
+            &#39;preserveAspectRatio&#39;: &#39;none&#39;
+        },
+        &#39;markers&#39;: {
+            &#39;id&#39;: &#39;markers&#39;
+        },
+        &#39;curves&#39;: {
+            &#39;id&#39;: &#39;curves&#39;,
+            &#39;preserveAspectRatio&#39;: &#39;none&#39;,
+            &#39;stroke-width&#39;: 1,
+            &#39;stroke-linejoin&#39;: &#39;round&#39;,
+            &#39;stroke&#39;: &#39;blue&#39;,
+            &#39;fill&#39;: &#39;blue&#39;
+        },
+        &#39;axis&#39;: {
+            &#39;id&#39;: &#39;axis&#39;,
+            &#39;stroke&#39;: &#39;grey&#39;,
+            &#39;stroke-width&#39;: 1,
+            &#39;font-size&#39;: &#39;10pt&#39;,
+            &#39;font-family&#39;: &#39;Sans-Serif&#39;
+        },
+        &#39;grid&#39;: {
+            &#39;id&#39;: &#39;grid&#39;,
+            &#39;stroke&#39;: &#39;grey&#39;,
+            &#39;stroke-width&#39;: 1,
+            &#39;stroke-dasharray&#39;: &#39;5 2&#39;
+        },
+        &#39;xAxis&#39;: {
+            &#39;id&#39;: &#39;xAxis&#39;,
+            &#39;style&#39;: &#39;text-anchor: middle;&#39;
+        },
+        &#39;yAxis&#39;: {
+            &#39;id&#39;: &#39;yAxis&#39;,
+            &#39;style&#39;: &#39;text-anchor: end;&#39;
+        },
+        &#39;xAxisLine&#39;: {
+            &#39;id&#39;: &#39;xAxisLine&#39;,
+            &#39;marker-mid&#39;: &#39;url(#tickMarker)&#39;
+        },
+        &#39;xAxisLineBis&#39;: {
+            &#39;id&#39;: &#39;xAxisLineBis&#39;,
+            &#39;marker-mid&#39;: &#39;url(#tickMarker)&#39;
+        },
+        &#39;yAxisLine&#39;: {
+            &#39;id&#39;: &#39;yAxisLine&#39;,
+            &#39;marker-mid&#39;: &#39;url(#tickMarker)&#39;
+        },
+        &#39;yAxisLineBis&#39;: {
+            &#39;id&#39;: &#39;yAxisLineBis&#39;,
+            &#39;marker-mid&#39;: &#39;url(#tickMarker)&#39;
+        },
+        &#39;cursor&#39;: {
+            &#39;id&#39;: &#39;cursor&#39;,
+            &#39;vector-effect&#39;: &#39;non-scaling-stroke&#39;,
+            &#39;marker&#39;: {
+                &#39;shape&#39;: &#39;circle&#39;,
+                &#39;size&#39;: 4,
+                &#39;stroke&#39;: &#39;grey&#39;,
+                &#39;stroke-width&#39;: 0.25,
+                &#39;fill&#39;: &#39;none&#39;
+            }
+        },
+        &#39;xLabel&#39;: {
+            &#39;id&#39;: &#39;xLabel&#39;,
+            &#39;font-size&#39;: &#39;12pt&#39;,
+            &#39;font-family&#39;: &#39;Sans-Serif&#39;,
+            &#39;font-style&#39;: &#39;oblique&#39;,
+            &#39;fill&#39;: &#39;gray&#39;,
+            &#39;style&#39;: &#39;text-anchor: middle;&#39;
+        },
+        &#39;yLabel&#39;: {
+            &#39;id&#39;: &#39;yLabel&#39;,
+            &#39;font-size&#39;: &#39;12pt&#39;,
+            &#39;font-family&#39;: &#39;Sans-Serif&#39;,
+            &#39;font-style&#39;: &#39;oblique&#39;,
+            &#39;fill&#39;: &#39;gray&#39;,
+            &#39;style&#39;: &#39;text-anchor: middle;&#39;
+        },
+        &#39;ticks&#39;: {
+            &#39;id&#39;: &#39;tickMarker&#39;,
+            &#39;x1&#39;: 0,
+            &#39;y1&#39;: -2,
+            &#39;x2&#39;: 0,
+            &#39;y2&#39;: 2,
+            &#39;markerUnits&#39;: &#39;strokeWidth&#39;, //userSpaceOnUse&#39;,
+            &#39;overflow&#39;: &#39;visible&#39;,
+            &#39;orient&#39;: &#39;auto&#39;,
+            &#39;stroke-width&#39;: 1
+        },
+        &#39;xTextTicks&#39;: {
+            &#39;id&#39;: &#39;xTextTicks&#39;,
+            &#39;fill&#39;: &#39;gray&#39;,
+            &#39;stroke&#39;: &#39;none&#39;
+        },
+        &#39;yTextTicks&#39;: {
+            &#39;id&#39;: &#39;yTextTicks&#39;,
+            &#39;fill&#39;: &#39;gray&#39;,
+            &#39;stroke&#39;: &#39;none&#39;
+        },
+        &#39;textTicks&#39;: {
+            &#39;fill&#39;: &#39;gray&#39;,
+            &#39;stroke&#39;: &#39;none&#39;
+        },
+        &#39;legend&#39;: {
+            &#39;id&#39;: &#39;legend&#39;,
+            &#39;font-size&#39;: &#39;10pt&#39;,
+            &#39;font-family&#39;: &#39;Sans-Serif&#39;,
+            &#39;overflow&#39;: &#39;visible&#39;,
+            &#39;fill&#39;: &#39;gray&#39;,
+            &#39;stroke&#39;: &#39;none&#39;
+        },
+        &#39;selectArea&#39;: {
+            &#39;id&#39;: &#39;selectArea&#39;,
+            &#39;stroke&#39;: &#39;gray&#39;,
+            &#39;fill&#39;: &#39;none&#39;,
+            &#39;stroke-width&#39;: 1,
+            &#39;vector-effect&#39;: &#39;non-scaling-stroke&#39;,
+            &#39;preserveAspectRatio&#39;: &#39;none&#39;,
+            &#39;markerUnits&#39;: &#39;userSpaceOnUse&#39;,
+            &#39;overflow&#39;: &#39;visible&#39;
+        },
+        &#39;path&#39;: {
+            &#39;vector-effect&#39;: &#39;non-scaling-stroke&#39;,
+            &#39;fill&#39;: &#39;none&#39;
+        },
+        &#39;marker&#39;: {
+            &#39;shape&#39;: &#39;none&#39;,
+            &#39;fill&#39;: &#39;blue&#39;,
+            &#39;size&#39;: 1,
+            &#39;viewBox&#39;: &quot;-1 -1 2 2&quot;,
+            &#39;class&#39;: &#39;scatterMarker&#39;,
+            &#39;preserveAspectRatio&#39;: &#39;none&#39;,
+            &#39;markerUnits&#39;: &#39;userSpaceOnUse&#39;,
+            &#39;overflow&#39;: &#39;visible&#39;
+        },
+        &#39;histogram&#39;: {
+            &#39;stroke&#39;: &#39;none&#39;,
+            &#39;vector-effect&#39;: &#39;non-scaling-stroke&#39;,
+            &#39;stroke-linejoin&#39;: &#39;round&#39;,
+            &#39;bar-width&#39;: 0.9
+        },
+        &#39;image&#39;: {
+        }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                           CURVES MANAGEMENT FUNCTIONS                       //
+    /////////////////////////////////////////////////////////////////////////////////
+
+
+<span id='Plot-method-addPath'>    /**
+</span>     * Add a path to plot.
+     * @param {Array} x
+     *  Array of values on &#39;x&#39; axis.
+     * @param {Array} y
+     *  Array of values on &#39;y&#39; axis.
+     * @param {Object} [properties=this.getProperties(&#39;path&#39;)]
+     *  Curve Id and style properties.
+     * @return {Object}
+     *  This plot.
+     *
+     *  // Create a new Plot
+     *  var myPlot = new Plot (&#39;myPlot&#39;, 300, 300)
+     *  // Insert plot into web page
+     *   document.body.appendChild (myPlot.getDrawing ());
+     *  // Add a new Path
+     *  var pathProperties = {
+     *     &#39;id&#39;: &#39;myPath&#39;,
+     *     &#39;stroke&#39;: &#39;green&#39;,
+     *     &#39;stroke-width&#39;: 2,
+     *     &#39;stroke-dasharray&#39;: &#39;0.1 0.1&#39;,
+     *     &#39;marker&#39;: {&#39;shape&#39;: &#39;rect&#39;
+     *                &#39;fill&#39;: &#39;fuchsia&#39;
+     *                &#39;size&#39;: 3
+     *     }
+     *  };
+     *  myPlot.addPath ([1, 2, 3, 4, 5],
+     *                  [7, 4, 5, 8, 2],
+     *                  pathProperties);
+
+     */
+    Plot.prototype.addPath = function (x, y, args) {
+
+        // Add (or replace) user arguments
+        var defaultArgs = this.getProperties(&#39;path&#39;);
+        var i;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                defaultArgs[i] = args[i];
+            }
+        }
+
+        // First Node in the path
+        var newPath = this.createPath(x, y, defaultArgs);
+
+        var xVec = new Tools.Vector(x);
+        var yVec = new Tools.Vector(y);
+        newPath.BBox = [xVec.min().get(0),
+                        yVec.min().get(0),
+                        xVec.max().get(0),
+                        yVec.max().get(0)];
+
+        // Add the to the path list
+        this.add(newPath, x, y);
+        return this;
+    };
+
+<span id='Plot-method-plot'>    /**
+</span>     * Plot functions
+     */
+    Plot.prototype.plot = function (y, x, str) {
+
+        var errMsg = this.constructor.name + &#39;.plot: &#39;;
+        var i, k;
+
+        // Check arguments
+        if (typeof y !== &#39;function&#39;) {
+            if (x &amp;&amp; !x.length) {
+                throw new Error(errMsg + &#39;x must be an array&#39;);
+            } else if (!(y &amp;&amp; y.length)) {
+                throw new Error(errMsg + &#39;y must be an array or a function&#39;);
+            } else if (!(y[0].length)) {
+                y = [y];
+            }
+        } else if (!(x &amp;&amp; x.length)) {
+            throw new Error(errMsg + &#39;if y is a function, x must be an array&#39;);
+        } else {
+            var f = y; // y is a function
+            for (y = [[]], i = 0; i &lt; x.length; i++) {
+                y[0].push(f(x[i]));
+            }
+        }
+
+        // Check dimensions
+        var nLines = y.length;
+        var nPts = y[0].length;
+        if (!x) {
+            for (x = [], i = 0; i &lt; nPts; i++) {
+                x.push(i + 1);
+            }
+        }
+        for (k = 0; k &lt; nLines; k++) {
+            if (y[k].length !== x.length) {
+                throw new Error(errMsg + &#39;y and x must have the same length&#39;);
+            }
+        }
+
+        // Plot everything
+        var args = Plot.stringToArgs(str);
+        for (k = 0; k &lt; nLines; k++) {
+            this.addPath(x, y[k], args);
+        }
+        return this;
+    };
+
+<span id='Plot-method-addHistogram'>    /**
+</span>     * Add an Histogram to plot.
+     * @param {Array} x
+     *  x values.
+     * @param {Array} y
+     *  y values.
+     * @param {Object} [properties=this.getProperties (&#39;scatter&#39;)]
+     *  Scatter plot Id and style properties.
+     *
+     *  // Create a new Plot
+     *  var myPlot = new Plot (&#39;myPlot&#39;, 500, 500)
+     *  // Add an Histogram
+     *  var histogramProperties = {
+     *     &#39;id&#39;: &#39;myHistogram&#39;,
+     *     &#39;fill&#39;: &#39;lightseagreen&#39;,
+     *     &#39;stroke&#39;: &#39;lightslategray&#39;,
+     *     &#39;stroke-width&#39;: 4,
+     *     &#39;rx&#39;: 0.1,
+     *     &#39;ry&#39;: 0.1
+     *  };
+     *  myPlot.addHistogram([1,2,3,4,5], [4,6,7,1,5], histogramProperties);
+     *  // Insert plot into web page
+     *  document.body.appendChild (myPlot.getDrawing ());
+     */
+    Plot.prototype.addHistogram = function (x, y, args) {
+
+        x = x || new Vector(1, y.length);
+
+        // Add (or replace) user arguments
+        var defaultArgs = this.getProperties(&#39;histogram&#39;);
+        var i;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                defaultArgs[i] = args[i];
+            }
+        }
+
+        // Create histogram plot
+        var histogram = Tools.createSVGNode(&#39;g&#39;, defaultArgs);
+        histogram.setAttributeNS(null, &#39;class&#39;, &#39;histogram&#39;);
+
+        // Define bar model
+        var id = &#39;bar&#39; + defaultArgs.id;
+        var xp = new Tools.Vector(x);
+        var widthMin = xp.derive().min().get(0);
+        var barWidth = widthMin * defaultArgs[&#39;bar-width&#39;];
+
+        var colormap = defaultArgs.colormap;
+
+        var j;
+        for (j = y.length - 1 ; j &gt;= 0; j--) {
+            var rect = Tools.createSVGNode(&#39;rect&#39;, defaultArgs);
+            rect.setAttributeNS(null, &#39;r&#39;, 1);
+            rect.setAttributeNS(null, &#39;id&#39;, id);
+            rect.setAttributeNS(null, &#39;class&#39;, &#39;histogramBar&#39;);
+            rect.setAttributeNS(null, &#39;x&#39;,  x[j] - barWidth / 2);
+            rect.setAttributeNS(null, &#39;y&#39;, -y[j]);
+            rect.setAttributeNS(null, &#39;height&#39;, y[j]);
+            rect.setAttributeNS(null, &#39;width&#39;, barWidth);
+            if (colormap) {
+                var color = &quot;hsl(&quot; + (360 * j/(y.length - 1)) + &quot;,100%,50%)&quot;;
+                rect.setAttributeNS(null, &#39;fill&#39;, color);
+            }
+            histogram.appendChild(rect);
+        }
+
+        var xVec = new Tools.Vector(x);
+        var yVec = new Tools.Vector(y);
+        histogram.BBox = [xVec.min().get(0) - widthMin,
+                          0,
+                          xVec.max().get(0)  + widthMin,
+                          yVec.max().get(0)];
+
+        this.add(histogram, x, y);
+        return this;
+    };
+
+<span id='Plot-method-addImage'>    /**
+</span>     * Add an raster image to plot.
+     * @param {string} source
+     *  Path to the image
+     * @param {number} x
+     *  x coordinate of top left corner
+     * @param {number} y
+     *  y coordinate of top left corner
+     *
+     *  // Create a new Plot
+     *  var myPlot = new Plot (&#39;myPlot&#39;, 500, 500)
+     *  // Conserve x/y unity ratio
+     *  myPlot.setOwnProperty(&#39;preserve-ratio&#39;, true);
+     *  // Add a new image
+     *  myPlot.addImage(&#39;../ImageJS/images/canard.png&#39;, 300, 500, {&#39;id&#39;: &#39;myImage&#39;});
+     *  // Insert plot into web page
+     *  document.body.appendChild (myPlot.getDrawing ());
+     */
+    Plot.prototype.addImage = function (src, x, y, args) {
+        x = x || 0;
+        y = y || 0;
+        var thisPlot = this;
+        var onload = function () {
+            var defaultArgs = thisPlot.getProperties(&#39;image&#39;);
+            var i;
+            for (i in args) {
+                if (args.hasOwnProperty(i)) {
+                    defaultArgs[i] = args[i];
+                }
+            }
+
+            defaultArgs.width = this.width;
+            defaultArgs.height = this.height;
+            defaultArgs.x = x;
+            defaultArgs.y = -y;
+
+            var image = Tools.createSVGNode(&#39;image&#39;, defaultArgs);
+            image.setAttributeNS(&#39;http://www.w3.org/1999/xlink&#39;,
+			         &#39;xlink:href&#39;, this.src);
+
+            image.BBox = [x, -this.height + y, x + this.width, y];
+
+	    // Add the to the path list
+            thisPlot.add(image, x, y);
+        };
+
+
+        if (typeof src === &#39;string&#39;) {
+            var im = new Image();
+            im.src = src;
+            im.onload = onload;
+        } else if (src instanceof HTMLImageElement) {
+            onload.bind(src)();
+        }
+
+        return this;
+    };
+
+<span id='Plot-method-add'>    /**
+</span>     * @private
+     *  Add svg element and scale the graph.
+     * @param {Object} obj
+     *  object to add.
+     * @return {Object}
+     *  This plot.
+     */
+    Plot.prototype.add = function (obj, x, y) {
+
+        if (!obj.getAttribute(&#39;id&#39;)) {
+            var n = this.getOwnProperty(&#39;autoId-curves&#39;);
+            obj.setAttributeNS(null, &#39;id&#39;, &#39;curve-&#39; + n);
+            this.setOwnProperty(&#39;autoId-curves&#39;, n + 1);
+        }
+
+        this.getDrawing().getElementById(&#39;curves&#39;).appendChild(obj);
+        this.setAxis();
+        if (this.getOwnProperty(&#39;legend-display&#39;) !== &#39;none&#39;) {
+            this.setLegend();
+        }
+
+        if (this.getOwnProperty(&#39;compute-closest&#39;)) {
+            var i, tree = this.tree, end = x.length, id = obj.id;
+            for (i = 0; i &lt; end; i++) {
+                tree.add(x[i], y[i], i, obj);
+            }
+        }
+        return this;
+    };
+
+<span id='Plot-method-remove'>    /**
+</span>     * Remove element on plot.
+     * @param {String} id
+     *  ID of the element to remove.
+     * @return {boolean}
+     *  True if element is successfully removed, false otherwise.
+     *
+     *  // Add a new scatter plot
+     *  var scatterProperties = {
+     *     &#39;id&#39;: &#39;myScatter&#39;,
+     *  };
+     *  myPlot.addScatter ([1, 2, 3, 4, 5],
+     *                     [7, 4, 5, 8, 2],
+     *                     scatterProperties);
+     *  myPlot.remove (&#39;myScatter&#39;)
+     */
+    Plot.prototype.remove = function (id) {
+
+        var curves = this.getDrawing().getElementById(&#39;curves&#39;);
+        var find = false;
+        if (curves.hasChildNodes()) {
+            var i;
+            var curvesChilds = curves.childNodes;
+            for (i = 0; i &lt; curvesChilds.length; i++) {
+                if (curvesChilds[i].id === id) {
+                    if (this.getOwnProperty(&#39;compute-closest&#39;)) {
+                        // Remove points in tree
+                        this.tree.remove(curvesChilds[i]);
+                    }
+                    // Remove svg element
+                    curves.removeChild(curvesChilds[i]);
+                    find = true;
+                    break;
+                }
+            }
+        }
+        this.setAxis();
+        this.setLegend();
+        return find;
+    };
+
+<span id='Plot-method-clear'>    /**
+</span>     * Clear the plot.
+     *
+     *  // Remove all data
+     *  myPlot.clear();
+     */
+    Plot.prototype.clear = function () {
+
+        if (this.getOwnProperty(&#39;compute-closest&#39;)) {
+            this.tree.clear();
+        }
+        var curves = this.getDrawing().getElementById(&#39;curves&#39;);
+        if (curves.hasChildNodes()) {
+            while (curves.childNodes.length &gt; 0) {
+                curves.removeChild(curves.firstChild);
+            }
+        }
+        this.setOwnProperty(&#39;autoId-curves&#39;, 0);
+        this.setAxis();
+        this.setLegend();
+        return this;
+    };
+
+<span id='Plot-method-getProperties'>    /**
+</span>     * @private
+     * Get defaults properties of an plot element.
+     * @param {String} element
+     *  Desired default properties element. Can be &#39;title&#39;,
+     * &#39;drawingArea&#39;, &#39;curves&#39;, &#39;axis&#39;, &#39;textTicks&#39;, &#39;path&#39;, scatter&#39;.
+     * @return {Object}
+     *  Object with copy of element properties.
+     */
+    Plot.prototype.getProperties = function (element) {
+
+        var propOut = {};
+        var p = Plot.prototype.properties[element];
+        var i;
+        for (i in p) {
+            if (p.hasOwnProperty(i)) {
+                propOut[i] = p[i];
+            }
+        }
+        return propOut;
+    };
+
+<span id='Plot-method-createPath'>    /**
+</span>     * @private
+     * Create path.
+     */
+    Plot.prototype.createPath = function (x, y, args) {
+
+
+        // First Node in the path
+        var points = &#39;&#39;;
+        var j, L = x.length;
+        for (j = 0; j &lt; L; j++) {
+            points += x[j] + &#39;,&#39; + (-y[j]) + &#39; &#39;;
+        }
+
+        // Create Polyline
+        var path = Tools.createSVGNode(&#39;polyline&#39;, args);
+        path.setAttributeNS(null, &#39;class&#39;, &#39;path&#39;);
+
+        // Add point list as attribute
+        path.setAttributeNS(null, &#39;points&#39;, points);
+
+        this.setMarkerPath(path, args.marker);
+
+        return path;
+    };
+
+<span id='Plot-method-setMarkerPath'>    /**
+</span>     * @private
+     *  Create a markerfor a new path.
+     */
+    Plot.prototype.setMarkerPath = function (path, args) {
+
+        var svg = this.getDrawing();
+        var drawingArea = svg.getElementById(&#39;drawingArea&#39;);
+        var markers = svg.getElementById(&#39;markers&#39;);
+        var defaultArgs = this.getProperties(&#39;marker&#39;);
+        var i;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                defaultArgs[i] = args[i];
+            }
+        }
+        var idNumber = this.getOwnProperty(&#39;autoId-marker&#39;);
+        this.setOwnProperty(&#39;autoId-marker&#39;, idNumber + 1);
+        var id = this.getId() + &#39;marker_&#39; + idNumber.toString();
+        id = id.replace(/ /g, &quot;_&quot;);
+        defaultArgs.id = id;
+
+        var marker = Tools.createSVGNode(&#39;marker&#39;, defaultArgs);
+        markers.appendChild(marker);
+        this.setMarkerShape(marker, defaultArgs.shape);
+
+        path.setAttribute(&#39;marker-id&#39;, id);
+        var markerUrl = &#39;url(#&#39; + id + &#39;)&#39;;
+        path.setAttribute(&#39;marker-start&#39;, markerUrl);
+        path.setAttribute(&#39;marker-mid&#39;, markerUrl);
+        path.setAttribute(&#39;marker-end&#39;, markerUrl);
+        return this;
+    };
+
+<span id='Plot-method-setMarkerShape'>    /**
+</span>     * @private
+     *  Set the marker base shape.
+     *  Marker base sould be in following bounding box [-0.5, -0.5, 0.5, 0.5].
+     */
+    Plot.prototype.setMarkerShape = function (marker, shape) {
+
+        var i;
+        for (i = 0; i &lt; marker.childNodes.length; i++) {
+            marker.removeChild(marker.childNodes[i]);
+        }
+
+        var shapeProperties;
+        var markerShape;
+        switch (shape.toLowerCase()) {
+        case &#39;rect&#39;:
+        case &#39;rectangle&#39;:
+            shapeProperties = {
+                &#39;x&#39;: -1,
+                &#39;y&#39;: -1,
+                &#39;width&#39;: 2,
+                &#39;height&#39;: 2
+            };
+            markerShape = Tools.createSVGNode(&#39;rect&#39;, shapeProperties);
+            break;
+        case &#39;circle&#39;:
+            shapeProperties = {
+                &#39;r&#39;: 1
+            };
+            markerShape = Tools.createSVGNode(&#39;circle&#39;, shapeProperties);
+            break;
+        case &#39;triangle&#39;:
+            shapeProperties = {
+                &#39;points&#39;: &quot;1.5, 0 -0.5, 1 -0.75, -1&quot;,
+                &#39;viewBox&#39;: &quot;-0.5 -0.866 1 0.866&quot;
+            };
+            markerShape = Tools.createSVGNode(&#39;polygon&#39;, shapeProperties);
+            break;
+        case &#39;none&#39;:
+            return this;
+        default:
+            throw new Error(&#39;Plot.setMarkerShape: Unknown shape.&#39;);
+        }
+        marker.appendChild(markerShape);
+        return this;
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                               AXIS FUNCTIONS                                //
+    /////////////////////////////////////////////////////////////////////////////////
+
+<span id='Plot-method-setAxis'>    /**
+</span>     * Define Axis.
+     * @param {Array|Object|string} [box=&#39;auto&#39;]
+     *  - If Array, box must be defined as &#39;[x1,y1,x2,y2]&#39;.
+     *  - If Object, it must be specified as
+     *  &#39;{&#39;x&#39;: x, &#39;y&#39;: -y, &#39;width&#39;: width, &#39;height&#39;: height}&#39;
+     *  - If string is used, then it must refer to an element id.
+     * @return {Plot}
+     *  This plot.
+     *
+     *  // Add a new scatter plot
+     *  var scatterProperties = {
+     *     &#39;id&#39;: &#39;myScatter&#39;,
+     *  };
+     *  myPlot.addScatter ([1, 2, 3, 4, 5],
+     *                     [7, 4, 5, 8, 2],
+     *                     scatterProperties);
+     *  // Set Axis with matlab like notations
+     *  myPlot.setAxis ([-3, 2, 10, 10]);
+     *  // Do the same
+     *  myPlot.setAxis ({&#39;x&#39;:-3, &#39;y&#39;:-2, &#39;width&#39;: 13, &#39;height&#39;: 12}]);
+     *  // Automatic axis
+     *  myPlot.setAxis ();
+     */
+    Plot.prototype.setAxis = function (curvesBBox) {
+        var svg = this.getDrawing();
+        var drawingArea = svg.getElementById(&#39;drawingArea&#39;);
+        var curves = svg.getElementById(&#39;curves&#39;);
+        var w = drawingArea.width.baseVal.value, h = drawingArea.height.baseVal.value;
+
+        var BBox, xlim, ylim;
+        // Matlab like command
+        if (curvesBBox instanceof Array) {
+            var x = Math.min(curvesBBox[0], curvesBBox[2]);
+            var y = Math.min(-curvesBBox[1], -curvesBBox[3]);
+            var width = Math.max(curvesBBox[0], curvesBBox[2]) - x;
+            var height = Math.max(-curvesBBox[1], -curvesBBox[3]) - y;
+            BBox = {&#39;x&#39;: x, &#39;y&#39;: y, &#39;width&#39;: width, &#39;height&#39;: height};
+            // Bounding box command
+        } else if (curvesBBox instanceof Object) {
+            BBox = curvesBBox;
+            // Path bounding box
+        } else if (typeof curvesBBox === &#39;string&#39;) {
+            var i;
+            var curvesChilds = curves.childNodes;
+            for (i = 0; i &lt; curvesChilds.length; i++) {
+                if (curvesChilds[i].id === curvesBBox) {
+                    this.setAxis(curvesChilds[i].BBox);
+                    return this;
+                }
+            }
+            // Automatic bounding box
+        } else {
+            BBox = this.getCurvesBBox();
+        }
+
+        if (this.getOwnProperty(&#39;preserve-ratio&#39;)) {
+            // Compute the scale
+            var hScale = BBox.width / w, vScale = BBox.height / h;
+            var space;
+            switch (Math.max(hScale, vScale)) {
+            case hScale:
+                space = BBox.height;
+                BBox.height *= (hScale / vScale);
+                BBox.y += (space - BBox.height) / 2;
+                break;
+            case vScale:
+                space = BBox.width;
+                BBox.width /= (hScale / vScale);
+                BBox.x += (space - BBox.width) / 2;
+                break;
+            }
+        }
+
+        if (!BBox.width) {
+            BBox.width = 1;
+            BBox.x -= 0.5;
+        }
+        if (!BBox.height) {
+            BBox.height = 1;
+            BBox.y -= 0.5;
+        }
+        this.setCurrentAxis(BBox);
+        var viewBox	= BBox.x + &#39; &#39; + BBox.y + &#39; &#39; + BBox.width + &#39; &#39; + BBox.height;
+        drawingArea.setAttributeNS(null, &#39;viewBox&#39;, viewBox);
+
+        this.scaleElements();
+        // Update front
+        var bg = svg.getElementById(&#39;front&#39;);
+        bg.setAttributeNS(null, &#39;x&#39;, BBox.x);
+        bg.setAttributeNS(null, &#39;y&#39;, BBox.y);
+        bg.setAttributeNS(null, &#39;width&#39;, BBox.width);
+        bg.setAttributeNS(null, &#39;height&#39;, BBox.height);
+
+        this.setXAxis();
+        this.setYAxis();
+        this.setLegendLocation();
+        return this;
+    };
+
+<span id='Plot-method-setXAxis'>    /**
+</span>     * @private
+     *  Create xAxis view.
+     */
+    Plot.prototype.setXAxis = function () {
+        var svg = this.getDrawing();
+
+        var xAxis = svg.getElementById(&#39;xAxis&#39;);
+        var xAxisLine = svg.getElementById(&#39;xAxisLine&#39;);
+        var xAxisLineBis = svg.getElementById(&#39;xAxisLineBis&#39;);
+
+        var dArea = svg.getElementById(&#39;drawingArea&#39;);
+
+        var BBoxCurves = this.getCurrentAxis();
+
+        var BBox = {
+            x: dArea.x.baseVal.value,
+            y: dArea.y.baseVal.value,
+            width: dArea.width.baseVal.value,
+            height: dArea.height.baseVal.value
+        };
+
+        var xTextTicks = svg.getElementById(&#39;xTextTicks&#39;);
+        while (xTextTicks.childNodes.length &gt; 0) {
+            xTextTicks.removeChild(xTextTicks.firstChild);
+        }
+
+        var i;
+        var points = BBox.x + &#39;,&#39; + (BBox.y + BBox.height) + &#39; &#39;;
+        var pointsBis = BBox.x + &#39;,&#39; + BBox.y + &#39; &#39;;
+        if (this.getOwnProperty(&#39;ticks-display&#39;)) {
+            var scale = BBox.width / BBoxCurves.width;
+            var xLim = this.getAxisLimits(BBoxCurves.x, BBoxCurves.width, 2);
+            var linspace = Tools.Vector.linearSpace;
+            var ind = linspace(BBox.x + (xLim.min - BBoxCurves.x) * scale,
+                               BBox.x + (xLim.min - BBoxCurves.x + (xLim.nTicks - 1) * xLim.dTick) * scale,
+                               xLim.nTicks).data;
+
+            for (i = 0; i &lt; ind.length; i++) {
+                points += ind[i] + &#39;,&#39; + (BBox.y + BBox.height) + &#39; &#39;;
+                pointsBis += ind[i] + &#39;,&#39; + BBox.y + &#39; &#39;;
+            }
+
+            var exponent = xLim.e10;
+            var tickText, textProp = this.getProperties(&#39;textTicks&#39;);
+            textProp.y = BBox.y + BBox.height + 20;
+
+            if (Math.abs(exponent) &lt; 2) {
+                exponent = 0;
+            } else {
+                textProp.x = BBox.x + BBox.width + 20;
+                tickText = Tools.createSVGTextNode(&#39;10^&#39; + exponent, textProp);
+                tickText.setAttributeNS(null, &#39;font-weight&#39;, &#39;bold&#39;);
+                xTextTicks.appendChild(tickText);
+            }
+            var val = linspace(xLim.min,
+                               xLim.min + (xLim.nTicks - 1) * xLim.dTick,
+                               xLim.nTicks).data;
+
+            for (i = 0; i &lt; ind.length; i++) {
+                textProp.x = ind[i];
+                val[i] = parseFloat((val[i] * Math.pow(10, -exponent)).toFixed(2));
+                tickText = Tools.createSVGTextNode(val[i], textProp);
+                xTextTicks.appendChild(tickText);
+            }
+        }
+        points += (BBox.x + BBox.width) + &#39;,&#39; + (BBox.y + BBox.height) + &#39; &#39;;
+        xAxisLine.setAttributeNS(null, &#39;points&#39;, points);
+        pointsBis += (BBox.x + BBox.width) + &#39;,&#39; + BBox.y + &#39; &#39;;
+        xAxisLineBis.setAttributeNS(null, &#39;points&#39;, pointsBis);
+        return this;
+    };
+
+<span id='Plot-method-setYAxis'>    /**
+</span>     * @private
+     *  Create xAxis view.
+     */
+    Plot.prototype.setYAxis = function () {
+
+        var svg = this.getDrawing();
+
+        var yAxis = svg.getElementById(&#39;yAxis&#39;);
+        var yAxisLine = svg.getElementById(&#39;yAxisLine&#39;);
+        var yAxisLineBis = svg.getElementById(&#39;yAxisLineBis&#39;);
+
+        var dArea = svg.getElementById(&#39;drawingArea&#39;);
+
+        var BBoxCurves = this.getCurrentAxis();
+
+        var BBox = {
+            x: dArea.x.baseVal.value,
+            y: dArea.y.baseVal.value,
+            width: dArea.width.baseVal.value,
+            height: dArea.height.baseVal.value
+        };
+
+        var yTextTicks = svg.getElementById(&#39;yTextTicks&#39;);
+        while (yTextTicks.childNodes.length &gt; 0) {
+            yTextTicks.removeChild(yTextTicks.firstChild);
+        }
+
+        var i;
+        var points = BBox.x + &#39;,&#39; + (BBox.y) + &#39; &#39;;
+        var pointsBis = (BBox.x + BBox.width) + &#39;,&#39; + (BBox.y) + &#39; &#39;;
+        if (this.getOwnProperty(&#39;ticks-display&#39;)) {
+            var scale = BBox.height / BBoxCurves.height;
+            var yLim = this.getAxisLimits(BBoxCurves.y, BBoxCurves.height, 2);
+            var linspace = Tools.Vector.linearSpace;
+            var ind = linspace(BBox.y + (yLim.min - BBoxCurves.y) * scale,
+                               BBox.y + (yLim.min - BBoxCurves.y + (yLim.nTicks - 1) * yLim.dTick) * scale,
+                               yLim.nTicks).data;
+
+            for (i = 0; i &lt; ind.length; i++) {
+                points += BBox.x + &#39;,&#39; + ind[i] + &#39; &#39;;
+                pointsBis += (BBox.x + BBox.width) + &#39;,&#39; + ind[i] + &#39; &#39;;
+            }
+
+            var exponent = yLim.e10;
+            var tickText, textProp = this.getProperties(&#39;textTicks&#39;);
+            textProp.x = BBox.x - 15;
+
+            if (Math.abs(exponent) &lt; 2) {
+                exponent = 0;
+            } else {
+                textProp.y = BBox.y - 10;
+                tickText = Tools.createSVGTextNode(&#39;10^&#39; + exponent, textProp);
+                tickText.setAttributeNS(null, &#39;font-weight&#39;, &#39;bold&#39;);
+                yTextTicks.appendChild(tickText);
+            }
+
+            var val = linspace(-yLim.min,
+                               -(yLim.min + (yLim.nTicks - 1) * yLim.dTick),
+                               yLim.nTicks).data;
+            var fontSize = parseFloat(this.getProperties(&#39;axis&#39;)[&#39;font-size&#39;]);
+            for (i = 0; i &lt; ind.length; i++) {
+                textProp.y = ind[i] + fontSize / 2;
+                val[i] = parseFloat((val[i] * Math.pow(10, -exponent)).toFixed(2));
+                tickText = Tools.createSVGTextNode(val[i], textProp);
+                yTextTicks.appendChild(tickText);
+            }
+        }
+        points += BBox.x + &#39;,&#39; + (BBox.y + BBox.height) + &#39; &#39;;
+        pointsBis += (BBox.x + BBox.width) + &#39;,&#39; + (BBox.y + BBox.height) + &#39; &#39;;
+        yAxisLine.setAttributeNS(null, &#39;points&#39;, points);
+        yAxisLineBis.setAttributeNS(null, &#39;points&#39;, pointsBis);
+        return this;
+    };
+
+<span id='Plot-method-getAxisLimits'>    /**
+</span>     * @private
+     *  Determine the best way to sample axis.
+     */
+    Plot.prototype.getAxisLimits = function (minValue, widthValue) {
+
+        var nTicksMax = 10;
+        var rounds = [1, 2, 5];
+
+        // Tools
+        var k, kBest;
+        var log10 = function (x) { return Math.log(x) / Math.LN10; };
+        var pow10 = function (x) { return Math.pow(10, x); };
+
+        // Find the best spacing
+        var dTickMinLog = log10(widthValue / nTicksMax);
+        var dTickBestLog = dTickMinLog + 2;
+        for (k = 0; k &lt; rounds.length; k++) {
+            var offset = log10(rounds[k]);
+            var dTickTmpLog = Math.ceil(dTickMinLog - offset) + offset;
+            if (dTickTmpLog &lt; dTickBestLog) {
+                dTickBestLog = dTickTmpLog;
+                kBest = k;
+            }
+        }
+        var exponent = Math.floor(dTickBestLog);
+        var dTick = rounds[kBest] * pow10(exponent);
+
+        // Find first tick and number of ticks
+        var minTick = Math.ceil(minValue / dTick) * dTick;
+        var maxTick = Math.floor((minValue + widthValue) / dTick) * dTick;
+        var nTicks = 1 + Math.round((maxTick - minTick) / dTick);
+
+        return {
+            &#39;min&#39;: minTick,
+            &#39;dTick&#39;: dTick,
+            &#39;nTicks&#39;: nTicks,
+            &#39;e10&#39;: exponent
+        };
+    };
+
+<span id='Plot-method-getCurvesBBox'>    /**
+</span>     * @private
+     *  Compute union of all bounding box to determine
+     *  automatic view.
+     */
+    Plot.prototype.getCurvesBBox = function () {
+
+        var curves = this.getDrawing().getElementById(&#39;curves&#39;);
+        var mBBox = [0, 0, 1, 1];
+
+        if (curves.hasChildNodes()) {
+            mBBox = curves.childNodes[0].BBox;
+            var i;
+            var curvesChilds = curves.childNodes;
+            for (i = 1; i &lt; curvesChilds.length; i++) {
+                var BB = curvesChilds[i].BBox;
+
+                mBBox[0] = BB[0] &lt; mBBox[0] ? BB[0] : mBBox[0];
+                mBBox[1] = BB[1] &lt; mBBox[1] ? BB[1] : mBBox[1];
+                mBBox[2] = BB[2] &gt; mBBox[2] ? BB[2] : mBBox[2];
+                mBBox[3] = BB[3] &gt; mBBox[3] ? BB[3] : mBBox[3];
+            }
+        }
+        var BBox = {
+            x: mBBox[0],
+            y: -mBBox[3],
+            width: mBBox[2] - mBBox[0],
+            height: mBBox[3] - mBBox[1]
+        };
+        return BBox;
+    };
+
+<span id='Plot-method-scaleElements'>    /**
+</span>     * @private
+     *  Scale specific elements when zooming or change properties
+     *  (like markers).
+     */
+    Plot.prototype.scaleElements = function () {
+
+        var svg = this.getDrawing();
+        var drawingArea = svg.getElementById(&#39;drawingArea&#39;);
+        var w = drawingArea.width.baseVal.value;
+        var h = drawingArea.height.baseVal.value;
+
+        // Specific scaling for scatter plot
+        var markers = svg.getElementById(&#39;markers&#39;).childNodes;
+        var scaleX = 2 * this.getCurrentAxis().width / w;
+        var scaleY = 2 * this.getCurrentAxis().height / h;
+
+        var m;
+        for (m = 0; m &lt; markers.length; m++) {
+            /*
+             if (markers[m].firstChild) {
+             var size = markers[m].getAttribute(&#39;size&#39;);
+             var scaling = &#39;scale(&#39; + (scaleX * size) + &#39;, &#39; + (scaleY * size) + &#39;) &#39;;
+             markers[m].firstChild.setAttributeNS(null, &#39;transform&#39;, scaling);
+             }
+             */
+            markers[m].setAttributeNS(null, &#39;markerWidth&#39;,
+                                      scaleX * markers[m].getAttribute(&#39;size&#39;));
+            markers[m].setAttributeNS(null, &#39;markerHeight&#39;,
+                                      scaleY * markers[m].getAttribute(&#39;size&#39;));
+        }
+
+        // Automatic non-scaleing-stroke properties for firefox
+        /*
+         // Specific scaling for scatter plot
+         var curvesNodes = svg.getElementById(&#39;curves&#39;).childNodes;
+         var scale = (scaleX + scaleY) / 2.0;
+         for (m = 0; m &lt; curvesNodes.length; m++) {
+         curvesNodes[m].setAttributeNS(null, &#39;stroke-width&#39;, scale);
+         }
+         */
+    };
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                              TITLE AND LABELS                               //
+    /////////////////////////////////////////////////////////////////////////////////
+
+
+<span id='Plot-method-setTitle'>    /**
+</span>     * Define plot title and labels.
+     * If text are an empty strings then rendering will be disable.
+     * @param {string} [title=&#39;&#39;]
+     *  Text of title.
+     * @param {string} [xLabel=&#39;&#39;]
+     *  Text of x label.
+     * @param {string} [yLabel=&#39;&#39;]
+     *  Text of y label.
+     * @return {Plot}
+     *  This plot.
+     *
+     *  // Set title
+     *  myPlot.setTitle (&#39;My plot !&#39;);
+     */
+    Plot.prototype.setTitle = function (text, xLabel, yLabel) {
+
+        text = text || &#39;&#39;;
+
+        var svg = this.getDrawing();
+        var title = svg.getElementById(&#39;title&#39;);
+        if (title.hasChildNodes()) {
+            while (title.childNodes.length &gt; 0) {
+                title.removeChild(title.firstChild);
+            }
+        }
+        if (text !== &#39;&#39;) {
+            this.setOwnProperty(&#39;title-display&#39;, true);
+            title.appendChild(document.createTextNode(text));
+        } else {
+            this.setOwnProperty(&#39;title-display&#39;, false);
+        }
+        if (xLabel !== undefined) {
+            this.setXLabel(xLabel);
+        }
+        if (yLabel !== undefined) {
+            this.setYLabel(yLabel);
+        }
+        this.autoDisplay();
+        return this;
+    };
+
+<span id='Plot-method-setLabels'>    /**
+</span>     * Define plot x and y labels.
+     * If text are an empty strings then rendering will be disable.
+     * @param {string} [xLabel=&#39;&#39;]
+     *  Text of x label.
+     * @param {string} [yLabel=&#39;&#39;]
+     *  Text of y label.
+     * @return {Plot}
+     *  This plot.
+     *
+     *  // Set x and y labels
+     *  myPlot.setLabels (&#39;x Label&#39;, &#39;y Label&#39;);
+     */
+    Plot.prototype.setLabels = function (xLabel, yLabel) {
+
+        this.setXLabel(xLabel);
+        this.setYLabel(yLabel);
+        return this;
+    };
+
+<span id='Plot-method-setXLabel'>    /**
+</span>     * Define plot x label.
+     * If text is an empty string then rendering will be disable.
+     * @param {string} [text=&#39;&#39;]
+     *  Text of x label.
+
+     * @return {Plot}
+     *  This plot.
+     *
+     *  // Set x label
+     *  myPlot.setXLabel (&#39;x Label&#39;);
+     */
+    Plot.prototype.setXLabel = function (text) {
+
+        text = text || &#39;&#39;;
+
+        var svg = this.getDrawing();
+        var xLabel = svg.getElementById(&#39;xLabel&#39;);
+        if (xLabel.hasChildNodes()) {
+            while (xLabel.childNodes.length &gt; 0) {
+                xLabel.removeChild(xLabel.firstChild);
+            }
+        }
+        if (text !== &#39;&#39;) {
+            this.setOwnProperty(&#39;xLabel-display&#39;, true);
+            xLabel.appendChild(document.createTextNode(text));
+        } else {
+            this.setOwnProperty(&#39;xLabel-display&#39;, false);
+        }
+
+        this.autoDisplay();
+        return this;
+    };
+
+<span id='Plot-method-setYLabel'>    /**
+</span>     * Define plot y label.
+     * If text is an empty string then rendering will be disable.
+     * @param {string} [text=&#39;&#39;]
+     *  Text of y label.
+     * @return {Plot}
+     *  This plot.
+     *
+     *  // Set y label
+     *  myPlot.setYLabel (&#39;y Label&#39;);
+     */
+    Plot.prototype.setYLabel = function (text) {
+
+        text = text || &#39;&#39;;
+
+        var svg = this.getDrawing();
+        var yLabel = svg.getElementById(&#39;yLabel&#39;);
+        if (yLabel.hasChildNodes()) {
+            while (yLabel.childNodes.length &gt; 0) {
+                yLabel.removeChild(yLabel.firstChild);
+            }
+        }
+        if (text !== &#39;&#39;) {
+            this.setOwnProperty(&#39;yLabel-display&#39;, true);
+            var textNode = document.createTextNode(text);
+            yLabel.appendChild(textNode);
+            this.rotateYLabel();
+        } else {
+            this.setOwnProperty(&#39;yLabel-display&#39;, false);
+        }
+
+        this.autoDisplay();
+        return this;
+    };
+
+<span id='Plot-method-rotateYLabel'>    /**
+</span>     * @private
+     *  Function rotating y label
+     */
+    Plot.prototype.rotateYLabel = function () {
+
+
+        var svg = this.getDrawing();
+        var yLabel = svg.getElementById(&#39;yLabel&#39;);
+
+        var BBox = yLabel.getBBox();
+        var cx = (BBox.x + BBox.width / 2);
+        var cy = (BBox.y + BBox.height / 2);
+        yLabel.setAttributeNS(null, &#39;transform&#39;, &#39;rotate(-90, &#39; + cx + &#39;, &#39; + cy + &#39;)&#39;);
+        return this;
+    };
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                              LEGEND FUNCTIONS                               //
+    /////////////////////////////////////////////////////////////////////////////////
+
+
+<span id='Plot-method-setLegend'>    /**
+</span>     * @private
+     *  Create plot legend.
+     */
+    Plot.prototype.setLegend = function () {
+
+        var svg = this.getDrawing();
+        var legend = svg.getElementById(&#39;legend&#39;);
+        while (legend.childNodes.length &gt; 0) {
+            legend.removeChild(legend.firstChild);
+        }
+
+        // Element have to be render for determine its measures
+        legend.setAttributeNS(null, &#39;display&#39;, &#39;inline&#39;);
+
+        var curves = svg.getElementById(&#39;curves&#39;);
+        var drawingArea = svg.getElementById(&#39;drawingArea&#39;);
+        var markers = Tools.createSVGNode(&#39;defs&#39;, {id: &#39;legendMarkers&#39;});
+        var i;
+        legend.appendChild(markers);
+        var pad = 5;
+        var sBox = {
+            &#39;width&#39;: 20,
+            &#39;height&#39;: 20
+        };
+        if (curves.hasChildNodes()) {
+            var curvesChilds = curves.childNodes;
+            var xPos = 0, yPos = 0;
+            for (i = 0; i &lt; curvesChilds.length; i++) {
+                if (curvesChilds[i].getAttribute(&#39;legend&#39;) !== &#39;none&#39;) {
+                    // Text
+                    var text = curvesChilds[i].getAttribute(&#39;legend&#39;) || curvesChilds[i].getAttribute(&#39;id&#39;);
+                    var id = &#39;legendTextId_&#39; + i;
+                    var textNode = Tools.createSVGTextNode(text, {&#39;id&#39;: id});
+                    legend.appendChild(textNode);
+                    var BBox = textNode.getBBox();
+                    textNode.setAttributeNS(null, &#39;x&#39;, xPos + sBox.width + 5);
+
+                    // Sample
+                    var sample;
+                    switch (curvesChilds[i].tagName) {
+                    case &#39;image&#39;:
+                        var sampleProperties = {
+                            &#39;x&#39;: xPos,
+                            &#39;y&#39;: yPos - 2 * sBox.height / 3,
+                            &#39;width&#39;: sBox.width,
+                            &#39;height&#39;: sBox.height
+                        };
+                        sample = Tools.createSVGNode(&#39;image&#39;, sampleProperties);
+                        var xlinkNS = &#39;http://www.w3.org/1999/xlink&#39;;
+                        var link = curvesChilds[i].getAttributeNS(xlinkNS, &#39;href&#39;);
+                        sample.setAttributeNS(xlinkNS, &#39;xlink:href&#39;, link);
+                        break;
+                    case &#39;polyline&#39;:
+                        id = &#39;legendCurveId_&#39; + i;
+                        sample = curvesChilds[i].cloneNode();
+                        sample.removeAttributeNS(null, &#39;marker-end&#39;);
+                        sample.removeAttributeNS(null, &#39;marker-start&#39;);
+                        if (sample.getAttribute(&#39;marker-mid&#39;)) {
+                            var markerId = sample.getAttribute(&#39;marker-mid&#39;).split(&#39;#&#39;)[1].split(&#39;)&#39;)[0];
+                            var marker = svg.getElementById(markerId).cloneNode(true);
+                            var markerSize = marker.getAttribute(&#39;size&#39;);
+                            markers.appendChild(marker);
+                            marker.removeAttributeNS(null, &#39;transform&#39;);
+                            marker.setAttributeNS(null, &#39;markerWidth&#39;, markerSize * 2);
+                            marker.setAttributeNS(null, &#39;markerHeight&#39;, markerSize * 2);
+                            marker.setAttributeNS(null, &#39;id&#39;, markerId + &#39;_legend&#39;);
+                            sample.setAttributeNS(null, &#39;marker-mid&#39;, &#39;url(#&#39; + markerId + &#39;_legend&#39; + &#39;)&#39;);
+                        }
+                        var ySample = yPos - BBox.height / 3;
+                        var points = xPos + &#39;,&#39; + ySample  + &#39; &#39; +
+                                (xPos + sBox.width / 2) + &#39;,&#39; + ySample + &#39; &#39; +
+                                (xPos + sBox.width) + &#39;,&#39; + ySample + &#39; &#39;;
+                        sample.setAttributeNS(null, &#39;points&#39;, points);
+                        legend.appendChild(sample);
+                        break;
+                        // TO CHANGE
+                    default:
+                        sample = Tools.createSVGNode(&#39;rect&#39;);
+                        break;
+                    }
+                    legend.appendChild(sample);
+                    textNode.setAttributeNS(null, &#39;y&#39;, yPos);
+                    yPos += BBox.height;
+                }
+
+            }
+
+        } else {
+            return this;
+        }
+        var legendBBox = legend.getBBox();
+        var frontProp = {
+            &#39;fill&#39;: &#39;white&#39;,
+            &#39;x&#39;: legendBBox.x - pad,
+            &#39;y&#39;: legendBBox.y - pad,
+            &#39;width&#39;: legendBBox.width + 2 * pad,
+            &#39;height&#39;: legendBBox.height + 2 * pad,
+            &#39;stroke&#39;: &#39;gray&#39;,
+            &#39;stroke-width&#39;: 2
+        };
+        var front = Tools.createSVGNode(&#39;rect&#39;, frontProp);
+        legend.insertBefore(front, legend.firstChild);
+        legendBBox = legend.getBBox();
+        var viewBox = legendBBox.x + &#39; &#39; + legendBBox.y + &#39; &#39; + legendBBox.width + &#39; &#39; + legendBBox.height;
+        legend.setAttributeNS(null, &#39;viewBox&#39;, viewBox);
+        legend.setAttributeNS(null, &#39;width&#39;, legendBBox.width);
+        legend.setAttributeNS(null, &#39;height&#39;, legendBBox.height);
+        this.setLegendLocation();
+        return this;
+    };
+
+<span id='Plot-method-getLegendLocation'>    /**
+</span>     * @private
+     *  Return reuired legend location location can be
+     *  &#39;nw&#39;, &#39;n&#39;, &#39;ne&#39;, &#39;w&#39;, &#39;c&#39;, &#39;e&#39;, &#39;sw&#39;, &#39;s&#39;, &#39;se&#39;.
+     */
+    Plot.prototype.getLegendLocation = function (location) {
+
+        var svg = this.getDrawing();
+        var legend = svg.getElementById(&#39;legend&#39;);
+        var legendBBox;
+        try {
+            legendBBox = legend.getBBox();
+        } catch (e) {
+            return;
+        }
+
+        // drawing area
+        var drawingArea = svg.getElementById(&#39;drawingArea&#39;);
+        var dABBox = {
+            &#39;x&#39;: drawingArea.x.baseVal.value,
+            &#39;y&#39;: drawingArea.y.baseVal.value,
+            &#39;width&#39;: drawingArea.width.baseVal.value,
+            &#39;height&#39;: drawingArea.height.baseVal.value
+        };
+        var margin = 0.02 * Math.min(dABBox.width, dABBox.height);
+
+        var xMin = [
+            dABBox.x + margin,
+            dABBox.x + (dABBox.width - legendBBox.width) / 2,
+            dABBox.x + dABBox.width - legendBBox.width - margin
+        ];
+        var yMin = [
+            dABBox.y + margin,
+            dABBox.y + (dABBox.height - legendBBox.height) / 2,
+            dABBox.y + dABBox.height - legendBBox.height - margin
+        ];
+        var w = legendBBox.width, h = legendBBox.height;
+        switch (location.toLowerCase()) {
+        case &#39;nw&#39;:
+        case &#39;north-west&#39;:
+            return [xMin[0], yMin[0], xMin[0] + w, yMin[0] + h];
+        case &#39;n&#39;:
+        case &#39;north&#39;:
+            return [xMin[1], yMin[0], xMin[1] + w, yMin[0] + h];
+        case &#39;none&#39;:
+        case &#39;ne&#39;:
+        case &#39;north-east&#39;:
+            return [xMin[2], yMin[0], xMin[2] + w, yMin[0] + h];
+        case &#39;w&#39;:
+        case &#39;west&#39;:
+            return [xMin[0], yMin[1], xMin[0] + w, yMin[1] + h];
+        case &#39;c&#39;:
+        case &#39;center&#39;:
+            return [xMin[1], yMin[1], xMin[1] + w, yMin[1] + h];
+        case &#39;e&#39;:
+        case &#39;east&#39;:
+            return [xMin[2], yMin[1], xMin[2] + w, yMin[1] + h];
+        case &#39;sw&#39;:
+        case &#39;sud-west&#39;:
+            return [xMin[0], yMin[2], xMin[0] + w, yMin[2] + h];
+        case &#39;s&#39;:
+        case &#39;sud&#39;:
+            return [xMin[1], yMin[2], xMin[1] + w, yMin[2] + h];
+        case &#39;se&#39;:
+        case &#39;sud-east&#39;:
+            return [xMin[2], yMin[2], xMin[2] + w, yMin[2] + h];
+        case &#39;auto&#39;:
+            return this.getLegendLocation(this.getLegendAutoLocation());
+        default:
+            throw new Error(&#39;Plot.getLegendLocation: Wrong location request.&#39;);
+        }
+    };
+
+<span id='Plot-method-getLegendAutoLocation'>    /**
+</span>     * @private
+     *  Return legend location which overlap least points
+     */
+    Plot.prototype.getLegendAutoLocation = function () {
+
+        if (!this.getOwnProperty(&#39;compute-closest&#39;)) {
+            return &#39;ne&#39;;
+        }
+        var locations = [&#39;ne&#39;, &#39;se&#39;, &#39;nw&#39;,
+                         &#39;w&#39;,  &#39;n&#39;, &#39;e&#39;,
+                         &#39;s&#39;, &#39;w&#39;, &#39;c&#39;];
+
+        var count = [];
+
+        // Initalization
+        var i;
+        var l = this.getLegendLocation(locations[0]);
+        var min, max;
+        try {
+            min = this.getCoordinates(l[0], l[1], false);
+            max = this.getCoordinates(l[2], l[3], false);
+        } catch (x) {
+            return &#39;none&#39;;
+        }
+        count[0] = this.tree.count(min.x, min.y, max.x - min.x, max.y - min.y);
+
+        var locMin = 0;
+
+        for (i = 1; i &lt; locations.length; i++) {
+            l = this.getLegendLocation(locations[i]);
+            min = this.getCoordinates(l[0], l[1], false);
+            max = this.getCoordinates(l[2], l[3], false);
+            count[i] = this.tree.count(min.x, min.y, max.x - min.x, max.y - min.y);
+            if (count[i] &lt; count[locMin]) {
+                locMin = i;
+            }
+        }
+        return locations[locMin];
+    };
+
+<span id='Plot-method-setLegendLocation'>    /**
+</span>     * @private
+     *  Place legend at the position required by plot
+     *  own property &#39;legend-display&#39;. Valids values are
+     * &#39;nw&#39;, &#39;n&#39;, &#39;ne&#39;, &#39;w&#39;, &#39;c&#39;, &#39;e&#39;, &#39;sw&#39;, &#39;s&#39;, &#39;se&#39;,
+     * &#39;auto&#39; and &#39;none&#39;.
+     */
+    Plot.prototype.setLegendLocation = function () {
+
+        var location = this.getOwnProperty(&#39;legend-display&#39;);
+        var svg = this.getDrawing();
+        var legend = svg.getElementById(&#39;legend&#39;);
+
+        if (location === &#39;none&#39;) {
+            legend.setAttributeNS(null, &#39;display&#39;, &#39;none&#39;);
+        } else {
+            legend.setAttributeNS(null, &#39;display&#39;, &#39;inline&#39;);
+            location = this.getLegendLocation(location);
+            legend.setAttributeNS(null, &#39;x&#39;, location[0]);
+            legend.setAttributeNS(null, &#39;y&#39;, location[1]);
+        }
+        return this;
+    };
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                           INITIALISATION AND UPDATE                         //
+    /////////////////////////////////////////////////////////////////////////////////
+
+
+<span id='Plot-method-initialize'>    /**
+</span>     * @private
+     *  Plot initialisation function.
+     */
+    Plot.prototype.initialize = function () {
+
+        // Set UI parameters
+        var svg = this.getDrawing();
+        var parent = this.getParentNode();
+        parent.appendChild(svg);
+
+        // Drawing area
+        var drawingAreaProperties = this.getProperties(&#39;drawingArea&#39;);
+        var drawingArea = Tools.createSVGNode(&#39;svg&#39;, drawingAreaProperties);
+        svg.appendChild(drawingArea);
+
+        // Nodes containing data Path
+        var curvesProperties = this.getProperties(&#39;curves&#39;);
+        var curves = Tools.createSVGNode(&#39;g&#39;, curvesProperties);
+        drawingArea.appendChild(curves);
+
+        // Nodes containing data Path
+        var markersProperties = this.getProperties(&#39;markers&#39;);
+        var markers = Tools.createSVGNode(&#39;defs&#39;, markersProperties);
+        drawingArea.appendChild(markers);
+
+        // Cursor
+        var cursorProperties = this.getProperties(&#39;cursor&#39;);
+        var cursor = Tools.createSVGNode(&#39;polyline&#39;, cursorProperties);
+        this.setMarkerPath(cursor, cursorProperties.marker);
+        drawingArea.appendChild(cursor);
+
+        // Drawing area front
+        var frontProperties = this.getProperties(&#39;front&#39;);
+        var front = Tools.createSVGNode(&#39;rect&#39;, frontProperties);
+        drawingArea.appendChild(front);
+
+        // Axis
+        var axisProperties = this.getProperties(&#39;axis&#39;);
+        var axis = Tools.createSVGNode(&#39;g&#39;, axisProperties);
+        svg.appendChild(axis);
+
+        // Tick marker
+        var ticksMarkerProp = this.getProperties(&#39;ticks&#39;);
+        var ticksMarker = Tools.createSVGNode(&#39;marker&#39;, ticksMarkerProp);
+        var ticksLine = Tools.createSVGNode(&#39;line&#39;, ticksMarkerProp);
+        ticksMarker.appendChild(ticksLine);
+        axis.appendChild(ticksMarker);
+
+        // x Axis
+        var xAxisProp = this.getProperties(&#39;xAxis&#39;);
+        var xAxis = Tools.createSVGNode(&#39;g&#39;, xAxisProp);
+        var xAxisLineProp = this.getProperties(&#39;xAxisLine&#39;);
+        var xAxisLine = Tools.createSVGNode(&#39;polyline&#39;, xAxisLineProp);
+        var xAxisLineBisProp = this.getProperties(&#39;xAxisLineBis&#39;);
+        var xAxisLineBis = Tools.createSVGNode(&#39;polyline&#39;, xAxisLineBisProp);
+        var xTextTicksProp = this.getProperties(&#39;xTextTicks&#39;);
+        var xTextTicks = Tools.createSVGNode(&#39;g&#39;, xTextTicksProp);
+        xAxis.appendChild(xAxisLine);
+        xAxis.appendChild(xAxisLineBis);
+        xAxis.appendChild(xTextTicks);
+        axis.appendChild(xAxis);
+
+        // y Axis
+        var yAxisProp = this.getProperties(&#39;yAxis&#39;);
+        var yAxis = Tools.createSVGNode(&#39;g&#39;, yAxisProp);
+        var yAxisLineProp = this.getProperties(&#39;yAxisLine&#39;);
+        var yAxisLine = Tools.createSVGNode(&#39;polyline&#39;, yAxisLineProp);
+        var yAxisLineBisProp = this.getProperties(&#39;yAxisLineBis&#39;);
+        var yAxisLineBis = Tools.createSVGNode(&#39;polyline&#39;, yAxisLineBisProp);
+        var yTextTicksProp = this.getProperties(&#39;yTextTicks&#39;);
+        var yTextTicks = Tools.createSVGNode(&#39;g&#39;, yTextTicksProp);
+        yAxis.appendChild(yAxisLine);
+        yAxis.appendChild(yAxisLineBis);
+        yAxis.appendChild(yTextTicks);
+        axis.appendChild(yAxis);
+
+        // Title
+        var titleProperties = this.getProperties(&#39;title&#39;);
+        var title = Tools.createSVGTextNode(&#39;&#39;, titleProperties);
+        svg.appendChild(title);
+
+        // xLabel
+        var xLabelProperties = this.getProperties(&#39;xLabel&#39;);
+        var xLabel = Tools.createSVGTextNode(&#39;&#39;, xLabelProperties);
+        svg.appendChild(xLabel);
+
+        // yLabel
+        var yLabelProperties = this.getProperties(&#39;yLabel&#39;);
+        var yLabel = Tools.createSVGTextNode(&#39;&#39;, yLabelProperties);
+        svg.appendChild(yLabel);
+
+        // Legend
+        var legendProperties = this.getProperties(&#39;legend&#39;);
+        var legend = Tools.createSVGNode(&#39;svg&#39;, legendProperties);
+        svg.appendChild(legend);
+
+        this.initializeEvents();
+
+        this.autoDisplay();
+        this.setAxis();
+
+        return this;
+    };
+
+<span id='Plot-method-initializeEvents'>    /**
+</span>     * @private
+     *  Plot Event initialisation function.
+     */
+    Plot.prototype.initializeEvents = function () {
+
+        var svg = this.getDrawing();
+        var front = svg.getElementById(&#39;drawingArea&#39;).getElementById(&#39;front&#39;);
+
+        // Set events Parameters
+        var thisPlot = this;
+        var onMouseDown = function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            thisPlot.coordDown = thisPlot.getCoordinates(event.clientX, event.clientY);
+            thisPlot.coordDown.clientX = event.clientX;
+            thisPlot.coordDown.clientY = event.clientY;
+            thisPlot.mousedown(thisPlot.coordDown, event);
+        };
+        var onMouseMove = function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            var coord = thisPlot.getCoordinates(event.clientX, event.clientY);
+            thisPlot.mousemove(coord, event);
+        };
+        var onMouseUp = function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            var newCoord = thisPlot.getCoordinates(event.clientX, event.clientY);
+            var oldCoord = thisPlot.coordDown;
+            if (oldCoord === undefined) {
+                return;
+            }
+            // Both coordinates are the same
+            if (oldCoord.clientX === event.clientX &amp;&amp; oldCoord.clientY === event.clientY) {
+                if (thisPlot.click &amp;&amp; typeof thisPlot.click === &#39;function&#39;) {
+                    thisPlot.click(newCoord, event);
+                }
+                // Else fire event mouseup
+            } else {
+                if (thisPlot.mouseup &amp;&amp; typeof thisPlot.mouseup === &#39;function&#39;) {
+                    thisPlot.mouseup(newCoord, event);
+                }
+            }
+            delete thisPlot.coordDown;
+        };
+
+        var onMouseWheel = function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            var coord = thisPlot.getCoordinates(event.clientX, event.clientY);
+            var direction = 0;
+            if (event.hasOwnProperty(&#39;wheelDelta&#39;)) {
+                direction = -event.wheelDelta / 120.0;
+            } else {
+                direction = event.detail / 3.0;
+            }
+            switch (event.target.parentNode.id) {
+            case &#39;xAxis&#39;:
+                if (!thisPlot.getOwnProperty(&#39;preserve-ratio&#39;)) {
+                    thisPlot.zoomAxis(coord, 1 + direction * 0.1, 1);
+                }
+                break;
+            case &#39;yAxis&#39;:
+                if (!thisPlot.getOwnProperty(&#39;preserve-ratio&#39;)) {
+                    thisPlot.zoomAxis(coord, 1, 1 + direction * 0.1);
+                }
+                break;
+            default:
+                if (thisPlot.mousewheel &amp;&amp; typeof thisPlot.mousewheel === &#39;function&#39;) {
+                    thisPlot.mousewheel(direction, coord, event);
+                }
+            }
+        };
+
+        var onMouseOut = function (event) {
+            event.stopPropagation();
+            event.preventDefault();
+            delete thisPlot.coordDown;
+            var select = thisPlot.getDrawing().getElementById(&#39;selectArea&#39;);
+            // Remove select rectangle
+            if (select) {
+                select.parentNode.removeChild(select);
+            }
+        };
+
+        front.addEventListener(&#39;mousedown&#39;, onMouseDown, false);
+        front.addEventListener(&#39;mousemove&#39;, onMouseMove, false);
+        front.addEventListener(&#39;mouseup&#39;, onMouseUp, false);
+        front.addEventListener(&#39;DOMMouseScroll&#39;, onMouseWheel, false);
+        front.addEventListener(&#39;mousewheel&#39;, onMouseWheel, false);
+        front.addEventListener(&#39;mouseout&#39;, onMouseOut, false);
+
+        // Axis events (zomming);
+        var xAxis = svg.getElementById(&#39;xAxis&#39;);
+        xAxis.addEventListener(&#39;mousewheel&#39;, onMouseWheel, false);
+        xAxis.addEventListener(&#39;DOMMouseScroll&#39;, onMouseWheel, false);
+        var yAxis = svg.getElementById(&#39;yAxis&#39;);
+        yAxis.addEventListener(&#39;mousewheel&#39;, onMouseWheel, false);
+        xAxis.addEventListener(&#39;DOMMouseScroll&#39;, onMouseWheel, false);
+
+        if (this.getOwnProperty(&#39;compute-closest&#39;)) {
+            this.tree = new Tree2d();
+        }
+
+        return this;
+    };
+
+<span id='Plot-method-autoDisplay'>    /**
+</span>     * @private
+     *  Automatically positions the components of the drawing.
+     */
+    Plot.prototype.autoDisplay = function () {
+
+        // Set UI parameters
+        var svg = this.getDrawing();
+
+        // drawing area
+        var drawingArea = svg.getElementById(&#39;drawingArea&#39;);
+        drawingArea.setAttributeNS(null, &#39;x&#39;, 0);
+        drawingArea.setAttributeNS(null, &#39;y&#39;, 0);
+        drawingArea.setAttributeNS(null, &#39;width&#39;, svg.width.baseVal.value);
+        drawingArea.setAttributeNS(null, &#39;height&#39;, svg.height.baseVal.value);
+
+        var dABBox = {
+            &#39;x&#39;: drawingArea.x.baseVal.value,
+            &#39;y&#39;: drawingArea.y.baseVal.value,
+            &#39;width&#39;: drawingArea.width.baseVal.value,
+            &#39;height&#39;: drawingArea.height.baseVal.value
+        };
+
+        var axis = svg.getElementById(&#39;axis&#39;);
+        var xAxis = svg.getElementById(&#39;xAxis&#39;);
+        var yAxis = svg.getElementById(&#39;yAxis&#39;);
+        var title = svg.getElementById(&#39;title&#39;);
+        var xLabel = svg.getElementById(&#39;xLabel&#39;);
+        var yLabel = svg.getElementById(&#39;yLabel&#39;);
+
+        var titleBBox, xAxisBBox, yAxisBBox, xLabelBBox, yLabelBBox;
+        try {
+            titleBBox = svg.getElementById(&#39;title&#39;).getBBox();
+            xAxisBBox = svg.getElementById(&#39;xAxis&#39;).getBBox();
+            yAxisBBox = svg.getElementById(&#39;yAxis&#39;).getBBox();
+            xLabelBBox = svg.getElementById(&#39;xLabel&#39;).getBBox();
+            yLabelBBox = svg.getElementById(&#39;yLabel&#39;).getBBox();
+        } catch (e) {
+            return this;
+        }
+        var s;
+
+        if (this.getOwnProperty(&#39;title-display&#39;)) {
+            dABBox.y = titleBBox.height;
+            dABBox.height -= titleBBox.height;
+            dABBox.y += 5;
+            dABBox.height -= 5;
+        }
+
+        if (this.getOwnProperty(&#39;ticks-display&#39;)) {
+            dABBox.x += 40;
+            dABBox.width -= 80;
+            dABBox.height -= 50;
+            dABBox.y += 20;
+        } 
+
+        var xLabelSpace, yLabelSpace;
+        if (this.getOwnProperty(&#39;yLabel-display&#39;)) {
+            yLabelSpace = yLabelBBox.height + 10;
+            dABBox.x += yLabelSpace;
+            dABBox.width -= yLabelSpace;
+        }
+
+        if (this.getOwnProperty(&#39;xLabel-display&#39;)) {
+            xLabelSpace = xLabelBBox.height + 10;
+            dABBox.height -= xLabelSpace;
+        }
+
+        drawingArea.setAttributeNS(null, &#39;x&#39;, dABBox.x);
+        drawingArea.setAttributeNS(null, &#39;y&#39;, dABBox.y);
+        drawingArea.setAttributeNS(null, &#39;width&#39;, dABBox.width);
+        drawingArea.setAttributeNS(null, &#39;height&#39;, dABBox.height);
+
+        yLabelBBox.y = dABBox.y;
+        yLabelBBox.y += dABBox.height / 2;
+        yLabelBBox.y -= yLabelBBox.height / 2;
+        yLabelBBox.x = 10;
+
+        xLabelBBox.x = dABBox.x + dABBox.width / 2;
+        xLabelBBox.y = svg.height.baseVal.value - 5;
+
+        title.setAttributeNS(null, &#39;x&#39;, xLabelBBox.x);
+        title.setAttributeNS(null, &#39;y&#39;, titleBBox.height);
+
+        xLabel.setAttributeNS(null, &#39;x&#39;, xLabelBBox.x);
+        xLabel.setAttributeNS(null, &#39;y&#39;, xLabelBBox.y);
+
+        yLabel.setAttributeNS(null, &#39;y&#39;, yLabelBBox.y);
+        yLabel.setAttributeNS(null, &#39;x&#39;, yLabelBBox.x);
+
+        this.rotateYLabel();
+        this.setAxis(this.getCurrentAxis());
+        return this;
+    };
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                                   TOOLS                                     //
+    /////////////////////////////////////////////////////////////////////////////////
+
+
+<span id='Plot-method-stringToArgs'>    /** Parse an argument string.
+</span>     *
+     * Format:
+     *  + [size] [border-size]
+     *  + [width] [fac-size]
+     *
+     * Colors X:
+     *  xx for light
+     *  x for normal
+     *  X for medium
+     *  XX for dark
+     *
+     * Color list:
+     *  Nothing: transparent
+     *  [R]ed, [G]reen, [B]lue
+     *  [W]hite, blac[k]
+     *
+     * Marker list:
+     *  . point
+     *  #$ rectangle
+     *  &lt;&gt;^v
+     *  +x*
+     *  _|
+     *
+     * Line list:
+     *  - filled
+     *  : dot
+     *  = dash, [fac-size] is [dash-size] [white-space]
+     *  ! dash-dot, [fac-size] is [dash-size] [white-space]
+     *  ; double-dash, [fac-size] is [dash-size] [white-space] [dash-size-2] [white-space-2]
+     *
+     * Example:
+     *  &#39;.k&#39; is black points
+     *  &#39;-r&#39; is red line
+     *  &#39;#bb3 :k2&#39; is black dotted line of width 2 with light blue rectangles of size 3
+     *  &#39;ok5,1&#39; is black circle of size 5 with a border of width 1
+     *  &#39;=B2,4&#39; is medium blue dashed line of width 2 with dash of size 4
+     *  &#39;=B2,4,8&#39; is the same with dash-spacing of 8
+     *  &#39;;BB2&#39; is dark blue dashed line of width 2, with long/short dash
+     *  &#39;;BB2,4,8 is the same with long dash of size 4 and dash-spacing of 8
+     *  &#39;;BB2,4,8,12 set alternatively dash size to 4 and 12, dash-spacing is 8
+     *  &#39;;BB2,4,8,12,16 set alternatively dash size to 4 and 12 and dash-spacing to 8 and 16
+     */
+    Plot.stringToArgs = function (str) {
+
+        var errMsg = &#39;Plot.stringToArgs: &#39;;
+        var assume = function (condition) {
+            if (!condition) {
+                throw new Error(errMsg + &#39;invalid argument string&#39;);
+            }
+        };
+
+        // check arguments
+        if (str === undefined) {
+            return {};
+        }
+        if (typeof str !== &#39;string&#39;) {
+            throw new Error(errMsg + &#39;argument must be a string&#39;);
+        }
+        str = str.split(&#39; &#39;).join(&#39;&#39;);
+
+        // Regexp
+        var markers = &#39;.#&#39;;
+        var lines = &#39;-=:;!&#39;;
+        var colors = &#39;kwrgb&#39;;
+        var colorList = [&#39;black&#39;, &#39;white&#39;, &#39;red&#39;, &#39;green&#39;, &#39;blue&#39;];
+        var regexp = &#39;([&#39; + colors + &#39;]{0,2})&#39;;
+        regexp += &#39;([0-9.,]*)&#39;;
+        regexp = &#39;^(([&#39; + markers + &#39;])&#39; + regexp + &#39;)?(([&#39; + lines + &#39;])&#39; + regexp + &#39;)?$&#39;;
+
+        // Tools function
+        var getFullName = function (value, list, fullNames) {
+            var i = list.indexOf(value);
+            assume(i &gt;= 0);
+            return fullNames[i];
+        };
+        var getColor = function (colorStr) {
+            if (!colorStr) {
+                return &#39;none&#39;;
+            }
+            var c = colorStr[0];
+            var isUpper = (c === c.toUpperCase());
+            var color = getFullName(c.toLowerCase(), colors, colorList);
+            if (colorStr.length &gt; 1) {
+                assume(colorStr[1] === c);
+                color = ((isUpper) ? &#39;dark&#39; : &#39;light&#39;) + color;
+            } else if (isUpper) {
+                color = &#39;medium&#39; + color;
+            }
+            return color;
+        };
+        var parseFloats = function (floatStr) {
+            var i;
+            var t = (!floatStr) ? [] : floatStr.split(&#39;,&#39;);
+            for (i = 0; i &lt; t.length; i++) {
+                t[i] = parseFloat(t[i]);
+                assume(!isNaN(t[i]));
+            }
+            return t;
+        };
+
+        // Parse string
+        var args = {&#39;stroke&#39;: &#39;none&#39;};
+        var parsed = str.match(new RegExp(regexp, &#39;i&#39;));
+        assume(parsed);
+
+        // Process lines
+        var lk = 6;
+        var lString = parsed[lk];
+        if (!lString) {
+            args.stroke = &#39;none&#39;;
+            args[&#39;stroke-width&#39;] = 0;
+        } else {
+            var lColor = getColor(parsed[lk + 1]);
+            var lSize = parseFloats(parsed[lk + 2]);
+            lSize[0] = (typeof lSize[0] === &#39;number&#39;) ? lSize[0] : 1;
+            args[&#39;stroke-width&#39;] = lSize[0];
+            args.stroke = lColor;
+            if (args.marker) {
+                args.marker.stroke = lColor;
+            }
+            var dashArray = &#39;&#39;;
+            switch (parsed[lk]) {
+            case &#39;-&#39;:
+                break;
+            case &#39;=&#39;:
+                lSize[1] = lSize[1] || 8 * lSize[0];
+                lSize[2] = lSize[2] || Math.floor(lSize[1] * 2 / 3);
+                dashArray += lSize[1] + &#39; &#39; + lSize[2];
+                break;
+            case &#39;:&#39;:
+                lSize[1] = lSize[0];
+                lSize[2] = 2 * lSize[1];
+                dashArray += lSize[1] + &#39; &#39; + lSize[2];
+                break;
+            case &#39;;&#39;:
+                lSize[1] = lSize[1] || 8 * lSize[0];
+                lSize[2] = lSize[2] || Math.floor(lSize[1] / 2);
+                lSize[3] = lSize[3] || Math.floor(lSize[1] / 2);
+                lSize[4] = lSize[4] || lSize[2];
+                dashArray += lSize[1] + &#39; &#39; + lSize[2] + &#39; &#39;;
+                dashArray += lSize[3] + &#39; &#39; + lSize[4];
+                break;
+            case &#39;!&#39;:
+                lSize[1] = lSize[1] || 12 * lSize[0];
+                lSize[2] = lSize[2] || Math.floor(lSize[1] / 2);
+                lSize[3] = 2 * lSize[0];
+                dashArray += lSize[1] + &#39; &#39; + lSize[2] + &#39; &#39;;
+                dashArray += lSize[3] + &#39; &#39; + lSize[2];
+                break;
+            default:
+                assume(false);
+            }
+            if (dashArray) {
+                args[&#39;stroke-dasharray&#39;] = dashArray;
+            }
+        }
+
+        // Process markers
+        var mk = 2;
+        var mString = parsed[mk];
+        if (mString) {
+            var mColor = getColor(parsed[mk + 1]);
+            var mSize = parseFloats(parsed[mk + 2]);
+            args.marker = {};
+            args.marker.fill = mColor;
+            args.marker.stroke = args.stroke;
+            args.marker.size = mSize[0] || 2;
+            args.marker[&#39;stroke-width&#39;] = (mSize[1] || args[&#39;stroke-width&#39;]) / args.marker.size;
+            switch (parsed[mk]) {
+            case &#39;.&#39;:
+                args.marker.shape = &#39;circle&#39;;
+                break;
+            case &#39;#&#39;:
+                args.marker.shape = &#39;rect&#39;;
+                break;
+            default:
+                assume(false);
+            }
+            if (args.marker.fill === &#39;none&#39; &amp;&amp; args.stroke !== &#39;none&#39;) {
+                args.marker.fill = &#39;white&#39;;
+            }
+        }
+
+        // Return result
+        if (!args[&#39;stroke-width&#39;]) {
+            args.stroke = &#39;none&#39;;
+        }
+        return args;
+    };
+
+<span id='Plot-method-getClosestPoint'>    /**
+</span>     * Return closest point to (coord) Default function called when &#39;click&#39;
+     * event is fired.
+     * You can redefined your own function until it accepts following parameters.
+     * @param {number} x
+     *  x coordinate of request point
+     * @param {number} y
+     *  y coordinate of request point
+     * @param {boolean} [scale=true]
+     *  Select whether closest mean exact closest or visualy closest.
+     * @return {Object}
+     *  Object with fields
+     *  - x: x coordinate of closest point.
+     *  - y: y coordinate of closest point.
+     *  - data: curve id.
+     */
+    Plot.prototype.getClosestPoint = function (x, y, scale) {
+
+        if (!this.getOwnProperty(&#39;compute-closest&#39;)) {
+            throw new Error(&#39;Property \&#39;compute-closest\&#39; is disabled.&#39;);
+        }
+        if (scale === undefined) {
+            scale = true;
+        }
+        var dArea = this.getDrawing().getElementById(&#39;drawingArea&#39;);
+        var BBoxCurves = this.getCurrentAxis();
+        var BBox = {
+            width: dArea.width.baseVal.value,
+            height: dArea.height.baseVal.value
+        };
+        var rx = 1, ry = 1;
+        if (!scale) {
+            rx = BBoxCurves.width / BBox.width;
+            ry = BBoxCurves.height / BBox.height;
+        }
+        return this.tree.closest(x, y, -1, rx, ry);
+    };
+
+<span id='Plot-method-setCursor'>    /**
+</span>     * @private
+     *  Display or hide cursor.
+     */
+    Plot.prototype.setCursor = function (xc, yc) {
+
+        var svg = this.getDrawing();
+        var cursor = svg.getElementById(&#39;cursor&#39;);
+        if (xc !== undefined &amp;&amp; yc !== undefined) {
+            cursor.setAttributeNS(null, &#39;display&#39;, &#39;inline&#39;);
+            cursor.setAttributeNS(null, &#39;points&#39;, xc + &#39;,&#39; + (-yc));
+        } else {
+            cursor.setAttributeNS(null, &#39;display&#39;, &#39;none&#39;);
+        }
+    };
+
+<span id='Plot-method-translateAxis'>    /**
+</span>     * @private
+     *  Translate axis view.
+     */
+    Plot.prototype.translateAxis = function (dx, dy) {
+
+        var axis = this.getCurrentAxis();
+        axis.x -= dx;
+        axis.y += dy;
+        this.setAxis(axis);
+    };
+
+<span id='Plot-method-zoomAxis'>    /**
+</span>     * @private
+     *  Zoom axis view.
+     */
+    Plot.prototype.zoomAxis = function (coord, fx, fy) {
+
+        fx = fx || 1;
+        fy = fy || fx;
+        var axis = this.getCurrentAxis();
+        var w = axis.width * fx;
+        var h = axis.height * fy;
+        var px = (coord.x - axis.x) / axis.width;
+        axis.x = coord.x - px * w;
+        var py = (coord.y + axis.y) / axis.height;
+        axis.y = -coord.y + py * h;
+        axis.width = w;
+        axis.height = h;
+        this.setAxis(axis);
+    };
+
+<span id='Plot-method-startSelectArea'>    /**
+</span>     * @private
+     *  Initiate select area operation.
+     */
+    Plot.prototype.startSelectArea = function (coord) {
+
+        var selectProperties = this.getProperties(&#39;selectArea&#39;);
+        selectProperties.x = coord.x;
+        selectProperties.y = -coord.y;
+        selectProperties.width = 0;
+        selectProperties.height = 0;
+        var select = Tools.createSVGNode(&#39;rect&#39;, selectProperties);
+        this.getDrawing().getElementById(&#39;curves&#39;).appendChild(select);
+    };
+
+<span id='Plot-method-updateSelectArea'>    /**
+</span>     * @private
+     *  Update select area operation.
+     */
+    Plot.prototype.updateSelectArea = function (coordStart, coordActual) {
+
+        var select = this.getDrawing().getElementById(&#39;selectArea&#39;);
+        var x = Math.min(coordStart.x, coordActual.x);
+        var y = Math.min(-coordStart.y, -coordActual.y);
+        var width = Math.max(coordStart.x, coordActual.x) - x;
+        var height = Math.max(-coordStart.y, -coordActual.y) - y;
+        select.setAttributeNS(null, &#39;x&#39;, x);
+        select.setAttributeNS(null, &#39;y&#39;, y);
+        select.setAttributeNS(null, &#39;width&#39;, width);
+        select.setAttributeNS(null, &#39;height&#39;, height);
+    };
+
+<span id='Plot-method-endSelectArea'>    /**
+</span>     * @private
+     *  Ends select area operation.
+     */
+    Plot.prototype.endSelectArea = function (coordStart, coordEnd) {
+
+        var select = this.getDrawing().getElementById(&#39;selectArea&#39;);
+        select.parentNode.removeChild(select);
+        this.selectarea(coordStart.x, coordStart.y, coordEnd.x, coordEnd.y);
+    };
+
+<span id='Plot-method-cancelSelectArea'>    /**
+</span>     * @private
+     *  Cancels select area operation.
+     */
+    Plot.prototype.cancelSelectArea = function () {
+
+        var select = this.getDrawing().getElementById(&#39;selectArea&#39;);
+        if (select) {
+            select.parentNode.removeChild(select);
+        }
+    };
+
+<span id='Plot-method-getCoordinates'>    /**
+</span>     * @private
+     *  Convert pixel coordinates to svg &#39;drawingArea&#39; units coordinate.
+     * @param {number} x
+     *  x coordinate to convert.
+     * @param {number} y
+     *  y coordinate to convert.
+     * @param {boolean} screen
+     *  Indicate whether the coordinates are relative
+     *  to the window or to the drawing area.
+     * @param {boolean} inverse
+     *  Specify the direction of the conversion.
+     *  &#39;true&#39; means screen units -&gt; drawing area units.
+     *  &#39;false&#39; means drawing area units -&gt; screen units.
+     *
+     *  // When a click event is fired convert screen click coordinates
+     *  // to drawing area coordinates.
+     *  myPlot.getCoordinates(event.clientX, event.clientY);
+     */
+    Plot.prototype.getCoordinates = function (x, y, screen, inverse) {
+
+        if (inverse === undefined) {
+            inverse = true;
+        }
+        if (screen === undefined) {
+            screen = true;
+        }
+        var svg = this.getDrawing();
+        var svgPoint = svg.createSVGPoint();
+        svgPoint.x = x;
+        svgPoint.y = y;
+
+        var curves = svg.getElementById(&#39;curves&#39;);
+        var matrix = screen ? curves.getScreenCTM() : curves.getCTM();
+        matrix = inverse ? matrix.inverse() : matrix;
+
+        svgPoint = svgPoint.matrixTransform(matrix);
+        svgPoint.y = -svgPoint.y;
+
+        // Undo the effect of viewBox and zoomin/scroll
+        return svgPoint;
+    };
+
+<span id='Plot-method-loadCsv'>    /** Load a CSV string into a 2D array.
+</span>     * @param {String} csv
+     *  String containing data, separateed by white spaces and new line.
+     * @param {Boolean} [transpose=undefined]
+     *  - If &#39;undefined&#39; transpose to maximize series lengths.
+     *  - If &#39;true&#39; series will be take as column, if &#39;false&#39; as line.
+     * @return {Array}
+     *  Loaded data
+     */
+    Plot.loadCsv = function (csvString, transpose) {
+
+        var errMsg = &#39;Plot.loadCsv: &#39;;
+        // Load data
+        var parsed = Tools.parseCsv(csvString, /\s*\n\s*/, /\s+/, false);
+        var arrays = Tools.Array.mapRec(parsed, parseFloat);
+        if (!Tools.Array.isRectangle(arrays)) {
+            throw new Error(errMsg + &#39;invalid csv string&#39;);
+        }
+        // Transpose it
+        if (transpose === undefined) {
+            if (arrays.length &gt; arrays[0].length) {
+                arrays = Tools.Array.transpose(arrays);
+            }
+        } else if (transpose === true) {
+            arrays = Tools.Array.transpose(arrays);
+        } else if (transpose !== false) {
+            throw new Error(errMsg + &quot;invalid &#39;transpose&#39; parameter&quot;);
+        }
+        // Return it
+        return arrays;
+    };
+
+<span id='Plot-method-displayCsv'>    /** Display csv string
+</span>     * @param {String} csv
+     *  String containing data.
+     * @param {Boolean} [transpose=undefined]
+     *  - If &#39;undefined&#39; transpose to maximize series lengths.
+     *  - If &#39;true&#39; series will be take as column, if &#39;false&#39; as line.
+     * @param {Boolean} [auto=true]
+     *  Choose color automaticaly.
+     * @param {Object} [properties]
+     *  Properties of paths.
+     */
+    Plot.prototype.displayCsv = function (csvString, transpose, auto, properties) {
+
+        var errMsg = this.constructor.name + &#39;displayCsv: &#39;;
+        var arrays = Plot.loadCsv(csvString, transpose);
+
+        // Auto colors
+        if (auto === undefined) {
+            auto = true;
+        } else if (typeof auto !== &#39;boolean&#39;) {
+            throw new Error(errMsg + &quot;invalid &#39;auto&#39; parameter&quot;);
+        }
+        var colors = [&quot;red&quot;, &quot;green&quot;, &quot;blue&quot;,
+                      &quot;fuchsia&quot;, &quot;lime&quot;, &quot;aqua&quot;,
+                      &quot;purple&quot;, &quot;olive&quot;, &quot;teal&quot;,
+                      &quot;yellow&quot;, &quot;navy&quot;, &quot;maroon&quot;,
+                      &quot;black&quot;, &quot;sylver&quot;, &quot;gray&quot;];
+
+        // If there is more than one series then the first one is used as x coordinates
+        var i, k, x = [];
+        if (arrays.length &gt; 1) {
+            x = arrays.shift();
+        } else {
+            for (k = 0; k &lt; arrays[0].length; k++) {
+                x.push(k + 1);
+            }
+        }
+
+        // Plot everything
+        for (k = 0; k &lt; arrays.length; k++) {
+            var nPlot = this.getOwnProperty(&#39;autoId-curves&#39;);
+            if (auto === true) {
+                var color = colors[nPlot % colors.length];
+                if (properties) {
+                    if (properties.stroke !== &#39;none&#39;) {
+                        properties.stroke = color;
+                    }
+                    if (properties.marker) {
+                        properties.marker.fill = color;
+                    }
+                } else {
+                    properties = {&#39;stroke&#39;: color};
+                }
+            }
+            this.addPath(x, arrays[k], properties);
+        }
+        return this;
+    };
+
+<span id='Plot-method-getCurvesIds'>    /**
+</span>     * Returns an array containing the identifiers of the plotted curves.
+     * @return {Array}
+     *  Array containing identifiers.
+     */
+    Plot.prototype.getCurvesIds = function () {
+
+        var ids = [];
+        var curves = this.getDrawing().getElementById(&#39;curves&#39;);
+        if (curves.hasChildNodes()) {
+            var i;
+            for (i = 0; i &lt; curves.childNodes.length; i++) {
+                ids.push(curves.childNodes[i].id);
+            }
+        }
+        return ids;
+    };
+
+<span id='Plot-method-setCurveProperty'>    /**
+</span>     * Change a property of a curve.
+     * @param {String} id
+     *  Identifier of the curve to be changed.
+     * @param {String} property
+     *  Name of property to be changed.
+     * @param {String} value
+     *  New value of the property.
+     * @return {Plot}
+     *  This plot.
+     *
+     * // Change stroke width of &#39;myCurve&#39;
+     * myPlot.setCurveProperty(&#39;myCurve&#39;, &#39;stroke-width&#39;, 3);
+     */
+    Plot.prototype.setCurveProperty = function (id, property, value) {
+
+        var curves = this.getDrawing().getElementById(&#39;curves&#39;);
+        if (curves.hasChildNodes()) {
+            var i;
+            var curvesChilds = curves.childNodes;
+            for (i = 0; i &lt; curvesChilds.length; i++) {
+                if (curvesChilds[i].id === id) {
+                    curvesChilds[i].setAttributeNS(null, property, value);
+                    this.setLegend();
+                    break;
+                }
+            }
+        }
+        return this;
+    };
+
+<span id='Plot-method-setCurveMarkerProperty'>    /** Change a property of a curve marker.
+</span>     * @param {String} id
+     *  Identifier of the curve to be changed.
+     * @param {String} property
+     *  Name of property to be changed.
+     * @param {String} value
+     *  New value of the property.
+     * @return {Plot}
+     *  This plot.
+     *
+     * // Change fill color of &#39;myCurve&#39;
+     * myPlot.setMarkerProperty(&#39;myCurve&#39;, &#39;fill&#39;, &#39;lime&#39;);
+     * // Change marker shape of &#39;myCurve&#39;
+     * myPlot.setMarkerProperty(&#39;myCurve&#39;, &#39;shape&#39;, &#39;rect&#39;);
+     */
+    Plot.prototype.setCurveMarkerProperty = function (id, property, value) {
+
+        var svg = this.getDrawing();
+        var curves = svg.getElementById(&#39;curves&#39;);
+        if (curves.hasChildNodes()) {
+            var i;
+            var curvesChilds = curves.childNodes;
+            for (i = 0; i &lt; curvesChilds.length; i++) {
+                if (curvesChilds[i].id === id) {
+                    var curve = curvesChilds[i];
+                    var markerId = curve.getAttributeNS(null, &#39;marker-id&#39;);
+                    var marker = svg.getElementById(markerId);
+                    if (property === &#39;shape&#39;) {
+                        this.setMarkerShape(marker, value);
+                    }
+                    marker.setAttributeNS(null, property, value);
+                    this.scaleElements();
+                    this.setLegend();
+                    break;
+                }
+            }
+        }
+        return this;
+    };
+
+<span id='Plot-method-toWindow'>    /** Clone the SVG element and display it in a new window.
+</span>     * @param {Number} height
+     * @param {Number} width
+     * @return {Object}
+     *  The window created.
+     */
+    Plot.prototype.toWindow = function (h, w) {
+        var wo = this.getWidth(), ho = this.getHeight();
+        h = h || ho;
+        w = w || wo;
+        var BBox;// = this.getCurrentAxis();
+        this.setWidth(w).setHeight(h).setAxis(BBox);
+        var win = window.open(&quot;&quot;, &quot;&quot;, &quot;width=&quot; + (w + 30) + &quot;, height=&quot; + (h + 30));
+        win.document.body.appendChild(this.setAxis(BBox).getDrawing().cloneNode(true));
+        this.setWidth(wo).setHeight(ho).setAxis(BBox);
+        return win;
+    };
+
+<span id='Plot-method-print'>    /** Clone the SVG element and display it in a new window
+</span>     * and open the print toolbox.
+     * @param {Number} height
+     * @param {Number} width
+     * @chainable
+     */
+    Plot.prototype.print = function (h, w) {
+        var win = this.toWindow(h, w);
+        win.print();
+        win.close();
+        return this;
+    };
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                            DEFAULT MOUSE EVENTS                             //
+    /////////////////////////////////////////////////////////////////////////////////
+
+
+<span id='Plot-method-mousedown'>    /**
+</span>     * Default function called when &#39;mousedown&#39; event is fired.
+     * You can redefined your own function until it accepts following parameters.
+     * @param {Object} coord Object with &#39;x&#39; and &#39;y&#39; fields corresponding to the mouse
+     *  position on the plot.
+     * @param {Event} event Original event fired.
+     */
+    Plot.prototype.mousedown = function (coord, event) {
+        if (event.shiftKey) {
+            this.startSelectArea(coord);
+        }
+    };
+
+<span id='Plot-method-mousemove'>    /**
+</span>     * Default function called when &#39;mousemove&#39; event is fired.
+     * You can redefined your own function until it accepts following parameters.
+     * It is possible to access to the mouse coordinate of event &#39;mousedown&#39;
+     * with &#39;this.coordDown&#39;.
+     * @param {Object} coord Object with &#39;x&#39; and &#39;y&#39; fields corresponding to the mouse
+     * position on the plot.
+     * @param {Event} event Original event fired.
+     */
+    Plot.prototype.mousemove = function (coord, event) {
+        if (this.coordDown === undefined) {
+            return;
+        }
+        var oldCoord = this.coordDown;
+        var newCoord = coord;
+        if (event.shiftKey) {
+            this.updateSelectArea(oldCoord, newCoord);
+        } else {
+            this.cancelSelectArea();
+            this.translateAxis(newCoord.x - oldCoord.x, newCoord.y - oldCoord.y);
+        }
+    };
+
+<span id='Plot-method-mouseup'>    /**
+</span>     * Default function called when &#39;mouseup&#39; event is fired.
+     * You can redefined your own function until it accepts following parameters.
+     * It is possible to access to the mouse coordinate of event &#39;mousedown&#39;
+     * with &#39;this.coordDown&#39;.
+     * @param {Object} coord Object with &#39;x&#39; and &#39;y&#39; fields corresponding to the mouse
+     * position on the plot.
+     * @param {Event} event Original event fired.
+     */
+    Plot.prototype.mouseup = function (coord, event) {
+        var oldCoord = this.coordDown;
+        var newCoord = coord;
+        if (event.shiftKey) {
+            this.endSelectArea(oldCoord, newCoord);
+        } else {
+            this.translateAxis(newCoord.x - oldCoord.x, newCoord.y - oldCoord.y);
+        }
+    };
+
+<span id='Plot-method-mousewheel'>    /**
+</span>     * Default function called when &#39;mousewheel&#39; event is fired.
+     * You can redefined your own function until it accepts following parameters.
+     * @param {number} direction  1 or -1 following the wheel direction.
+     * @param {Object} coord Object with &#39;x&#39; and &#39;y&#39; fields corresponding to the mouse
+     * position on the plot.
+     * @param {Event} event Original event fired.
+     */
+    Plot.prototype.mousewheel = function (direction, coord, event) {
+        var f = 1 + direction * 0.1;
+        this.zoomAxis(coord, f);
+    };
+
+<span id='Plot-method-click'>    /**
+</span>     *  Default function called when &#39;click&#39; event is fired.
+     *  &#39;click&#39; event corresponds to &#39;mousedown&#39; and &#39;mouseup&#39; events fired at
+     *  the same location.
+     *  You can redefined your own function until it accepts following parameters.
+     *  It is possible to access to the mouse coordinate of event &#39;mousedown&#39;
+     *  with &#39;this.coordDown&#39;.
+     * @param {Object} coord
+     *  Object with &#39;x&#39; and &#39;y&#39; fields corresponding to the mouse
+     *  position on the plot.
+     * @param {Event} event
+     *  Original event fired.
+     *
+     *  // Defined an action when click event occurs
+     *  myPlot.click = function (coord, event) {
+     *    alert(&#39;click at point(&#39; + coord.x + &#39;, &#39; + coord.y + &#39;).&#39;)
+     *  };
+     */
+    Plot.prototype.click = function (coord, event) {
+        var c = this.getClosestPoint(coord.x, coord.y, false);
+        if (c) {
+            this.setCursor(c.x, c.y);
+        }
+    };
+
+<span id='Plot-method-selectarea'>    /**
+</span>     * Default function called when an area has been selected.
+     * You can redefined your own function until it accepts following parameters.
+     * @param {number} x1
+     *  x first coordinate.
+     * @param {number} y1
+     *  y first coordinate.
+     * @param {number} x2
+     *  x second coordinate.
+     * @param {number} y2
+     *  y second coordinate.
+     *
+     * // Defined an action when an area is selected
+     * myPlot.selectarea = function (x1, y1, x2, y2) {
+     *   alert(&#39;You selected area from (&#39;+x1+&#39;, &#39;+y1+&#39;) to (&#39;+x2+&#39;, &#39;+y2+&#39;).&#39;)
+     * };
+     */
+    Plot.prototype.selectarea = function (x1, y1, x2, y2) {
+        this.setAxis([x1, y1, x2, y2]);
+    };
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    //                                 SVG TOOLS                                   //
+    /////////////////////////////////////////////////////////////////////////////////
+
+<span id='Plot-Tools'>    /** @class Plot.Tools
+</span>     * @singleton
+     * @private
+     */
+    var Tools = {};
+
+<span id='Plot-Tools-method-createSVGNode'>    /** Creates a svg node.
+</span>     * @param {String} type
+     * @param {Object} args
+     * @return {Object}
+     */
+    Tools.createSVGNode = function (type, args) {
+        type = type.toLowerCase();
+        var element = document.createElementNS(&#39;http://www.w3.org/2000/svg&#39;, type);
+        var i;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                element.setAttributeNS(null, i, args[i]);
+            }
+        }
+        return element;
+    };
+
+<span id='Plot-Tools-method-createSVGTextNode'>    /** Creates a svg text node.
+</span>     * @param {String} text
+     * @param {Object} args
+     * @return {Object}
+     */
+    Tools.createSVGTextNode = function (text, args) {
+        var element = document.createElementNS(&#39;http://www.w3.org/2000/svg&#39;, &#39;text&#39;);
+        var i;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                element.setAttributeNS(null, i, args[i]);
+            }
+        }
+        element.appendChild(document.createTextNode(text));
+        return element;
+    };
+
+<span id='Plot-Tools-method-getPosition'>    /** Returns the position corresponding to an event
+</span>     * @param {Object} e
+     * @param {Object} event
+     * @return {Array}
+     *  Returns an array like : [left, top].
+     * @todo
+     *  add some details.
+     */
+    Tools.getPosition = function (e, event) {
+        var left = 0;
+        var top = 0;
+
+        // Tant que l&#39;on a un élément parent
+        while (e.offsetParent !== undefined &amp;&amp; e.offsetParent !== null) {
+	    // On ajoute la position de l&#39;élément parent
+            left += e.offsetLeft + (e.clientLeft !== null ? e.clientLeft : 0);
+            top += e.offsetTop + (e.clientTop !== null ? e.clientTop : 0);
+            e = e.offsetParent;
+        }
+
+        left = -left + event.pageX;
+        top = -top + event.pageY;
+
+        return [left, top];
+    };
+
+<span id='Plot-Tools-method-isArrayLike'>    /** Tests if an Object is a kind of Array.
+</span>     * @param {Object} obj
+     * @return {Boolean}
+     */
+    Tools.isArrayLike = function (obj) {
+        return obj &amp;&amp; typeof obj === &#39;object&#39; &amp;&amp; obj.length !== undefined;
+    };
+
+<span id='Plot-Tools-Vector-method-constructor'><span id='Plot-Tools-Vector'>    /** @class Plot.Tools.Vector
+</span></span>     * @private
+     *  Class used to deal with array.
+     * @constructor
+     *  Creates a Vector.
+     */
+    Tools.Vector = function (arg1, arg2, arg3, arg4) {
+        var n, b, s, e, i, a, x;
+        if (Tools.isArrayLike(arg1)) {
+            n = arg1.length;
+            this.data = this.zeros(n, arg4);
+            this.index = this.zeros(n, Uint32Array);
+            for (i = 0; i &lt; n; i++) {
+                this.data[i] = arg1[i];
+                this.index[i] = i;
+            }
+        } else if (arg1 instanceof Tools.Vector) {
+            n = arg1.index.length;
+            this.data = this.zeros(n);
+            this.index = this.zeros(n, Uint32Array);
+            i = this.index;
+            var d = this.data;
+            var ii = arg1.index;
+            var id = arg1.data;
+            for (x = 0; x &lt; n; x++) {
+                d[x] = id[ii[x]];
+                i[x] = x;
+            }
+        } else {
+            if (arg1 !== undefined &amp;&amp; arg2 !== undefined &amp;&amp; arg3 !== undefined) {
+                b = arg1;
+                s = arg2;
+                e = arg3;
+            } else if (arg1 !== undefined &amp;&amp; arg2 !== undefined &amp;&amp; arg3 === undefined) {
+                b = arg1;
+                s = arg1 &lt; arg2 ? 1 : -1;
+                e = arg2;
+            } else if (arg1 !== undefined &amp;&amp; arg2 === undefined &amp;&amp; arg3 === undefined) {
+                b = 0;
+                s = 0;
+                e = arg1;
+            }
+            if (s !== 0) {
+                n = Math.abs(Math.floor((e - b) / s) + 1);
+            } else {
+                n = Math.abs(Math.floor((e - b)));
+            }
+            this.data = this.zeros(n, arg4);
+            this.index = this.zeros(n, Uint32Array);
+            a = b;
+            for (i = 0; i &lt; n; i++, a += s) {
+                this.data[i] = a.toPrecision(15);
+                this.index[i] = i;
+            }
+        }
+        return this;
+    };
+
+<span id='Plot-Tools-Vector-method-zeros'>    /**  Creates a vector filled with zeros.
+</span>     * @param {Number} size
+     * @param {Object} [constructor=Float64Array]
+     */
+    Tools.Vector.prototype.zeros = function (n, Type) {
+        var out;
+        if (!Type) {
+            out = new Float64Array(n);
+        } else {
+            out = new Type(n);
+        }
+        return out;
+    };
+
+<span id='Plot-Tools-Vector-method-linearSpace'>    /** Creates a vector of regularly espaced values.
+</span>     * @param {Number} begin
+     * @param {Number} end
+     * @param {Number} number
+     */
+    Tools.Vector.linearSpace = function (b, e, n) {
+        var n1 = Math.floor(n) - 1;
+        var c = (e - b) * (n - 2);
+        var out = new Tools.Vector(b, (e - b) / n1, e);
+        out.data[n - 1] = e;
+        return out;
+    };
+
+<span id='Plot-Tools-Vector-method-derive'>    /** Derive a vector.
+</span>     * @param {Number} order
+     */
+    Tools.Vector.prototype.derive = function (o) {
+        o = o || 1;
+        var d, i, x, n;
+        d = this.data;
+        i = this.index;
+        n = i.length;
+        for (x = 1; x &lt; n; x++) {
+            d[i[x - 1]] = d[i[x]] - d[i[x - 1]];
+        }
+        this.data = this.data.subarray(0, n - 1);
+        this.index = this.index.subarray(0, n - 1);
+        if (o &gt; 1) {
+            this.derive(o - 1);
+        }
+        return this;
+    };
+
+<span id='Plot-Tools-Vector-method-max'>    /** Returns the indice and the value of the maximum.
+</span>     * @return {Array}
+     * [value, indice]
+     */
+    Tools.Vector.prototype.max = function () {
+        var d, n, x, i, nx;
+        d = this.data;
+        i = this.index;
+        nx = i.length;
+        var M = -Infinity;
+        var Mind = NaN;
+        for (x = 0; x &lt; nx; x++) {
+            if (d[i[x]] &gt; M) {
+                M = d[i[x]];
+                Mind = i[x];
+            }
+        }
+        return new Tools.Vector([M, Mind]);
+    };
+
+<span id='Plot-Tools-Vector-method-min'>    /** Returns the indice and the value of the minimum.
+</span>     * @return {Array}
+     * [value, indice]
+     */
+    Tools.Vector.prototype.min = function () {
+        var d, n, x, i, nx;
+        d = this.data;
+        i = this.index;
+        nx = i.length;
+        var M = +Infinity;
+        var Mind = NaN;
+        for (x = 0; x &lt; nx; x++) {
+            if (d[i[x]] &lt; M) {
+                M = d[i[x]];
+                Mind = i[x];
+            }
+        }
+        return new Tools.Vector([M, Mind]);
+    };
+
+<span id='Plot-Tools-Vector-method-get'>    /** Returns a value of the vector.
+</span>     * @param {Number} indice
+     * @return {Number}
+     */
+    Tools.Vector.prototype.get = function (i) {
+        return this.data[this.index[i]];
+    };
+
+<span id='Plot-Tools-Vector-method-set'>    /** Set a value of the vector.
+</span>     * @param {Number} indice
+     * @chainable
+     */
+    Tools.Vector.prototype.set = function (i, v) {
+        this.data[this.index[i]] = v;
+        return this;
+    };
+
+<span id='Plot-Tools-Vector-method-makeDraggable'>    /** Make a HTML element draggable: objects can be dropped on it.
+</span>     * @param {HTMLElement|String} element
+     *  HTMLElement or HTMLElement id wich is desired to be draggable.
+     * @param {Function} callback
+     *  Function to be called when files will be drag on element.
+     * @param {string} [type=&#39;none&#39;]
+     *  Specify the way of reading the file.&lt;br /&gt;
+     *  Can be &#39;DataUrl | url&#39;, &#39;ArrayBuffer | bin | binary&#39;, or &#39;text&#39;.
+     *
+     *  // Drag callback: load the image
+     *  var main = function(result) {
+     *      // Load callback: display the image
+     *      var callback = function(im) {
+     *          im.draw(createView(1, 1));
+     *      };
+     *      // Load the image
+     *      var im = new ImageJS().load(result, callback);
+     *  };
+     *  // Make the canvas with id &#39;canvas&#39; draggable
+     *  Tools.makeDraggable(&#39;canvasId&#39;, main);
+     */
+    Tools.makeDraggable = function (element, callback, type) {
+
+        // Deal with arguments
+        type = (type || &#39;none&#39;).toLowerCase();
+        switch (type) {
+        case &#39;dataurl&#39;:
+        case &#39;url&#39;:
+            type = &#39;url&#39;;
+            break;
+        case &#39;text&#39;:
+        case &#39;txt&#39;:
+            type = &#39;txt&#39;;
+            break;
+        case &#39;arraybuffer&#39;:
+        case &#39;binary&#39;:
+        case &#39;bin&#39;:
+            type = &#39;bin&#39;;
+            break;
+        default:
+            type = &#39;none&#39;;
+        }
+
+        if (typeof element === &#39;string&#39;) {
+            element = document.getElementById(element) || element;
+        }
+
+        // Callback functions declarations
+        var dragEnter, dragLeave, dragOver;
+        dragEnter = dragLeave = dragOver = function (evt) {
+            evt.stopPropagation();
+            evt.preventDefault();
+        };
+
+        var drop = function (evt) {
+            evt.stopPropagation();
+            evt.preventDefault();
+
+            // File handling functions
+            var handleFile, newCallback;
+            if (type !== &#39;none&#39;) {
+                newCallback = function (evt) {
+                    if (callback) {
+                        callback(evt.target.result, evt);
+                    }
+                };
+                handleFile =  function (file) {
+                    var reader = new FileReader();
+                    reader.onload = newCallback;
+                    switch (type) {
+                    case &#39;url&#39;:
+                        reader.readAsDataURL(file);
+                        break;
+                    case &#39;txt&#39;:
+                        reader.readAsText(file);
+                        break;
+                    case &#39;bin&#39;:
+                        reader.readAsArrayBuffer(file);
+                        break;
+                    }
+                };
+            } else {
+                handleFile = function (file) {
+                    if (callback) {
+                        callback(file);
+                    }
+                };
+            }
+
+            // Only call the handler if 1 or more files was dropped.
+            if (evt.dataTransfer.files.length) {
+                var i;
+                for (i = 0; i &lt; evt.dataTransfer.files.length; i++) {
+                    handleFile(evt.dataTransfer.files[i]);
+                }
+            }
+        };
+
+        // Drag Drop on HTML element.
+        element.addEventListener(&#39;dragenter&#39;, dragEnter, false);
+        element.addEventListener(&#39;dragleave&#39;, dragLeave, false);
+        element.addEventListener(&#39;dragover&#39;, dragOver, false);
+        element.addEventListener(&#39;drop&#39;, drop, false);
+    };
+
+    Tools.parseCsv = function (csv, vDelim, hDelim, transpose) {
+
+        transpose = transpose || false;
+        /*
+         var tabRow = csv.split(vDelim);
+         var output = [];
+         var i;
+         for (i = 0; i &lt; tabRow.length; i++) {
+         if (/\d/.test(tabRow[i])) {
+         output.push(tabRow[i].split(hDelim));
+         }
+         }
+         */
+        vDelim = vDelim || &quot;\n&quot;;
+        var csv = csv.split(vDelim);
+        if (csv[csv.length - 1] === &quot;&quot;) {
+            csv.pop();
+        }
+        var i, ei;
+        var output = [];
+
+        for (i = 0, ei = csv.length; i &lt; ei; i++) {
+            output.push(csv[i].match(/[\-+]?[0-9]*\.?[0-9]+([eE][\-+]?[0-9]+)?/g));
+        }
+        return transpose ? Tools.Array.transpose(output) : output;
+    };
+
+    Tools.Array = Tools.Array || {};
+    Tools.Array.opposite = function (a) {
+
+        var i;
+        for (i = 0; i &lt; a.length; i++) {
+            if (a[i] instanceof Array) {
+                Tools.Array.opposite(a[i]);
+            } else {
+                a[i] = -a[i];
+            }
+        }
+        return a;
+    };
+
+    Plot.prototype.appendTo = function (parent) {
+
+        if (typeof parent === &#39;string&#39;) {
+            parent = document.getElementById(parent);
+        } else {
+            parent = parent || document.body;
+        }
+        parent.appendChild(this.getDrawing());
+        this.autoDisplay();
+        return this;
+    };
+
+<span id='Plot-Tools-Vector-method-mapRec'>    /** Apply a function to each value of an array or an array of arrays.
+</span>     * @param {Array} array
+     * @param {Function} f
+     *  Function to be applied to each element of the array.
+     * @return {Array}
+     *  Array of f(t) for all t in the input array.
+     */
+    Tools.Array.mapRec = function (a, f) {
+
+        var i, N = a.length;
+        var aOut = new a.constructor(N);
+        for (i = 0; i &lt; N; i++) {
+            if (a[i].length !== undefined &amp;&amp; typeof a[i] !== &#39;string&#39;) {
+                aOut[i] = Tools.Array.mapRec(a[i], f);
+            } else {
+                aOut[i] = f(a[i]);
+            }
+        }
+        return aOut;
+    };
+
+
+<span id='Plot-Tools-Vector-method-isRectangle'>    /** Is a 2D array rectangular?
+</span>     * @param {Array} array
+     *  An array of arrays.
+     * @return {boolean}
+     *  True iff all the sub-arrays have the same length.
+     */
+    Tools.Array.isRectangle = function (a) {
+
+        if (!a || !a.length || a[0].length === undefined) {
+            return false;
+        }
+        var i, N = a.length;
+        var P = a[0].length;
+        for (i = 1; i &lt; N; i++) {
+            if (a[i].length !== P) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+<span id='Plot-Tools-Vector-method-transpose'>    /** Transpose an array of arrays.
+</span>     * @param {Array} a
+     *  Array to be transposed.
+     * @return {Array}
+     *  Transposed array.
+     */
+    Tools.Array.transpose = function (a) {
+        var errMsg = &#39;Tools.Array.transpose: &#39;;
+        if (!Tools.Array.isRectangle(a)) {
+            throw new Error(errMsg + &#39;cannot transpose a non-rectangular array&#39;);
+        }
+        var i, N = a.length;
+        var j, P = a[0].length;
+        var aOut = new a.constructor(P);
+        for (j = 0; j &lt; P; j++) {
+            aOut[j] = new a[0].constructor(N);
+            for (i = 0; i &lt; N; i++) {
+                aOut[j][i] = a[i][j];
+            }
+        }
+        return aOut;
+    };
+
+<span id='Plot-Tree2d-method-constructor'><span id='Plot-Tree2d'>    /** @class Plot.Tree2d
+</span></span>     * @private
+     * Class used to store the node of the plot for fast search.
+     * @constructor
+     */
+    function Tree2d() {
+        this.root = null;
+    }
+
+<span id='Plot-Tree2d-method-clear'>    /** Remove all the point from the tree. */
+</span>    Tree2d.prototype.clear = function () {
+        this.root = null;
+    };
+
+<span id='Plot-Tree2d-method-add'>    /** Add a point with a data to the tree. */
+</span>    Tree2d.prototype.add = function (x, y, i, data) {
+
+        // If it is the first point
+        if (!this.root) {
+            var size = 1;
+            while (!(Math.abs(x) &lt; size &amp;&amp; Math.abs(y) &lt; size)) {
+                size *= 2;
+            }
+            while (x &amp;&amp; y &amp;&amp; Math.abs(x) &lt; size &amp;&amp; Math.abs(y) &lt; size) {
+                size /= 2;
+            }
+            var rootX = (x &gt;= 0) ? size : -size;
+            var rootY = (y &gt;= 0) ? size : -size;
+            this.root = new Tree2d.Node(rootX, rootY, null, null, size);
+        }
+        // If outside of the BBox
+        while (this.root.size &amp;&amp; !this.root.hasInBBox(x, y)) {
+            var oldSize = this.root.size, newSize = 2 * oldSize;
+            var newX = this.root.x;
+            var newY = this.root.y;
+            newX += (newX &lt; x) ? oldSize : -oldSize;
+            newY += (newY &lt; y) ? oldSize : -oldSize;
+            var newRoot = new Tree2d.Node(newX, newY, null, null, newSize);
+            var we = (this.root.x &lt; newRoot.x) ? &quot;w&quot; : &quot;e&quot;;
+            var ns = (this.root.y &lt; newRoot.y) ? &quot;s&quot; : &quot;n&quot;;
+            newRoot[ns + we] = this.root;
+            newRoot.length = this.root.length;
+            this.root = newRoot;
+        }
+        // Append a new node
+        var node = new Tree2d.Node(x, y, i, data);
+        this.root = Tree2d.Node.add(this.root, node, null);
+    };
+
+<span id='Plot-Tree2d-method-remove'>    /** Remove a data from the tree. */
+</span>    Tree2d.prototype.remove = function (dataFilter) {
+
+        // Initialize argument
+        if (typeof dataFilter !== &#39;function&#39;) {
+            var dataRef = dataFilter;
+            dataFilter = function (data) {
+                return (data === dataRef);
+            };
+        }
+
+        // Remove the nodes
+        this.root = Tree2d.Node.remove(this.root, dataFilter);
+    };
+
+<span id='Plot-Tree2d-method-count'>    /** Get the number of point in the tree / in a box. */
+</span>    Tree2d.prototype.count = function (x, y, w, h) {
+        if (!this.root) {
+            return 0;
+        }
+        if (x === undefined) {
+            return this.root.length;
+        }
+        if (h === undefined) {
+            var errMsg = this.constructor.name + &#39;.count: &#39;;
+            throw new Error(errMsg + &#39;expected 0 or 4 arguments&#39;);
+        }
+        var xmin = Math.min(x, x + w), xmax = Math.max(x, x + w);
+        var ymin = Math.min(y, y + h), ymax = Math.max(y, y + h);
+        return this.root.count(xmin, ymin, xmax, ymax);
+    };
+
+<span id='Plot-Tree2d-method-closest'>    /** Find the closest point from x/y in a given radius. */
+</span>    Tree2d.prototype.closest = function (x, y, radius, xUnit, yUnit) {
+        if (typeof x !== &#39;number&#39; || typeof y !== &#39;number&#39;) {
+            throw new Error(this.constructor.name + &#39;.closest: invalid x, y.&#39;);
+        }
+        // Distance function
+        var r = (radius &amp;&amp; radius &gt; 0) ? radius * radius : -1;
+        var rx = (xUnit) ? xUnit * xUnit : 1;
+        var ry = (yUnit) ? yUnit * yUnit : rx;
+        var norm = function (dx, dy) {
+            return dx * dx / rx + dy * dy / ry;
+        };
+        // Search function
+        var search = function (root) {
+            // Empty
+            if (!root) {
+                return null;
+            }
+            // Leaf
+            if (root.data !== null) {
+                var d = norm(x - root.x, y - root.y);
+                if (r &lt; 0 || d &lt; r) {
+                    r = d;
+                    return root;
+                }
+                return null;
+            }
+            // Check BB
+            var projX = Math.min(Math.max(x, root.x - root.size), root.x + root.size);
+            var projY = Math.min(Math.max(y, root.y - root.size), root.y + root.size);
+            if (r &gt;= 0 &amp;&amp; norm(x - projX, y - projY) &gt; r) {
+                return null;
+            }
+            // Search recursively
+            var we = (x &lt; root.x) ? &quot;we&quot; : &quot;ew&quot;;
+            var ns = (y &lt; root.y) ? &quot;sn&quot; : &quot;ns&quot;;
+            var node = search(root[ns[0] + we[0]]);
+            if (norm(x - root.x, 0) &lt; norm(0, y - root.y)) {
+                node = search(root[ns[0] + we[1]]) || node;
+                node = search(root[ns[1] + we[0]]) || node;
+            } else {
+                node = search(root[ns[1] + we[0]]) || node;
+                node = search(root[ns[0] + we[1]]) || node;
+            }
+            node = search(root[ns[1] + we[1]]) || node;
+            return node;
+        };
+        var closest = search(this.root);
+        return closest;
+    };
+
+<span id='Plot-Tree2d-method-plot'>    /** Display a tree in a plot/ */
+</span>    Tree2d.prototype.plot = function (plot, pointStyle, boxStyle, lineStyle) {
+        var draw = function (node, pt, box, line) {
+            if (!node || !(pt || box || line)) {
+                return;
+            }
+            draw(node.nw, pt, box, line);
+            draw(node.ne, pt, box, line);
+            draw(node.sw, pt, box, line);
+            draw(node.se, pt, box, line);
+            if (node.data !== null &amp;&amp; pt) {
+                plot.addPath([node.x, node.x], [node.y, node.y], pt);
+            }
+            if (node.size &amp;&amp; box) {
+                var x = node.x;
+                var y = node.y;
+                var d = node.size;
+                plot.addPath([x, x], [y - d, y + d], line);
+                plot.addPath([x - d, x + d], [y, y], line);
+                plot.addPath([x - d, x + d, x + d, x - d, x - d],
+                             [y - d, y - d, y + d, y + d, y - d],
+                             box);
+            }
+        };
+        pointStyle = pointStyle || !(boxStyle || lineStyle);
+        pointStyle = (typeof pointStyle === &#39;object&#39;) ? pointStyle : {&#39;marker&#39;: {&#39;shape&#39;: &#39;circle&#39;}};
+        boxStyle = (!boxStyle) ? false
+            : (typeof boxStyle === &#39;object&#39;) ? boxStyle : {&#39;stroke&#39;: &#39;red&#39;};
+        lineStyle = (boxStyle &amp;&amp; typeof lineStyle === &#39;object&#39;) ? lineStyle : boxStyle;
+        plot.clear();
+        draw(this.root, false, boxStyle, lineStyle);
+        draw(this.root, pointStyle);
+    };
+
+<span id='Plot-Tree2d-Node-method-constructor'><span id='Plot-Tree2d-Node'>    /** @class Plot.Tree2d.Node
+</span></span>     * @private
+     * Class used to create the node of the tree.
+     * @constructor
+     */
+    Tree2d.Node = function (x, y, i, data, size) {
+        this.x = x;
+        this.y = y;
+        this.number = i;
+        this.data = data;
+        this.length = 1;
+        if (data === null) {
+            this.length = 0;
+            this.size = size;
+            this.nw = this.ne = null;
+            this.sw = this.se = null;
+        }
+    };
+
+<span id='Plot-Tree2d-Node-method-add'>    /** Add a node. */
+</span>    Tree2d.Node.add = function (root, node, prevRoot) {
+        // Assume that the node is inside root&#39;s bbox
+        if (root === null || node === null) {
+            return node || root;
+        }
+
+        if (root.data !== null) {
+            // Leaf with same x/y
+            if (root.x === node.x &amp;&amp; root.y === node.y) {
+                root.datas = root.datas || [root.data];
+                root.datas.push(node.data);
+                root.length++;
+                return root;
+            }
+            // New leaf
+            var newSize = prevRoot.size / 2;
+            var newNode = new Tree2d.Node(prevRoot.x, prevRoot.y, null, null, newSize);
+            newNode.x += (root.x &lt; prevRoot.x) ? -newNode.size : +newNode.size;
+            newNode.y += (root.y &lt; prevRoot.y) ? -newNode.size : +newNode.size;
+            Tree2d.Node.add(newNode, root, prevRoot);
+            Tree2d.Node.add(newNode, node, prevRoot);
+            return newNode;
+        }
+
+        // Insert in the right quadrant
+        var we = (node.x &lt; root.x) ? &quot;w&quot; : &quot;e&quot;;
+        var ns = (node.y &lt; root.y) ? &quot;s&quot; : &quot;n&quot;;
+        root[ns + we] = Tree2d.Node.add(root[ns + we], node, root);
+        root.length++;
+        return root;
+    };
+
+<span id='Plot-Tree2d-Node-method-remove'>    /** Remove a node. */
+</span>    Tree2d.Node.remove = function (node, dataFilter) {
+        if (node === null) {
+            return null;
+        }
+
+        // If it is a leaf
+        if (node.data !== null) {
+            var newDatas = [], oldDatas = node.datas || [node.data];
+            var k, N = oldDatas.length;
+            for (k = 0; k &lt; N; k++) {
+                if (!dataFilter(oldDatas[k])) {
+                    newDatas.push(oldDatas[k]);
+                }
+            }
+            if (!newDatas.length) {
+                return null;
+            }
+            node.datas = (newDatas.length &gt; 1) ? newDatas : [];
+            node.data = newDatas[0];
+            node.length = newDatas.length;
+            return node;
+        }
+
+        // It is a node
+        node.nw = Tree2d.Node.remove(node.nw, dataFilter);
+        node.ne = Tree2d.Node.remove(node.ne, dataFilter);
+        node.sw = Tree2d.Node.remove(node.sw, dataFilter);
+        node.se = Tree2d.Node.remove(node.se, dataFilter);
+        node.length = 0;
+        node.length += (node.nw) ? node.nw.length : 0;
+        node.length += (node.ne) ? node.ne.length : 0;
+        node.length += (node.sw) ? node.sw.length : 0;
+        node.length += (node.se) ? node.se.length : 0;
+        if (!node.length) {
+            return null;
+        }
+
+        // If only one child, the node could be removed
+        return node;
+    };
+
+<span id='Plot-Tree2d-Node-method-hasInBBox'>    /** hasInBBox function. */
+</span>    Tree2d.Node.prototype.hasInBBox = function (x, y) {
+        return x &gt;= this.x - this.size
+            &amp;&amp; y &gt;= this.y - this.size
+            &amp;&amp; x &lt; this.x + this.size
+            &amp;&amp; y &lt; this.y + this.size;
+    };
+
+<span id='Plot-Tree2d-Node-method-count'>    /** Counts the number of nodes present in a box. */
+</span>    Tree2d.Node.prototype.count = function (xmin, ymin, xmax, ymax) {
+        // If it is a leaf
+        if (this.data !== null) {
+            var x = this.x, y = this.y;
+            var inside = (xmin &lt;= x &amp;&amp; x &lt;= xmax &amp;&amp; ymin &lt;= y &amp;&amp; y &lt;= ymax);
+            return (inside) ? this.length : 0;
+        }
+        // If it is a node
+        var xminNode = this.x - this.size, xmaxNode = this.x + this.size;
+        var yminNode = this.y - this.size, ymaxNode = this.y + this.size;
+        // If outside
+        if (xmax &lt; xminNode || ymax &lt; yminNode || xmin &gt;= xmaxNode || ymin &gt;= ymaxNode) {
+            return 0;
+        }
+        // If included
+        if (xmin &lt;= xminNode &amp;&amp; ymin &lt;= yminNode &amp;&amp; xmax &gt;= xmaxNode &amp;&amp; ymax &gt;= ymaxNode) {
+            return this.length;
+        }
+        // If overlapping
+        var sum = 0;
+        sum += (this.nw) ? this.nw.count(xmin, ymin, xmax, ymax) : 0;
+        sum += (this.ne) ? this.ne.count(xmin, ymin, xmax, ymax) : 0;
+        sum += (this.sw) ? this.sw.count(xmin, ymin, xmax, ymax) : 0;
+        sum += (this.se) ? this.se.count(xmin, ymin, xmax, ymax) : 0;
+        return sum;
+    };
+
+    Plot.prototype.addChromaticityDiagram = function (diagram, args) {
+        var param = {
+            &quot;Planckian locus&quot;: true,
+            &quot;Daylight locus&quot;: true,
+            &quot;Spectrum locus&quot;: true,
+            &quot;Standards illuminants&quot;: true,
+            &quot;Gamut&quot;: true
+        };
+
+        var i;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                param[i] = args[i];
+            }
+        }
+
+        if (diagram === &#39;rgY&#39;) {
+            this.setTitle(&#39;CIE rg Diagram&#39;, &#39;r chromaticity&#39;, &#39;g chromaticity&#39;);
+        } else if (diagram === &#39;xyY&#39;) {
+            this.setTitle(&#39;CIE xy Diagram&#39;, &#39;x chromaticity&#39;, &#39;y chromaticity&#39;);
+        } else if (diagram === &#39;1960 uvY&#39;) {
+            this.setTitle(&#39;CIE 1960 uv Diagram&#39;, &#39;u chromaticity&#39;, &#39;v chromaticity&#39;);
+        } else if (diagram === &quot;1976 u&#39;v&#39;Y&quot;) {
+            this.setTitle(&quot;CIE 1976 u&#39;v&#39; Diagram&quot;, &quot;u&#39; chromaticity&quot;, &quot;v&#39; chromaticity&quot;);
+        } else {
+            throw new Error(&#39;Plot.drawChromaticityDiagram: &#39; +
+                            diagram + &#39; is not a chromaticity diagram.&#39;);
+        }
+
+        // Plot properties
+        var pLProperties = {
+            &#39;id&#39;: &#39;Planckian locus&#39;,
+            &#39;stroke&#39;: &#39;black&#39;,
+            &#39;stroke-width&#39;: 1
+        };
+        var sLProperties = {
+            &#39;id&#39;: &#39;Spectrum locus&#39;,
+	    &#39;stroke&#39;: &#39;lightseagreen&#39;,
+	    &#39;stroke-width&#39;: 2,
+	    &#39;stroke-dasharray&#39;: &quot;5 2&quot;
+        };
+        var pGProperties = {
+            &#39;id&#39;: &#39;Gamut&#39;,
+            &#39;stroke&#39;: &#39;red&#39;,
+            &#39;stroke-width&#39;: 1
+        };
+        var sIProperties = {
+            &#39;id&#39;: &#39;Standards illuminants&#39;,
+	    &#39;stroke&#39;: &#39;none&#39;,
+	    &#39;fill&#39;: &#39;none&#39;,
+            &#39;marker&#39;: {
+                &#39;shape&#39;: &#39;circle&#39;,
+                &#39;fill&#39;: &#39;orange&#39;,
+                &#39;size&#39;: 2,
+                &#39;stroke&#39;: &#39;none&#39;
+            }
+        };
+
+        // Get primaries Data
+        var prim = Matrix.CIE.getPrimaries(&#39;current&#39;, diagram);
+
+        // Get standards illuminants data
+        var stdIll = Matrix.CIE.getIlluminantList();
+        var xStdIll = [], yStdIll = [];
+
+        var i;
+        for (i = stdIll.length; i--; i) {
+            var ill = Matrix.CIE.getIlluminant(stdIll[i], diagram);
+            xStdIll.push(ill[0]);
+            yStdIll.push(ill[1]);
+        }
+
+        // Plot spectrum locus
+        if (param[&quot;Spectrum locus&quot;] === true) {
+            var sL = Matrix.CIE.getSpectrumLocus(diagram);
+            this.addPath(sL[0], sL[1], sLProperties);
+        }
+        // Plot planckian locus
+        if (param[&quot;Planckian locus&quot;] === true) {
+            var pL = Matrix.CIE.getPlanckianLocus(diagram);
+            this.addPath(pL[0], pL[1], pLProperties);
+        }
+
+        // Plot primaries gamut
+        if (param[&quot;Gamut&quot;] === true) {
+            var xPrim = [prim[0], prim[3], prim[6], prim[0]];
+            var yPrim = [prim[1], prim[4], prim[7], prim[1]];
+            this.addPath(xPrim, yPrim, pGProperties);
+        }
+
+        // Plot standards illuminants
+        if (param[&quot;Standards illuminants&quot;] === true) {
+            this.addPath(xStdIll, yStdIll, sIProperties);
+        }
+
+        return this;
+    };
+
+    Plot.prototype.properties.chromaticityPath = {&#39;id&#39;: &#39;scatter&#39;,
+                                                  &#39;fill&#39;: &#39;none&#39;,
+                                                  &#39;stroke&#39;: &#39;none&#39;,
+                                                  &#39;marker&#39;: {&#39;shape&#39;: &#39;circle&#39;,
+                                                             &#39;size&#39;: 0.25,
+                                                             &#39;fill&#39;: &#39;blue&#39;}
+                                                 };
+
+    Plot.prototype.addChromaticitiesFromRgb = function (r, g, b, args, diagram) {
+        diagram = diagram || &#39;xyY&#39;;
+
+        var defaultArgs = this.getProperties(&#39;chromaticityPath&#39;);
+        var i, end;
+        for (i in args) {
+            if (args.hasOwnProperty(i)) {
+                defaultArgs[i] = args[i];
+            }
+        }
+        var N = r.length;
+        var data = new Float32Array(N * 3),
+            x = data.subarray(0, N),
+            y = data.subarray(N, N * 2),
+            z = data.subarray(N * 2);
+
+        x.set(r);
+        y.set(g);
+        z.set(b);
+        Matrix.Colorspaces[&#39;RGB to &#39; + diagram](data, N, N, 1);
+        this.addPath(x, y, defaultArgs);
+        return this;
+    };
+
+
+
+    Plot.prototype.viewPatch = function (S, n, name, part) {
+        &#39;use strict&#39;;
+        var p = this;
+        p.clear();
+        var k = S.keypoints[n];
+        var patch = k.descriptorsData[name].patch;
+        if (part === &quot;norm&quot;) {
+            patch = patch[part];
+            patch = patch.rdivide(patch.max2());
+        } else if (part === &quot;RGB&quot;) {
+            patch = patch[part];
+        } else if (part === undefined) {
+            patch = phaseNormImage(patch.phase, patch.norm, true, k.orientation);
+        }
+        patch.toImage(function () {
+            //var axis = p.getCurrentAxis();
+            p.remove(&quot;patch&quot;);
+            // var shift = this.width / 2;
+            // p.addImage(this, k.x - shift, -(k.y - shift), {id: &quot;patch&quot;});
+            p.addImage(this, 0, 0, {id: &quot;patch&quot;});
+            //p.setAxis(axis);
+            p.setAxis();
+            p.setTitle(name);
+        });
+    };
+
+    Plot.prototype.showKeypoints = function (S) {
+        &#39;use strict&#39;;
+        var p = this;
+        p.clear();
+        S.image.toImage(function () {
+            p.addImage(this, 0, 0);
+            var scatterProperties = {
+                &quot;stroke&quot;: &quot;none&quot;,
+                &quot;marker&quot;: {
+                    &quot;shape&quot;: &quot;circle&quot;,
+                    &quot;fill&quot;: &quot;red&quot;,
+                    &quot;size&quot;: 2
+                }
+            };
+
+            var x = [], y = [];
+            var i, ie;
+            for (i = 0, ie = S.keypoints.length; i &lt; ie; i++) {
+                x[i] = S.keypoints[i].x;
+                y[i] = -S.keypoints[i].y;
+            }
+            p.addPath(x, y, scatterProperties);
+            p.setTitle(S.keypoints.length + &quot; Keypoints&quot;);
+        });
+        return this;
+    };
+
+    Plot.prototype.showMatchs = function (im1, im2, matchs, align) {
+        &#39;use strict&#39;;
+        align = align || &#39;v&#39;;
+        var p = this, offset;
+        p.clear();
+
+        if (align === &#39;v&#39;) {
+            offset = im1.getSize(0);
+            im1.toImage(function () {
+                p.addImage(this, 0, 0);
+                im2.toImage(function () {
+                    p.addImage(this, 0, -offset);
+                    var m = matchs;
+                    for (var i = 0; i &lt; m.length; i++) {
+                        var k1 = m[i].k1, k2 = m[i].k2;
+                        if (m[i].isValid) {
+                            p.addPath([k1.x, k2.x], [-k1.y, -offset - k2.y], {id: i, stroke: &quot;lime&quot;});
+                        } else {
+                            p.addPath([k1.x, k2.x], [-k1.y, -offset - k2.y], {id: i, stroke: &quot;red&quot;});
+                        }
+                    }
+                    // p.setTitle(m.length + &quot; Matchs&quot;);
+                });
+            });
+        } else {
+            offset = im1.getSize(1);
+            im1.toImage(function () {
+                p.addImage(this, 0, 0);
+                im2.toImage(function () {
+                    p.addImage(this, offset, 0);
+                    var m = matchs;
+                    for (var i = 0; i &lt; m.length; i++) {
+                        var k1 = m[i].k1, k2 = m[i].k2;
+                        if (m[i].isValid) {
+                            p.addPath([k1.x, k2.x + offset], [-k1.y, -k2.y], {id: i, stroke: &quot;lime&quot;});
+                        } else {
+                            p.addPath([k1.x, k2.x + offset], [-k1.y, -k2.y], {id: i, stroke: &quot;red&quot;});
+                        }
+                    }
+                    // p.setTitle(m.length + &quot; Matchs&quot;);
+                });
+            });
+        }
+    };
+
+    global.Plot = Plot;
+
+})(global);
+
+</pre>
+</body>
+</html>

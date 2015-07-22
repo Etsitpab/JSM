@@ -1,0 +1,178 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<meta charset="UTF-8">
+<html>
+  <head>
+    <script src="../../modules/JSM.js"></script>
+    <script src="../../modules/Image.js"></script>
+    <script src="../../modules/Linalg.js"></script>
+    <script src="../../src/Image/Image.wavelets.js"></script>
+
+    <script src="../base.js"></script>
+    <script src="../Disk.js"></script>
+    <script src="demo.js"></script> 
+    <script src="../../min/CIE.min.js"></script>
+    <script src="../../projects/colorEnhancement.js"></script>
+    <script src="../../projects/colorConstancy.js"></script>
+    <script src="../../min/drawHistogram.min.js"></script>
+    <script src="../base.js"></script>
+    
+    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="demo.css" media="screen" />
+    <title>Color Enhancement in the Wavelet Domain</title>
+  </head>
+
+  <body>
+
+    <div id="demo">
+      <h1>Color Enhancement in the Wavelet Domain</h1>
+      <input type="file" id="loadFile" multiple/>
+      <div id="images">
+      </div>
+      <div id="interface">
+        
+        <div id="ui">
+          <input type="button" id="displayHelp" value="Help"/>
+          <input type="button" id="pinImage" value="Pin image"/>
+          <hr></hr>
+          <canvas id="histogram" style="width:100%"></canvas>
+          <hr></hr>
+          <fieldset>
+            <legend>Options</legend>
+            <label> Stretch dynamic: </label>
+            <select id="stretchDyn">
+              <option value="false"> No </option>
+              <option value="lum"> Luminance only </option>
+              <option value="color"> Each channel </option>
+            </select>
+            <label> View: </label>
+            <select id="view">
+              <option value="proc"> Image processed </option>
+              <option value="orig"> Image original </option>
+              <option value="diff"> Differences </option>
+            </select>
+            <label class="val"> &Gamma; </label>
+            <input type="range" id="Gamma" class="val" min="0.1" step="0.1" max="1.5" value="1.0"/>
+            <input type="text" id="GammaVal" class="val" value="" readonly>
+            <label> Paper results </label>
+            <select id="paperResults">
+              <option value="YES"> YES </option>
+              <option value="NO" selected> NO </option>
+            </select>
+          </fieldset>
+          <hr></hr>
+
+          <fieldset>
+            <legend>Color enhancement</legend>
+            <label> Average value </label>
+            <select id="averageValue">
+              <option value="channel" selected> Channel average </option>
+              <option value="image"> Image average </option>
+              <option value="half"> 1/2 </option>
+            </select>
+            <label class="val"> &alpha;  </label>
+            <input type="range" id="alpha" class="val" min="0" step="0.05" max="1" value="0.1"/>
+            <input type="text" id="alphaVal" class="val" value="" readonly>
+            <label class="val"> w </label>
+            <input type="range" id="w" class="val" min="0" step="0.5" max="30" value="15"/>
+            <input type="text" id="wVal" class="val" value="" readonly>
+            <label class="val"> K </label>
+            <input type="range" id="K" class="val" min="1" step="1" max="100" value="20"/>
+            <input type="text" id="KVal" class="val" value="" readonly>
+            <label class="val"> &gamma; </label>
+            <input type="range" id="gamma" class="val" min="0.1" step="0.1" max="1.0" value="0.5"/>
+            <input type="text" id="gammaVal" class="val" value="" readonly>
+            <label class="val" style="width:35%;"> Wavelet </label>
+            <select id="wavelet" style="width:62%;">
+              <option value="sym4"> SYM4 </option>
+              <option value="sym8"> SYM8 </option>
+              <option value="coif1"> COIF1 </option>
+              <option value="coif2"> COIF2 </option>
+              <option value="haar"> HAAR </option>
+              <option value="sym2"> SYM2 </option>
+              <option value="cdf97"> CDF97 </option>
+            </select>
+            <label> Colorspace </label>
+            <select id="colorspace">
+              <option value="RGB"> RGB </option>
+              <option value="Gray"> Gray </option>
+              <option value="HSV"> HSV </option>
+              <option value="HSL"> HSL </option>
+              <option value="Opponent"> Opponent </option>
+              <option value="Ohta"> Ohta </option>
+              <option value="CMY"> CMY </option>
+              <option value="XYZ"> CIE XYZ </option>
+              <option value="xyY"> CIE xyY </option>
+              <option value="1960 uvY"> CIE 1960 uvY </option>
+              <option value="1976 u'v'Y"> CIE 1976 u'v'Y </option>	
+              <option value="Lab"> CIE Lab </option>	
+              <option value="Luv"> CIE Luv </option>	
+              <option value="Lch"> CIE Lch </option>	
+            </select>
+
+            <hr></hr>
+            <input type="button" value="Apply" id="applyColEn">
+            <input type="button" value="Default parameters" id="resetColEn"/>
+          </fieldset>
+        </div>
+        <div id="image">
+          <canvas id="outputImage"></canvas>
+        </div>
+      </div>
+
+    </div>
+    <div id="help">
+      <h2>How to use this demo</h2>
+      <p>
+        This demo implements the algorithm introduced in the paper
+        <a href="http://www.researchgate.net/profile/Edoardo_Provenzi/publication/259397505_A_Wavelet_Perspective_on_Variational_Perceptually-Inspired_Color_Enhancement_Int_J_Comput_Vis/links/0c96052b6f4432c5fa000000.pdf">A Wavelet Perspective on Variational Perceptually-Inspired Color Enhancement</a>
+        published in 2014 by <a href="https://scholar.google.com/citations?user=tULpeL4AAAAJ&hl=en">E Provenzi</a> and V Caselles.
+        This algorithm performs color and contrast enhancement in the wavelet domain and this demo allows you to test it on your own images.
+        Note that image larger than 1200x1200 are resized to avoid too long computation time and/or mermory consumption.
+      <p>
+      <h3>Instructions</h3>
+      <ul>
+        <li>
+          First upload an image using the file selector in the top left part of this page.
+        </li>
+        <li>
+          The in the color enhancement section, you may set your parameters and then click on Apply to see the algorithm effect on the uploaded picture.
+          The computation may take several seconds.
+        </li>
+        <li>
+          Once the image is processed, it will be displayed and you can use the arrow keys to navigate between the original image,
+          the processed image or see differences between these images. These different pictures are also available with the View selector.
+        </li>
+      </ul>
+      The Stretch dynamic selector allows to expand the image dynamic after algorithm processing.
+      The stretching can be done either on the luminance channel or oon each RGB channel independently.
+      <h3>Parameters</h3>
+      The best way to understand then is with any doubt to read the paper, but i provide some hint to build intuition on their effects.
+      <ul>
+        <li>
+          <strong>&alpha;:</strong> For each channel, it controls the dispersion arround the average value.
+          Set to zero, this parameter has no effect, while set to 1 the image will be washed out. 
+        </li>
+        <li>
+          <strong>w:</strong> It controls the contrast enhancement the bigger the value the greater the effect.
+        </li>
+        <li>
+          <strong>K:</strong> It controls the magnitude of details enhanced. Small values (1) will only enhance the strongest edges while
+          greater values will also enhance small details, noise included.
+        </li>
+        <li>
+          <strong>&gamma;:</strong> This parameter is not described in the article, it implements a gamma functionnal for the &phi; variable used in the article.
+        </li>
+        <li>
+          <strong>&Gamma;:</strong> This parameter is also not described in the article, it allows for  applying a global gamma correction
+          on the input image before processing. This gamma correction is reverted after processing on the output data.
+          Generally values arround 0.5 provide very nice results.
+        </li>
+      </ul>
+
+      <h3></h3>
+      <input type="button" id="closeHelp" value="Close"/>
+
+    </div>
+
+  </body>
+</html>

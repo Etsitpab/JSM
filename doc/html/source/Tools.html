@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ *
+ * @author Baptiste Mazin     &lt;baptiste.mazin@telecom-paristech.fr&gt;
+ * @author Guillaume Tartavel &lt;guillaume.tartavel@telecom-paristech.fr&gt;
+ */
+
+<span id='Tools'>/** Miscellaneous tools for argument checking.
+</span> *
+ * Several kind of functions are proposed:
+ *
+ *  + boolean functions, `Tools.is*`: return a boolean value.
+ *  + validation functions, `Tools.check*`: return the input value,
+ *    possibly changed; error are thrown.
+ *
+ * @singleton
+ */
+var Tools = {};
+if (typeof window === &#39;undefined&#39;) {
+    module.exports.Tools = Tools;
+}
+
+(function (Tools) {
+     &quot;use strict&quot;;
+
+
+     //////////////////////////////////////////////////////////////////
+     //                  Boolean Functions                           //
+     //////////////////////////////////////////////////////////////////
+
+
+     // Scalar
+
+<span id='Tools-method-isSet'>     /** Test whether an argument is set.
+</span>      *
+      * @param {Object} [obj]
+      *
+      * @return {Boolean}
+      *  True iff the argument is neither `null` nor `undefined`.
+      */
+     Tools.isSet = function (obj) {
+         return (obj !== null &amp;&amp; obj !== undefined);
+     }.bind(Tools);
+
+<span id='Tools-method-isInRange'>     /** Test whether a number belongs to an interval.
+</span>      *
+      * __See also:__
+      *  {@link Tools#isNumber}.
+      *
+      * @param {Number} x
+      *
+      * @param {Number} [min = -Infinity]
+      *
+      * @param {Number} [max = +Infinity]
+      *
+      * @return {Boolean}
+      *  True iff `x` is between `min` and `max`.
+      */
+     Tools.isInRange = function (x, min, max) {
+         min = this.isSet(min) ? min : -Infinity;
+         max = this.isSet(max) ? max : +Infinity;
+         return (min &lt;= x &amp;&amp; x &lt;= max);
+     }.bind(Tools);
+
+<span id='Tools-method-isNumber'>     /** Test whether a variable is a number, and if it belongs to an interval.
+</span>      *
+      * __See also:__
+      *  {@link Tools#isInRange},
+      *  {@link Tools#isInteger},
+      *  {@link Tools#isBoolean}.
+      *
+      * @param {Object} obj
+      *
+      * @param {Number} [min = -Infinity]
+      *
+      * @param {Number} [max = +Infinity]
+      *
+      * @return {Boolean}
+      *  True iff `obj` is a number between `min` and `max`.
+      */
+     Tools.isNumber = function (obj, min, max) {
+         return (typeof obj === &#39;number&#39;) &amp;&amp; this.isInRange(obj, min, max);
+     }.bind(Tools);
+
+<span id='Tools-method-isInteger'>     /** Test whether a variable is an integer.
+</span>      *
+      * @param{Object} obj
+      *
+      * @param {Number} [min = -Infinity]
+      *
+      * @param {Number} [max = +Infinity]
+      *
+      * @return{Boolean}
+      *  True iff the argument is an integer between `min` and `max`.
+      */
+     Tools.isInteger = function (obj, min, max) {
+         return this.isNumber(obj, min, max) &amp;&amp; (obj % 1 === 0);
+     }.bind(Tools);
+
+<span id='Tools-method-isBoolean'>     /** Test wether a variable is a boolean.
+</span>      *
+      * @param{Object} obj
+      *
+      * @return{Boolean}
+      *  True iff the argument is a boolean.
+      */
+     Tools.isBoolean = function (obj) {
+         return (obj === true || obj === false);
+     }.bind(Tools);
+
+
+     // Arrays
+
+<span id='Tools-method-isArrayLike'>     /** Test whether an object is like an array (e.g. typed array).
+</span>      *
+      * See also:
+      *  {@link Tools#isArrayInRange},
+      *  {@link Tools#isArrayOfNumbers},
+      *  {@link Tools#isArrayOfIntegers},
+      *  {@link Tools#isArrayOfBooleans}.
+      *
+      * @param {Object} obj
+      *
+      * @return {Boolean}
+      *  True iff the argument is an array, typed array, or similar.
+      */
+     Tools.isArrayLike = function (obj) {
+         return (typeof obj === &#39;object&#39;) &amp;&amp; (obj.length !== undefined);
+     }.bind(Tools);
+
+<span id='Tools-method-isArrayInRange'>     /** Test whether an object is an array-like and in a given range.
+</span>      *
+      * Note:
+      *  all the elements of the array are tested one by one.
+      *
+      * @param {Object} obj
+      *  Array of numbers.
+      *
+      * @param {Number} [min = -Infinity]
+      *
+      * @param {Number} [max = +Infinity]
+      *
+      * @return {Boolean}
+      *  True iff the argument is an array-like
+      *  and its values are between `min` and `max`.
+      */
+     Tools.isArrayInRange = function (obj, min, max) {
+         var i, ie;
+         if (!this.isArrayLike(obj)) {
+             return false;
+         }
+         for (i = 0, ie = obj.length; i &lt; ie; i++) {
+             if (!this.isInRange(obj[i], min, max)) {
+                 return false;
+             }
+         }
+         return true;
+     }.bind(Tools);
+
+<span id='Tools-method-isArrayOfNumbers'>     /** Test whether an object is an array-like made of numbers.
+</span>      *
+      * Note:
+      *  all the elements of the array are tested one by one.
+      *
+      * __See also:__
+      *  {@link Tools#isArrayLike}
+      *
+      * @param {Object} obj
+      *
+      * @param {Number} [min = -Infinity]
+      *
+      * @param {Number} [max = +Infinity]
+      *
+      * @return {Boolean}
+      *  True iff the argument is an array-like
+      *  and contains only numbers between `min` and `max`.
+      */
+     Tools.isArrayOfNumbers = function (obj, min, max) {
+         var i, ie;
+         if (!this.isArrayLike(obj)) {
+             return false;
+         }
+         min = this.isSet(min) ? min : -Infinity;
+         max = this.isSet(max) ? max : +Infinity;
+         for (i = 0, ie = obj.length; i &lt; ie; i++) {
+             var o = obj[i];
+             if (!((typeof o === &#39;number&#39;) &amp;&amp; min &lt;= o &amp;&amp; o &lt;= max)) {
+                 return false;
+             }
+         }
+         return true;
+     }.bind(Tools);
+
+<span id='Tools-method-isArrayOfIntegers'>     /** Test whether an object is an array-like made of integers.
+</span>      *
+      * Note:
+      *  all the elements of the array are tested one by one.
+      *
+      * @param {Object} obj
+      *
+      * @param {Number} [min = -Infinity]
+      *
+      * @param {Number} [max = +Infinity]
+      *
+      * @return {Boolean}
+      *  True iff the argument is an array-like
+      *  and contains only integers between `min` and `max`.
+      * @todo check for typed array.
+      */
+     Tools.isArrayOfIntegers = function (obj, min, max) {
+         var i, ie;
+         switch (obj.constructor) {
+         case Int8Array:
+         case Int16Array:
+         case Int32Array:
+             if (min === undefined &amp;&amp; max === undefined) {
+                 return true;
+             } 
+             for (i = 0, ie = obj.length; i &lt; ie; i++) {
+                 if (obj[i] &lt; min || obj[i] &gt; max) {
+                     return false;
+                 }
+             }
+             return true;
+         case Uint8ClampedArray:
+         case Uint8Array:
+         case Uint16Array:
+         case Uint32Array:
+             if ((min === 0 || min === undefined) &amp;&amp; max === undefined) {
+                 return true;
+             }
+             if (max !== undefined) {
+                 for (i = 0, ie = obj.length; i &lt; ie; i++) {
+                     if (obj[i] &lt; min || obj[i] &gt; max) {
+                         return false;
+                     }
+                 }
+             }
+             return true;
+         default:
+             if (!this.isArrayLike(obj)) {
+                 return false;
+             }
+         }
+         min = this.isSet(min) ? min : -Infinity;
+         max = this.isSet(max) ? max : +Infinity;
+         for (i = 0, ie = obj.length; i &lt; ie; i++) {
+             var o = obj[i];
+             if (!((typeof o === &#39;number&#39;) &amp;&amp; (min &lt;= o &amp;&amp; o &lt;= max) &amp;&amp; (o % 1 === 0))) {
+                 return false;
+             }
+         }
+         return true;
+     }.bind(Tools);
+
+<span id='Tools-method-isArrayOfBooleans'>     /** Test whether an object is an array-like made of booleans.
+</span>      *
+      * Note:
+      *  all the elements of the array are tested one by one.
+      *
+      * @param {Object} obj
+      *
+      * @return {Boolean}
+      *  True iff the argument is an array-like and contains only booleans.
+      */
+     Tools.isArrayOfBooleans = function (obj) {
+         var i, ie;
+         if (!this.isArrayLike(obj) || obj.length &lt; 1) {
+             return false;
+         }
+
+         for (i = 0, ie = obj.length; i &lt; ie; i++) {
+             if (obj[i] !== true &amp;&amp; obj[i] !== false) {
+                 return false;
+             }
+         }
+         return true;
+     }.bind(Tools);
+
+
+     //////////////////////////////////////////////////////////////////
+     //                  Validation Functions                        //
+     //////////////////////////////////////////////////////////////////
+
+
+<span id='Tools-method-checkOpts'>     /** Check optional argument objects.
+</span>      *
+      * Check whether all options are valid.
+      * Initialized undefined options with default values.
+      *
+      *     // List of valid options and default values
+      *     def = {&#39;n&#39;: 10, &#39;b&#39;: true};
+      *
+      *     // Check and initialize 2 sets of options
+      *     optsA = Tools.checkOpts(def, {&#39;n&#39;: 5});     // optsA is: {&#39;n&#39;: 5, &#39;b&#39;: true}
+      *     optsB = Tools.checkOpts(def, {&#39;x&#39;: 42});    // error: &#39;x&#39; not defined in def
+      *
+      * @param {Object} def
+      *  Object listing the valid options and their default values.
+      *
+      * @param {Object} [opts]
+      *  A set of options.
+      *
+      * @return {Object}
+      *  The options set, or their default values.
+      */
+     Tools.checkOpts = function (def, opts) {
+         var name;
+         opts = opts || {};
+         for (name in opts) {
+             if (opts.hasOwnProperty(name)) {
+                 if (def[name] === undefined) {
+                     throw new Error(&#39;checkOpts: unknown option: &#39; + name);
+                 }
+             }
+         }
+         for (name in def) {
+             if (def.hasOwnProperty(name)) {
+                 if (!this.isSet(opts[name])) {
+                     opts[name] = def[name];
+                 }
+             }
+         }
+         return opts;
+     };
+
+<span id='Tools-method-checkSize'>     /** Check a size, i.e. an array of non-negative integers.
+</span>      *
+      *     s = Tools.checkSize(5);             // s is: [5, 1]
+      *     s = Tools.checkSize(5, &#39;row&#39;);      // s is: [1, 5]
+      *     s = Tools.checkSize(5, &#39;square&#39;);   // s is: [5, 5]
+      *     s = Tools.checkSize([4, 2, 1]);     // s is: [4, 2, 1]
+      *
+      * @param {Number | Array} [size = [0, 0]]
+      *  A size information.
+      *
+      * @param {String} [unidim=&#39;vector&#39;]
+      *  Sefault behavior in case of a scalar value,
+      *  Can be &quot;vector&quot;, &quot;row&quot;, &quot;column&quot;, or &quot;square&quot;.
+      *
+      * @return {Array}
+      *  The size, as an array.
+      *
+      * @todo allow 1D in &#39;unidim&#39; case?
+      */
+     Tools.checkSize = function (size, unidim) {
+
+         // Format the size
+         size = this.isSet(size) ? size : [0, 0];
+         if (this.isNumber(size)) {
+             size = [size];
+         }
+         if (this.isArrayLike(size) &amp;&amp; size.length === 1 &amp;&amp; this.isArrayLike(size[0])) {
+             size = size[0];
+         }
+
+         // Check if array is valid
+         if (!this.isArrayLike(size) || size.length &lt; 1) {
+             throw new Error(&#39;checkSize: Invalid size argument.&#39;);
+         }
+         if (!this.isArrayOfIntegers(size, 0)) {
+             throw new Error(&#39;checkSize: Size must be a positive integer.&#39;);
+         }
+
+         // Format the array
+         size = Array.prototype.slice.apply(size);
+         while (size[size.length - 1] === 1 &amp;&amp; size.length &gt; 2) {
+             size.pop();
+         }
+
+         // Unidimensional case: square matrix or row vector
+         if (size.length === 1) {
+             switch (unidim) {
+             case &#39;square&#39;:
+                 size = [size[0], size[0]];
+                 break;
+             case &#39;row&#39;:
+                 size = [1, size[0]];
+                 break;
+             case &#39;column&#39;:
+             case &#39;vector&#39;:
+             case undefined:
+                 size = [size[0], 1];
+                 break;
+             default:
+                 throw new Error(&#39;checkSize: Invalid value for &quot;unidim&quot;.&#39;);
+             }
+         }
+
+         // Return the right size
+         return size;
+     }.bind(Tools);
+
+<span id='Tools-method-checkSizeEquals'>     /** Check two equal sizes.
+</span>      *
+      * If the sizes are the same except for trailing 1&#39;s, the behavior depends on
+      * `Matrix.ignoreTrailingDims`:
+      *
+      *  + if True, the trailing 1&#39;s are dropped.
+      *  + if False, size are considered different if numbers of dimensions is different.
+      *
+      * See also:
+      *  {@link Tools#checkSize}
+      *
+      *     s = Tools.checkSizeEquals(5, [5, 1]);       // s is: [5, 1]
+      *     s = Tools.checkSizeEquals(5, [1, 5]);       // error!
+      *
+      *     s = Tools.checkSizeEquals(5, [5, 1, 1]);    // [5, 1] if &#39;Matrix.ignoreTrailingDims&#39;
+      *                                                 // error if not
+      *
+      * @param{Array | Number} sizeA
+      *  Size of a matrix A.
+      *
+      * @param{Array | Number} sizeB
+      *  Size of a matrix B.
+      *
+      * @return{Array}
+      *  Array containing the (equal) size.
+      *
+      * @todo broadcasting? behavior for last dimensions of 1?
+      */
+     Tools.checkSizeEquals = function (sizeA, sizeB, ignoreTrailingDims) {
+         sizeA = this.checkSize(sizeA);
+         sizeB = this.checkSize(sizeB);
+         ignoreTrailingDims = ignoreTrailingDims || true;
+
+         var sizeF = (sizeA.length &lt; sizeB.length) ? sizeA : sizeB;
+
+         var i, ni = Math.min(sizeA.length, sizeB.length);
+         var nimax = Math.max(sizeA.length, sizeB.length);
+
+         for (i = 0; i &lt; ni; i++) {
+             if (sizeA[i] !== sizeB[i]) {
+                 throw new Error(&#39;checkSizeEquals: dimensions must be equals.&#39;);
+             }
+         }
+         if (ignoreTrailingDims) {
+             for (i = ni; i &lt; nimax; i++) {
+                 if (sizeA[i] !== undefined &amp;&amp; sizeA[i] !== 1) {
+                     throw new Error(&#39;checkSizeEquals: dimensions must be equals.&#39;);
+                 }
+                 if (sizeB[i] !== undefined &amp;&amp; sizeB[i] !== 1) {
+                     throw new Error(&#39;checkSizeEquals: dimensions must be equals.&#39;);
+                 }
+             }
+         } else if (!ignoreTrailingDims) {
+             throw new Error(&#39;checkSizeEquals: &#39; +
+                             &#39;dimensions differ by trailing 1\&#39;s, &#39;,
+                             &#39;and ignoreTrailingDims is False.&#39;);
+         }
+         return sizeF;
+     }.bind(Tools);
+
+<span id='Tools-method-checkRange'>     /** Check a range argument, i.e. made of indices [min, max].
+</span>      *
+      * @param {Array | Number} range
+      *  Can be:
+      *
+      *  + an integer: max, using min = 0.
+      *  + an array: [max] or [min, max].
+      *
+      * @return{Array}
+      *  The range, as [min, max].
+      *
+      * @todo allow empty range [] or [a, b] for a &gt; b ?
+      */
+     Tools.checkRange = function (range) {
+
+         // Check type
+         if (typeof range === &#39;number&#39;) {
+             range = [range];
+         }
+         if (!this.isArrayOfIntegers(range)) {
+             throw new Error(&#39;checkRange: range must be made of integers.&#39;);
+         }
+
+         // Check content
+         if (range.length === 1) {
+             range = [0, range[0]];
+         }
+         if (range.length !== 2) {
+             throw new Error(&#39;checkRange: range must have 1 or 2 bounds.&#39;);
+         }
+         if (range[0] &gt; range[1]) {
+             throw new Error(&#39;checkRange: range must be [min, max] in this order.&#39;);
+         }
+
+         // Return valid range
+         range = [range[0], range[1]];
+         return range;
+     }.bind(Tools);
+
+<span id='Tools-method-checkColon'>     /** Check arguments of the `colon` operator.
+</span>      *
+      * @param {Number | Array} colon
+      *  Can be :
+      *
+      *  + `value` or `[value]`: select only this value.
+      *  + `[first, last]`: equivalent to all indices from `first` to `last` (step is +1 or -1).
+      *  + `[first, step, last]`: equivalent to all indices from `first` to `last` with given step.
+      *
+      * @param {Number} [length]
+      *  If specified, allow negative indices from the end of the array.
+      *
+      * @return {Array}
+      *  Colon arguments, as `[first, step, last]`.
+      *
+      * @todo rename it &#39;sequence&#39;? use optional argument for negative indices? allow empty selection?
+      */
+     Tools.checkColon = function (c, length) {
+
+         // Format as a vector
+         if (this.isArrayLike(c) &amp;&amp; c.length === 1 &amp;&amp; this.isArrayLike(c[0])) {
+             c = c[0];
+         }
+         if (this.isNumber(c)) {
+             c = [c];
+         }
+
+         // Check format
+         if (!this.isArrayOfNumbers(c)) {
+             throw new Error(&#39;checkColon: colon operator must be non-negative integers.&#39;);
+         }
+
+         // Get values
+         var a, b, s = null;
+         switch (c.length) {
+         case 0:
+             throw new Error(&#39;checkColon: colon operator cannot be empty.&#39;);
+         case 1:
+             a = b = c[0];
+             break;
+         case 2:
+             a = c[0];
+             b = c[1];
+             break;
+         case 3:
+             a = c[0];
+             s = c[1];
+             b = c[2];
+             break;
+         default:
+             throw new Error(&#39;checkColon: colon operator expected 1, 2, or 3 values.&#39;);
+         }
+
+         // Negative index
+         if (!this.isSet(length)) {
+             length = Infinity;
+         } else if (this.isInteger(length, 0)) {
+             a = (a &gt;= 0) ? a : a + length;
+             b = (b &gt;= 0) ? b : b + length;
+         } else {
+             throw new Error(&#39;checkColon: if specified, length must be a non-negative integer.&#39;);
+         }
+
+         // Check indices
+         if (!this.isArrayOfIntegers([a, b])) {
+             throw new Error(&#39;checkColon: first and last elements must be integers&#39;);
+         }
+         if (!this.isArrayOfIntegers([a, b], 0, length - 1)) {
+             throw new Error(&#39;checkColon: first or last elements out of bounds&#39;);
+         }
+
+         // Step
+         if (!this.isSet(s)) {
+             s = (a &lt;= b) ? +1 : -1;
+         } else if ((b - a) * s &lt; 0) {
+             throw new Error(&#39;checkColon: invalid step.&#39;);
+         }
+
+         // return result
+         return [a, s, b];
+     }.bind(Tools);
+
+<span id='Tools-method-checkArrayEquals'>     /** Check wether two arrays have the same length and the same values or not.
+</span>      *
+      * @param {Array} a
+      *
+      * @param {Array} b
+      *
+      * @return {Boolean}
+      */
+     Tools.checkArrayEquals = function (a, b) {
+         var l = a.length, i;
+         if (l !== b.length) {
+             return false;
+         }
+         for (i = 0; i &lt; l; i++) {
+             if (a[i] !== b[i]) {
+                 return false;
+             }
+         }
+         return true;
+     };
+
+<span id='Tools-method-checkType'>     /** Check if a datatype argument is valid numeric class
+</span>      * i.e. Array, typed Array or Matlab-like class type.
+      *
+      * - `array`
+      * - `float64Array`, `float64`, `double`
+      * - `float32Array`, `float32`, `float`, `single`
+      * - `int8array`, `int8`
+      * - `uint8clampedarray`, `uint8c`
+      * - `uint8array`, `uint8`
+      * - `int16array`, `int16`
+      * - `uint16array`, `uint16`
+      * - `int32array`, `int32`
+      * - `uint32array`, `uint32`
+      * - `bool`, `boolean`, `logical`
+      *
+      * @param{String|Function} type
+      *  Type identifier or constructor.
+      *
+      * @return{Function}
+      *  Constructor of corresponding type.
+      */
+     Tools.checkType = function (type) {
+         // Select type
+         if (typeof (type) === &#39;function&#39;) {
+             type = type.name;
+         }
+         if (typeof (type) === &#39;string&#39;) {
+             switch (type.toLowerCase()) {
+             case &#39;array&#39;:
+                 return Array;
+             case &#39;float64array&#39;:
+             case &#39;float64&#39;:
+             case &#39;double&#39;:
+                 return Float64Array;
+             case &#39;float32array&#39;:
+             case &#39;float32&#39;:
+             case &#39;float&#39;:
+             case &#39;single&#39;:
+                 return Float32Array;
+             case &#39;int8array&#39;:
+             case &#39;int8&#39;:
+                 return Int8Array;
+             case &#39;bool&#39;:
+             case &#39;boolean&#39;:
+             case &#39;logical&#39;:
+             case &#39;uint8clampedarray&#39;:
+             case &#39;canvaspixelarray&#39;:
+             case &#39;uint8c&#39;:
+                 return Uint8ClampedArray;
+             case &#39;uint8array&#39;:
+             case &#39;uint8&#39;:
+                 return Uint8Array;
+             case &#39;int16array&#39;:
+             case &#39;int16&#39;:
+                 return Int16Array;
+             case &#39;uint16array&#39;:
+             case &#39;uint16&#39;:
+                 return Uint16Array;
+             case &#39;int32array&#39;:
+             case &#39;int32&#39;:
+                 return Int32Array;
+             case &#39;uint32array&#39;:
+             case &#39;uint32&#39;:
+                 return Uint32Array;
+             case &#39;int64&#39;:
+             case &#39;uint64&#39;:
+                 throw new Error(&#39;checkType: int64 and uint64 aren\&#39;t supported.&#39;);
+             default:
+                 throw new Error(&#39;checkType: Type must be a valid numeric class name.&#39;);
+             }
+         }
+         if (type === undefined) {
+             return Matrix.dataType;
+         }
+         throw new Error(&#39;checkType: Wrong data type argument.&#39;);
+     };
+
+
+     //////////////////////////////////////////////////////////////////
+     //                      Other Functions                         //
+     //////////////////////////////////////////////////////////////////
+
+
+<span id='Tools-method-includeJS'>     /** Include a JS file into the document.
+</span>      *
+      * Note that the content of the included file is not available immediately,
+      * but only after the callback function is called.
+      *
+      * @param {String} url
+      *  URL of the JS file.
+      *
+      * @param {Function} [callback]
+      *  Callback function, executed once the file has been included.
+      *
+      * @todo remove it first if already included.
+      */
+     Tools.includeJS = function (url, arg) {
+
+         var scr = document.createElement(&#39;script&#39;);
+         scr.setAttribute(&#39;type&#39;, &#39;text/javascript&#39;);
+         scr.setAttribute(&#39;src&#39;, url);
+         if (this.isSet(arg)) {
+             scr.onload = arg;
+         }
+         document.head.appendChild(scr);
+     }.bind(Tools);
+
+<span id='Tools-method-assert'>     /** Throw an error if the condition is False.
+</span>      *
+      * @param {Boolean} condition
+      *  A boolean value.
+      *
+      * @return {Boolean}
+      *  True if the condition is true.
+      *
+      * @throws {Error}
+      *  If the condition is false.
+      */
+     Tools.assert = function (condition) {
+         if (!condition) {
+             throw new Error(&#39;Assertion failed.&#39;);
+         }
+         return true;
+     }.bind(Tools);
+
+
+     (function () {
+          /*
+           *  Code imported from [Mozilla][1] and slightly modified.
+           *  [1]:https://developer.mozilla.org/en-US/docs/Web/JavaScript/Base64_encoding_and_decoding
+           */
+
+          /* @param {Char} n */
+          var b64ToUint6 = function (n) {
+              return n &gt; 64 &amp;&amp; n &lt; 91 ?
+                  n - 65
+                  : n &gt; 96 &amp;&amp; n &lt; 123 ?
+                  n - 71
+                  : n &gt; 47 &amp;&amp; n &lt; 58 ?
+                  n + 4
+                  : n === 43 ?
+                  62
+                  : n === 47 ?
+                  63 :
+                  0;
+          };
+
+          /* @param {Uint6} n */
+          var uint6ToB64 = function (n) {
+              return n &lt; 26 ?
+                  n + 65
+                  : n &lt; 52 ?
+                  n + 71
+                  : n &lt; 62 ?
+                  n - 4
+                  : n === 62 ?
+                  43
+                  : n === 63 ?
+                  47
+                  :
+                  65;
+          };
+
+<span id='Tools-method-arrayFromBase64'>          /** Convert a base64 string to a typed array.
+</span>           *
+           * @param {String} str
+           *  String in base64 to convert.
+           *
+           * @param {Function} [constructor=Uint8Array]
+           *  Constructor of the typed array to build.
+           *
+           * @return {Array}
+           * @method arrayFromBase64
+           */
+          Tools.arrayFromBase64 = function (sBase64, Type) {
+              var sB64Enc = sBase64.replace(/[^A-Za-z0-9\+\/]/g, &quot;&quot;);
+              var l = sB64Enc.length;
+              var nOutLen = (l * 3 + 1) &gt;&gt; 2;
+              var taBytes = new Uint8Array(nOutLen);
+              for (var nMod3, nMod4, nUint24 = 0, nOutIdx = 0, nInIdx = 0; nInIdx &lt; l; nInIdx++) {
+                  nMod4 = nInIdx &amp; 3;
+                  nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) &lt;&lt; 18 - 6 * nMod4;
+                  if (nMod4 === 3 || l - nInIdx === 1) {
+                      for (nMod3 = 0; nMod3 &lt; 3 &amp;&amp; nOutIdx &lt; nOutLen; nMod3++, nOutIdx++) {
+                          taBytes[nOutIdx] = nUint24 &gt;&gt;&gt; (16 &gt;&gt;&gt; nMod3 &amp; 24) &amp; 255;
+                      }
+                      nUint24 = 0;
+                  }
+              }
+              return Type ? new Type(taBytes.buffer) : taBytes;
+          };
+
+<span id='Tools-method-arrayToBase64'>          /** Convert a typed array to a base64.
+</span>           *
+           *     // Create an 5x5 single precision array from a Matrix
+           *     var t1 = rand(5, &#39;single&#39;).getData();
+           *
+           *     // Create a base 64 string from the array
+           *     var strb64 = Tools.ArrayToBase64(t1);
+           *
+           *     // Reverse operation
+           *     var t2 = Tools.ArrayFromBase64(strb64, Float32Array);
+           *
+           * @param {Array} tab
+           *  Array to convert
+           *
+           * @return {String}
+           */
+          Tools.arrayToBase64 = function (aBytes) {
+              aBytes = new Uint8Array(aBytes.buffer);
+              var nMod3 = 2, sB64Enc = &quot;&quot;;
+
+              for (var nLen = aBytes.length, nUint24 = 0, nIdx = 0; nIdx &lt; nLen; nIdx++) {
+                  nMod3 = nIdx % 3;
+                  if (nIdx &gt; 0 &amp;&amp; (nIdx * 4 / 3) % 76 === 0) { sB64Enc += &quot;\r\n&quot;; }
+                  nUint24 |= aBytes[nIdx] &lt;&lt; (16 &gt;&gt;&gt; nMod3 &amp; 24);
+                  if (nMod3 === 2 || aBytes.length - nIdx === 1) {
+                      sB64Enc += String.fromCharCode(uint6ToB64(nUint24 &gt;&gt;&gt; 18 &amp; 63), uint6ToB64(nUint24 &gt;&gt;&gt; 12 &amp; 63), uint6ToB64(nUint24 &gt;&gt;&gt; 6 &amp; 63), uint6ToB64(nUint24 &amp; 63));
+                      nUint24 = 0;
+                  }
+              }
+
+              return sB64Enc.substr(0, sB64Enc.length - 2 + nMod3) + (nMod3 === 2 ? &#39;&#39; : nMod3 === 1 ? &#39;=&#39; : &#39;==&#39;);
+
+          };
+
+      })();
+
+
+<span id='Tools-method-stringToDownload'>     /** Transform a string to a file and download it.
+</span>      * *It does not seem to work with all browsers.*
+      *
+      * @param {String} input
+      *
+      * @return {String} name
+      */
+     Tools.stringToDownload = function(str, name) {
+         var textFileAsBlob = new Blob([str], {type: &#39;text/plain&#39;});
+         var downloadLink = document.createElement(&quot;a&quot;);
+         downloadLink.download = name || &quot;file.txt&quot;;
+         downloadLink.href = URL.createObjectURL(textFileAsBlob);
+         downloadLink.click();
+     };
+
+
+     //////////////////////////////////////////////////////////////////
+     //                   Miscellaneous functions                    //
+     //////////////////////////////////////////////////////////////////
+
+
+     (function () {
+          var times = [], labels = {};
+
+<span id='Tools-method-tic'>          /** Save the current time (in ms) as reference.
+</span>           * @param {string} [label=undefined]
+           *  Label used as a marker to store the current time. If undefined,
+           *  then the current time is stored on the stack. 
+           * @return {undefined}
+           * @todo 
+           *  store only last time instead of stack? Return time?
+           * @matlike
+           */
+          Tools.tic = function (label) {
+              if (label) {
+                  labels[label] = new Date().getTime();
+              } else {
+                  times.push(new Date().getTime());
+              }
+          };
+
+<span id='Tools-method-toc'>          /** Compute the elapsed time (in ms) since the last `tic`.
+</span>           * @param {string} [label=undefined]
+           *  If label is defined then used the corresponding time to compute
+           *  the difference. Otherwise the function will use the last time 
+           *  on the stack.
+           * @todo allow optional argument `start`?
+           * @return {Number}
+           * @matlike
+           */
+          Tools.toc = function (label) {
+              var t = new Date().getTime();
+              if (label) {
+                  return (t - labels[label]) || 0;
+              }
+              return (t - times.pop()) || 0;
+          };
+
+      }());
+
+
+ })(Tools);
+
+</pre>
+</body>
+</html>

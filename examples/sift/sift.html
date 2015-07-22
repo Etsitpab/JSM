@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<meta charset="UTF-8">
+<html>
+  <head>
+    
+    <script src="../../modules/Tools.js"></script>
+    <script src="../../modules/MatrixView.js"></script>
+    <script src="../../modules/Matrix.js"></script>
+    <script src="../../modules/Image.js"></script>
+    <script src="../../modules/Plot.js"></script>
+
+    <script src="../../src/Matching/Matching.class.js"></script>
+    <script src="../../src/Matching/Matching.DescriptorData.js"></script>
+    <script src="../../src/Matching/Matching.Descriptor.js"></script>
+    <script src="../../src/Matching/Matching.Keypoint.js"></script>
+    <script src="../../src/Matching/Matching.Match.js"></script>
+    <script src="../../src/Matching/Matching.Scalespace.js"></script>
+    <script src="../../src/Matching/Matching.Sift.js"></script>
+    <script src="../../src/Matching/Matching.extend.benchmark.js"></script>
+    <script src="../../projects/Math.object.js"></script>
+    <script src="../../projects/drawHistogram.js"></script>
+
+    <script src="../base.js"></script>
+    <script src="sift.js"></script>
+    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <title>Color descriptors matching</title>
+  </head>
+
+  <body>
+
+    <div id="demo">
+      <h1>Color descriptors matching</h1>
+      <input type="file" id="loadFile" multiple/>
+      <div id="interface">
+
+        <div id="ui">
+          <label> Image 1 </label>
+          <select id="export1">
+            <option value="keypoints"> Keypoints </option>
+            <option value="SIFT"> SIFT </option>
+            <option value="HUE">  HUE </option>
+            <option value="OHTA1"> OHTA1 </option>
+	    <option value="OHTA2"> OHTA2 </option>	
+          </select>
+          <label> Image 2 </label>
+          <select id="export2">
+            <option value="keypoints"> Keypoints </option>
+            <option value="SIFT"> SIFT </option>
+            <option value="HUE">  HUE </option>
+            <option value="OHTA1"> OHTA1 </option>
+	    <option value="OHTA2"> OHTA2 </option>	
+          </select>
+          <label> Matchs export </label>
+          <select id="export3">
+            <option value="SIFT"> SIFT </option>
+            <option value="SIFT+HUE-Norm">  SIFT+HUE-Norm </option>
+            <option value="Ohta-SIFT"> Ohta-SIFT </option>
+            <option value="Ohta-SIFT+HUE-Norm"> Ohta-SIFT+HUE-Norm </option>
+          </select>
+          <input type="button" value="Export all" onclick="exportAll();" />
+          <hr></hr>
+            <label> Harris threshold </label>
+            <select id="harris">
+              <option value="1e0"> 0 </option>
+              <option value="1e1"> 1e1 </option>
+              <option value="1e2"> 1e2 </option>
+              <option value="1e3" selected> 1e3 </option>
+              <option value="1e4"> 1e4 </option>
+              <option value="1e5"> 1e5 </option>
+            </select>
+
+          <label> Distance </label>
+          <select id="distance">
+            <option value="L1" selected> L1 </option>
+            <option value="CEMD"> CEMD </option>
+          </select>
+            <label> Matrix skew </label>
+            <input type="range" id="matrix" min="0" step="0.05" max="1" value="0.4"/>
+            <!-- <input type="text" id="matrix" value=""><br> -->
+
+          <hr></hr>
+       <label> Threshold </label>
+            <select id="threshold">
+              <option value="0.5"> 0.5 </option>
+              <option value="0.6"> 0.6 </option>
+              <option value="0.7" selected> 0.7 </option>
+              <option value="0.75"> 0.75 </option>
+              <option value="0.8"> 0.8 </option>
+              <option value="0.85"> 0.85 </option>
+              <option value="0.9"> 0.9 </option>
+            </select>
+            <label> Combination </label>
+            <select id="combination">
+              <option value="SIFT" selected> SIFT </option>
+              <option value="SIFT+HUE-Norm"> SIFT+HUE-Norm </option>
+              <option value="Ohta-SIFT"> Ohta-SIFT </option>
+              <option value="Ohta-SIFT+HUE-Norm"> Ohta-SIFT+HUE-Norm </option>
+            </select>
+            <label> Visual </label>
+            <select id="combination">
+              <option value="curves"> Curves </option>
+              <option value="histograms"> histograms </option>
+            </select>
+     
+        </div>
+        <div id="image">
+        </div>
+      </div>
+
+    </div>
+
+  </body>
+</html>

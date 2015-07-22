@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ *
+ * @author Baptiste Mazin     &lt;baptiste.mazin@telecom-paristech.fr&gt;
+ * @author Guillaume Tartavel &lt;guillaume.tartavel@telecom-paristech.fr&gt;
+ */
+
+var root = typeof window === &#39;undefined&#39; ? module.exports : window;
+
+//////////////////////////////////////////////////////////////////
+//                         Match Class                          //
+//////////////////////////////////////////////////////////////////
+
+
+(function (global) {
+
+<span id='Matching-Match-method-constructor'><span id='Matching-Match'>    /** This class provides object to store matchs.
+</span></span>     *
+     * @class Matching.Match
+     * @param {Integer} num_1 
+     *  Number of the first `Keypoint`.
+     *  
+     * @param {Object} key_1
+     *  The first `Keypoint`.
+     * 
+     * @param {Integer} num_2 
+     *  Number of the second `Keypoint`.
+     *
+     * @param {Integer} key_2 
+     *  The second `Keypoint`.
+     *
+     * @param {Number} distance 
+     *  The distance between the two keypoints.
+     *
+     * @constructor
+     */
+    function Match(i, k1, j, k2, d) {
+<span id='Matching-Match-property-k1'>        /** First keypoint */
+</span>        this.k1 = k1;
+        /* The first keypoint number for localisation in scalespace */
+        this.k1.number = i;
+<span id='Matching-Match-property-k2'>        /** First keypoint */
+</span>        this.k2 = k2;
+        /* The second keypoint number for localisation in scalespace */
+        this.k2.number = j;
+<span id='Matching-Match-property-distance'>        /** The disimilarity measure between these two keypoints */
+</span>        this.distance = d;
+    }
+
+    Match.prototype.isValid = false;
+
+<span id='Matching-Match-property-compar'>    /** Function used to sort the matches.
+</span>     * @property
+     */
+    Match.compar = function (m1, m2) {
+        return m1.distance - m2.distance;
+    };
+
+<span id='Matching-Match-method-toString'>    /** Convert a match to a String. Function used for export purpose.
+</span>     */
+    Match.prototype.toString = function () {
+        var str = this.k1.toString(true, 
+                                   true, false, false) + &quot; &quot;;
+        str += this.k2.toString(true, true, false, false) + &quot; &quot;;
+        str += this.distance;
+        str += &quot; &quot; + (this.isValid ? 1 : 0);
+        return str;
+    };
+
+    global.Match = Match;
+
+})(Matching);
+</pre>
+</body>
+</html>
