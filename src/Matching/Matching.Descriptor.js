@@ -167,7 +167,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             return his;
         },
 
-        /** Extract the histograms from a main orientation `o` and an RGB
+        /** Extract the histograms from a main orientation `o` and an
          * image patch `patch`.
          * @param {Number} o
          * @param {Matrix} patch
@@ -179,36 +179,67 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var h = data.histograms;
             var pps = data.pps;
             var sum = data.sum;
+            var dPhase = patch.phase.getData(),
+                dNorm = patch.norm.getData(),
+                view = patch.view;
+            var xs = view.getFirst(2) + view.getFirst(1),
+                dx = view.getStep(1),
+                ys = view.getFirst(0);
 
-            var dPhase = patch.phase.getData(), dNorm = patch.norm.getData();
-            var size = patch.norm.getSize(0);
-            var wSize = Math.floor(size / 2), wSize2 = wSize * wSize;
-
-            // var exp = Math.exp, c = -2 / wSize2;
+            var size = view.getSize(0),
+                wSize = Math.floor(size / 2),
+                wSize2 = wSize * wSize;
+            
+            var exp = Math.exp, c = -2 / wSize2;
             var oR = this.relativeOrientation === true ? o : 0;
 
+            var rings = this.rings, sectors = this.sectors;
+            var rings2 = new Float32Array(rings.length);
+            for (var r = 0; r < rings.length; r++) {
+                rings2[r] = wSize * wSize * rings[r] * rings[r];
+            }
+            
+            var cst = 1 / (2 * Math.PI);
+            
             var i, j, _j, ij;
-            var x, y, x2, r2;
-
-            for (j = 0, _j = 0, x = -wSize; j < size; j++, _j += size, x++) {
-                for (i = 0, ij = _j, x2 = x * x, y = wSize; i < size; i++, ij++, y--) {
-
-                    r2 = x2 + y * y;
-
+            var x, y, x2, r2, j2;
+            
+            for (j = 0, _j = xs; j < size; j++, _j += dx) {
+                for (i = 0, ij = _j + ys, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
+                    r2 = j2 + (i - wSize) * (i - wSize);
+                    
                     if (r2 > wSize2) {
-                        dNorm[ij] = 0;
-                        dPhase[ij] = 0;
                         continue;
                     }
 
                     var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin);
-                    var his = this.getHistogramNumber(y, x, o, wSize);
-                    //dNorm[ij] *= exp(c * r2);
+                    var y = i - wSize, x = j - wSize;
+                    var ring = 0;
+                    while (r2 > rings2[ring]) {
+                        ring++;
+                    }
+                    // Sector corresponding to point (x, y)
+                    var phase = Math.atan2(y, x) * cst;
+                    phase = (phase < 0 ? phase + 1 : phase) - o;
+                    var nBin = sectors[ring];
+                    if (phase < 0) {
+                        phase += 1;
+                    }
+                    var k =  Math.floor(phase * nBin + 0.5);
+                    var sec = (k >= nBin) ? (k - nBin) : k;
+                    
+                    // Histogram corresponding to sector and ring
+                    var s, his = sec;
+                    for (s = 0; s < ring; s++) {
+                        his += sectors[s];
+                    }
                     var norm = dNorm[ij];
-                    //var norm = exp(c * r2) * dNorm[ij];
+                    //dNorm[ij] *= exp(c * r2);
+                    var norm = exp(c * r2) * dNorm[ij];
                     pps[his]++;
                     sum[his] += norm;
                     h[his][bin] += norm;
+                    
                 }
             }
             return data;
@@ -220,14 +251,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * robust color descriptors.
          */
         normalizeColor: function (patchRGB) {
-            //return correctImage(patchRGB, patchRGB.miredHistogram().modes[0].RGB);
-            // patchNorm = patch['.^'](2.4).colorConstancy("grey_world").imcor['.^'](1 / 2.4);
-            // return patchRGB.general_cc(0, 1, 0, patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("shades_of_grey", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("grey_world", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("grey_edge", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("max_rgb", patchRGB.mask).imcor;
-
             var R = 1 / patchRGB.mean[0];
             var G = 1 / patchRGB.mean[1];
             var B = 1 / patchRGB.mean[2];
@@ -257,18 +280,17 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             return {patch: patch, mean: patchRGB.mean, mask: patchRGB.mask};
         },
-
-        /** Compute from an RGB image patch an patch adapted to the descriptor
-         * computation. This transformation is constituted by a colorspace conversion
-         * an a gradient phase/norm computation.
+        /** Compute from an RGB image patch an patch adapted to the 
+         * descriptor computation. This transformation is constituted by 
+         * a colorspace conversion an a gradient phase/norm computation.
          */
         getPatch: function (patch) {
             if (this.normalize === true) {
-                patch = this.normalizeColor(patch);
+                // patch = this.normalizeColor(patch);
             }
             var cs = this.colorspace;
             if (cs.name !== "RGB") {
-                patch = patch.patch.applycform(this.convert);
+                patch = patch.applycform(this.convert);
             }
 
             switch (this.type) {
@@ -286,18 +308,15 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             return patch;
         },
-
         /** Extract a `DescriptorData` structure from a main
-         * orientation `o` and an RGB image patch `patchRGB`.
+         * orientation `o` and an image `patch`.
          *
          * @param {Number} o
-         * @param {Matrix} patchRGB
+         * @param {Matrix} patch
          * @param {Array} [mem]
          *  Preallocated memory.
          */
-        extractFromPatch: function (o, patchRGB, data) {
-            var patch = this.getPatch(patchRGB);
-
+        extractFromPatch: function (o, patch, data) {
             var dataStruct = this.extractWeightedHistograms(o, patch, data);
             this.data = dataStruct;
             if (this.extractModes === true) {
@@ -311,6 +330,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 dataStruct.cumulHistograms();
             } else {
                 dataStruct.normalizeHistograms();
+                // dataStruct.thresholdHistograms(0.1);
+                // dataStruct.normalizeHistograms();
             }
 
             return dataStruct;

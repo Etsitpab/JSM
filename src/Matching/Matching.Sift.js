@@ -65,7 +65,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.precomputeMaxLaplacian();
                 S.precomputeHarris();
             }
-            console.log("Compute Scale Space: ", Tools.toc());
+            console.log("Compute Scale Space: ", Tools.toc(), "ms");
             return this;
         },
         /** Select keypoints based on harris cornerness and on laplacian.
@@ -83,7 +83,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.laplacianThreshold(lapThresh);
                 S.harrisThreshold(harrisThresh);
             }
-            console.log("Compute Thresholds: ", Tools.toc());
+            console.log("Compute Thresholds: ", Tools.toc(), "ms");
             for (i = 0; i < ie; i++) {
                 var S = this.scaleSpaces[i];
                 console.log("\t", "Scalespace[" + i + "]:",
@@ -105,7 +105,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 var S = this.scaleSpaces[i];
                 S.extractMainOrientations(algorithm);
             }
-            console.log("Compute Main orientations: ", Tools.toc());
+            console.log("Compute Main orientations: ", Tools.toc(), "ms");
             for (i = 0; i < ie; i++) {
                 var S = this.scaleSpaces[i];
                 console.log("\t", "Scalespace[" + i + "]:",
@@ -124,7 +124,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             for (i = 0, ie = this.scaleSpaces.length; i < ie; i++) {
                 this.scaleSpaces[i].extractDescriptors(descriptors);
             }
-            console.log("Compute Descriptors: ", Tools.toc());
+            console.log("Compute Descriptors: ", Tools.toc(), "ms");
             return this;
         },
         /** Compute the matches between two images. The keypoints as well as
@@ -159,7 +159,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             this.matchs = this.matchs || [];
             this.matchs[S1] = this.matchs[S1] || [];
             this.matchs[S1][S2] = matchs.sort(global.Match.compar);
-            console.log("Matching time : ", Tools.toc());
+            console.log("Matching time : ", Tools.toc(), "ms");
             return this;
         },
         /** Select good matches based on their similarity measures.
@@ -200,7 +200,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             this.matchsList[S1][S2] = matchsList;
             console.log("\t", "matchsList[" + S1 + "][" + S2 + "]:",
                         matchsList.length, "matchs.");
-            console.log("Threshold matchs time : ", Tools.toc());
+            console.log("Threshold matchs time : ", Tools.toc(), "ms");
 
             return this;
         },
@@ -227,7 +227,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 .computeDescriptors()
                 .computeMatchs(S1, S2)
                 .thresholdMatchs(S1, S2);
-            console.log("Global match time : ", Tools.toc());
+            console.log("Global match time : ", Tools.toc(), "ms");
             return this;
         },
         /** Export matches list between two scalescapes to string.

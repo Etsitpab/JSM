@@ -200,6 +200,21 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             return this;
         },
+        thresholdHistograms: function (t) {
+            var h = this.histograms;
+            var i, j, ei, ej, sum;
+
+            // Normalization w.r.t pps
+            for (i = 0, ei = h.length, sum = 0; i < ei; i++) {
+                // h[i][0] = 0;
+                for (j = 1, ej = h[i].length; j < ej; j++) {
+                    if (h[i][j] > t) {
+                        h[i][j] = t;
+                    }
+                }
+            }
+            return this;
+        },
         /** 
          Compute the cumulative histograms. 
          This is used to decrease 

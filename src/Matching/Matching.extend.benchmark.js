@@ -113,7 +113,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return nk;
     };
 
-
     global.Keypoint.prototype.matchBenchmark = function (keypoints, criterions, combinations) {
 
         var getDistancesForCombination = function (distances, combinations) {
@@ -155,7 +154,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return out;
     };
 
-
     global.ScaleSpace.prototype.projectKeypoints = function (mat) {
         var keypoints = this.keypoints;
         var im = this.image;
@@ -175,7 +173,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         }
         return keypointsOut;
     };
-
 
     global.Sift.prototype.computeMatchsBenchmark = function (S1, S2, criterions, combinations) {
         Tools.tic();
@@ -208,7 +205,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         this.matchs = this.matchs || [];
         this.matchs[S1] = this.matchs[S1] || [];
         this.matchs[S1][S2] = matchs;
-        console.log("Matching Benchmark time : ", Tools.toc());
+        console.log("Matching time : ", Tools.toc(), "ms");
         return this;
     };
 
@@ -233,7 +230,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
             m.isValid = isValid(m.k1, m.k2, mat);
         }
     };
-
 
     global.createCurves = function (matchs) {
         var n = matchs.length;
@@ -312,6 +308,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             throw new Error("Sift.benchmark: usage error");
         }
 
+        Tools.tic();
         var S = new global.Sift([im1, im2]);
         S.computeScaleSpace();
 
@@ -330,7 +327,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         S.computeDescriptors()
             .computeMatchsBenchmark(0, 1, criterions, combinations);
         S.curves = {};
-        console.log(mat);
         if (mat) {
             var c;
             for (c in S.matchs[0][1]) {
@@ -338,31 +334,40 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.curves[c] = global.createCurves(S.matchs[0][1][c]);
             }
         }
+        console.log("Benchmark time:", Tools.toc(), "ms");
 
         return S;
     };
 
     global.ScaleSpace.prototype.getDescriptorPatch = function (n, name, part, sz) {
         var k = this.keypoints[n];
-        var patchRGB = this.getImagePatch(k, true);
+        var patchRGB = this.getViewOnImagePatch(
+            k, {"name": "RGB", "channels": []}
+        );
+        patchRGB = patchRGB.image.extractViewFrom(patchRGB.view)
+
         var mask = patchRGB.mask;
         var descriptor, patch;
 
         if (name !== "RGB" && name !== "RGBNorm") {
             descriptor = k.descriptorsData[name].descriptor;
-            patch = descriptor.getPatch(patchRGB);
+            patch = this.getViewOnImagePatch(
+                k,
+                descriptor.colorspace,
+                descriptor.type,
+                descriptor.normalize
+            );
+            patch.phase = patch.phase.extractViewFrom(patch.view)
+            patch.norm = patch.norm.extractViewFrom(patch.view)
         }
 
         var rings, sectors;
         if (part === "norm") {
             patch = patch[part];
             patch = patch.rdivide(patch.max());
-            mask =  mask.cat(2, mask, mask);
         } else if (name === "RGB" || name === "RGBNorm") {
-            patch = (name === "RGBNorm") ? global.Descriptor.prototype.normalizeColor(patchRGB) : patchRGB;
-            patch = patch.patch;
+            patch = patchRGB;
             patch = patch.cat(2, Matrix.ones(patch.size(0), patch.size(1)));
-            mask = mask.cat(2, mask, mask, mask);
         } else if (name !== undefined) {
             rings = descriptor.rings;
             sectors = descriptor.sectors;
@@ -371,14 +376,11 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else {
                 patch = phaseNormImage(patch.phase, patch.norm, true);
             }
-            mask = mask.cat(2, mask, mask, mask);
         }
-        patch = patch['.*'](mask);
 
         var canvas = document.createElement("canvas");
         sz = sz || 201;
         patch.imshow(canvas, sz / patch.size(0));
-        // var descriptorsData = k.descriptorsData;
         k = k.getCopy();
         k.x = sz / 2;
         k.y = sz / 2;
@@ -398,34 +400,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return Matrix.imread(canvas).im2single();
     };
 
-    global.ScaleSpace.prototype.patchsToIm = function (ks) {
-        // var im = this.image.getCopy();
-        var im = Matrix.zeros(this.image.getSize());
-        var i;
-        ks = ks || this.keypoints;
-        for (i = ks.length - 1; i > -1; i--) {
-            var k = ks[i];
-            var x = k.x, y = k.y, s = Math.round(k.factorSize * k.sigma);
-            var round = Math.round;
-            var xMin = round(x - s), xMax = round(x + s);
-            var yMin = round(y - s), yMax = round(y + s);
-            var kp = k.patch.RGBNorm || k.patch.RGB;
-            var mask = k.patch.RGB.mask;
-            mask =  mask.cat(2, mask, mask)['>'](0);
-
-            var imP = im.get([yMin, yMax], [xMin, xMax], []);
-            imP.set(mask, kp.get(mask));
-            im.set([yMin, yMax], [xMin, xMax], [], imP);
-        }
-        return im;
-    };
-
     global.Sift.prototype.createView = function (cell, h, w) {
         cell.innerHTML = "";
 
         var f = Math.floor;
         var S = this;
-        w = w || cell.clientWidth;
+        w = w || cell.clientWidth - 50;
         h = h || cell.clientHeight;
         cell.style.setProperty("width", w);
         cell.style.setProperty("height", h);
@@ -549,7 +529,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 if (v === "histograms") {
                     pDesc = createHistograms();
                 } else if (v === "curves" && this.curves) {
-                    console.log("toto");
                     plotCurves = createCurves(this.curves);
                 }
             }
