@@ -59,6 +59,9 @@
 
     /** Returns the phase angle for complex Matrix.
      *
+     * When used as Matrix object method, this function acts in place. 
+     * Use the Matrix.angle property to work on a copy.
+     *
      * __Also see:__
      *  {@link Matrix#abs}.
      *
@@ -66,7 +69,7 @@
      * @matlike
      * @method angle
      */
-    (function (Matrix_prototype) {
+    (function () {
         var angle_real = function (data) {
             for (var i = 0, ie = data.length; i < ie; i++) {
                 data[i] = 0;
@@ -88,10 +91,17 @@
             }
             return this;
         };
-    })(Matrix_prototype);
+        Matrix.angle = function (m) {
+            return m.getCopy().angle();
+        };
+
+    })();
 
     /** Returns the absolute value for real Matrix and
      * the complex magnitude for complex Matrix.
+     *
+     * When used as Matrix object method, this function acts in place. 
+     * Use the Matrix.abs property to work on a copy.
      *
      * __Also see:__
      *  {@link Matrix#angle}.
@@ -100,7 +110,7 @@
      * @matlike
      * @method abs
      */
-    (function (Matrix_prototype) {
+    (function () {
         var abs_real = function (data) {
             for (var i = 0, ie = data.length; i < ie; i++) {
                 data[i] = data[i] > 0 ? data[i] : -data[i];
@@ -123,10 +133,17 @@
             }
             return this;
         };
-    })(Matrix_prototype);
+        Matrix.abs = function (m) {
+            return m.getCopy().abs();
+        };
+    })();
 
     /** Returns the complex conjugate of each element of the Matrix.
      *
+     * When used as Matrix object method, this function acts in place. 
+     * Use the Matrix.conj property to work on a copy.
+     *
+     * @matlike
      * @chainable
      */
     Matrix_prototype.conj = function () {
@@ -138,6 +155,9 @@
             imag[i] = -imag[i];
         }
         return this;
+    };
+    Matrix.conj = function (m) {
+        return m.getCopy().conj();
     };
 
 })(Matrix, Matrix.prototype);
