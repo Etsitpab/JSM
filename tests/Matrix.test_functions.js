@@ -428,7 +428,6 @@
         var s, fft, out, time, psnr;
         for (var sz = 1; sz < 6; sz += 2) {
             s = Matrix.rand(sz, sz + 1);
-            log(s.size());
             var res = test1(s);
             log("FFT 1D decomposition/reconstruction", res.psnr, res.time);
             var res = test2(s);
