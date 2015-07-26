@@ -101,28 +101,28 @@ function GLEffect(sourceCode) {
  * @param {GLImage | HTMLElement | Array} image
  *  Input image or array of input images (for multi-images effects).
  *  Images can be `img`, `canvas`, or `video` elements.
+ * @param {GLImage} [output = null]
+ *  Output GLImage. If none, the result is stored in a default canvas.
  * @param {Object} [opts = {}]
- *  - `toCanvas`: Boolean<br/>
- *      If true, render to the default canvas instead of a GLImage.
  *  - `scale`: Number<br/>
  *      Size ratio of output / input.
  *  - `width`: Number<br/>
  *      Width of the output.
  *  - `height`: Number<br/>
  *      Height of the output image.
- *  - `output`: GLImage | Mixed<br/>
- *      The output image.
  *  - `getSize`: Function | Boolean<br/>
  *      _Argument:_ the `image` argument.<br/>
  *      _Returns:_ the size of the output image, or `false` on error.
- * @return {GLImage}
+ * @return {HTMLCanvasElement | GLImage}
+ *  If no GLImage is given as `output` argument, the output canvas is returned.
+ *  Otherwise, the `output` argument is returned.
  * @throws {Error}
  *  If input image(s) has invalid type or dimensions.
  */
-GLEffect.prototype.run = function (image, opts) {
+GLEffect.prototype.run = function (image, output, opts) {
     'use strict';
     opts = GLEffect._cloneOpts(opts);
-    var output = this._initOutput(image, opts);
+    output = this._initOutput(image, output, opts);
     GLEffect._readOpt(opts);
 
     // Setup GL context
@@ -628,18 +628,18 @@ GLEffect.prototype._createAttributes = function (vertexCount, attributeArrays) {
 /** Initialize the input and output images.
  * @param {GLImage | HTMLElement | Array} input
  *  Input image(s).
+ * @param {GLImage} [output = null]
+ *  Output image, or `null` to render into the default  canvas.
  * @param {Object} [opts]
  *  The `opts` parameters of GLEffect.run.
- * @return {GLImage}
- *  The output image, initialized.
+ * @return {GLImage | Object}
+ *  The output image (initialized) or the canvas (with extra attributes set).
  * @throws {Error}
  *  If images has invalid types or dimensions.
  * @private */
-GLEffect.prototype._initOutput = function (input, opts) {
+GLEffect.prototype._initOutput = function (input, output, opts) {
     'use strict';
     var outsize = input;
-    var output = GLEffect._readOpt(opts, 'output');
-    var toCanvas = GLEffect._readOpt(opts, 'toCanvas');
     var getSize = GLEffect._readOpt(opts, 'getSize');
     var scale = GLEffect._readOpt(opts, 'scale');
 
@@ -683,16 +683,12 @@ GLEffect.prototype._initOutput = function (input, opts) {
     }
 
     // Create output image with given dimensions
-    if (!toCanvas) {
-        output = output || new GLImage();
-    } else if (!output) {
+    if (!output) {
         output = this._context.canvas;
         output.resize = function (width, height) {
             output.width = width;
             output.height = height;
         };
-    } else {
-        throw new Error('Argument error: cannot have both "toCanvas" true and "output" set.');
     }
     if (!scale) {
         output.resize(
@@ -1027,12 +1023,12 @@ GLReduction.prototype.run = function (image, opts) {
     opts = GLEffect._cloneOpts(opts);
     var maxIterCPU = GLEffect._readOpt(opts, 'maxIterCPU', 1024);
     GLEffect._readOpt(opts);
+    if (!GLReduction._imbuffers) {
+        GLReduction._imbuffers = [new GLImage(), new GLImage()];
+    }
     if (!(image instanceof GLImage)) {
-        if (!GLReduction._run_image) {
-            GLReduction._run_image = new GLImage();
-        }
-        GLReduction._run_image.load(image);
-        image = GLReduction._run_image;
+        GLReduction._imbuffers[0].load(image);
+        image = GLReduction._imbuffers[0];
     }
     var isPositiveEven = function (n) {
         return (n > 0) && (n % 2 === 0);
@@ -1040,12 +1036,13 @@ GLReduction.prototype.run = function (image, opts) {
     var isBigEnough = function (im) {
         return (im.width * im.height > maxIterCPU);
     };
+    var k = 0;
     while (isBigEnough(image) && isPositiveEven(image.width) && isPositiveEven(image.height)) {
-        image = this.glEffect.run(image, {'scale': 1 / 2});
+        image = this.glEffect.run(image, GLReduction._imbuffers[k++ % 2], {'scale': 1 / 2});
     }
     var array = image.toArray();
     var result = new Float64Array(array.subarray(0, 4));
-    var k, n = array.length;
+    var n = array.length;
     if (!this.isScalarFunction) {
         for (k = 4; k < n; k += 4) {
             this.jsFunction(result, array.subarray(k, k + 4));

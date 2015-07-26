@@ -1,4 +1,4 @@
-/*jslint vars: true, nomen: true, browser: true */
+/*jslint vars: true, nomen: true, plusplus: true, browser: true */
 /*global Shortcuts, FileLoader, FileSlot, Effects, GLEffect */
 
 // Create the shortcuts
@@ -19,10 +19,9 @@ function createShortcuts() {
 // Create the file loader
 function createFileLoader() {
     'use strict';
-    var fl = new FileLoader('images', null, 'image/*,video/*');
+    var nloaded = 0;
+    var fl = new FileLoader('images', FileLoader.MULTIPLE, 'image/*,video/*');
     fl.appendWebcams();
-
-    // Run when selection change
     fl.onchange = function (slot, nowSelected) {
         if (!nowSelected || slot.type !== 'webcam') {
             Effects.run(fl);
@@ -31,6 +30,8 @@ function createFileLoader() {
     fl.onload = function (slot) {
         if (slot.type === 'webcam') {
             Effects.run(fl);
+        } else if (nloaded++ === 0) {
+            slot.select();
         }
     };
 

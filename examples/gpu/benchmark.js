@@ -99,8 +99,8 @@ function runEffect() {
         255 * sumAll(REDUCTION.run(im)));
 
     // Display
-    var gray = GRAYIFYER.run(im);
-    var canvas = MIXER.run([im, gray], {'toCanvas': true});
+    var gray = GRAYIFYER.run(im, new GLImage());
+    var canvas = MIXER.run([im, gray]);
     var container = $('content');
     removeAllChildren(container);
     container.appendChild(canvas);
@@ -110,7 +110,7 @@ function runEffect() {
     slider.value = 0;
     slider.oninput = function () {
         MIXER.setParameter('alpha', slider.value);
-        MIXER.run([im, gray], {'toCanvas': true});
+        MIXER.run([im, gray]);
         slider.focus();
     };
 }

@@ -1,5 +1,5 @@
 /*jslint vars: true, nomen: true, plusplus: true, browser: true */
-/*global GLEffect, Webcam, HTMLVideoElement */
+/*global GLEffect, GLImage, Webcam, HTMLVideoElement */
 
 // User-Interface for designing a GLEffect
 function EffectUI(name, effect, hidden) {
@@ -458,21 +458,22 @@ Effects._getInputs = function (fileLoader) {
 };
 
 // Run the effect once
-Effects._runOnce = function (images, toImage) {
+Effects._runOnce = function (image, toImage) {
     'use strict';
+    if (!Effects._runOnce_imbuffers) {
+        Effects._runOnce_imbuffers = [new GLImage(), new GLImage()];
+    }
+    var imbuffers = Effects._runOnce_imbuffers;
     var t = new Date().getTime();
-    var opts, current;
+    var current, output;
     var k, n = Effects.list_enabled.length;
     for (k = 0; k < n; ++k) {
         current = Effects.list_enabled[k];
-        opts = GLEffect._cloneOpts(current.opts);
-        if (k === n - 1 && !toImage) {
-            opts.toCanvas = true;
-        }
-        images = current.effect.run(images, opts);
+        output = (k < n - 1) ? imbuffers[k % 2] : toImage ? new GLImage() : null;
+        image = current.effect.run(image, output);
     }
     Effects.displayTime(new Date().getTime() - t);
-    return images;
+    return image;
 };
 
 // Run the effect in a loop (for video)
