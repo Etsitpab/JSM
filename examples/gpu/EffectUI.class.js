@@ -58,7 +58,7 @@ EffectUI.prototype.toHTML = function () {
     $('opts').value = JSON.stringify(this.opts);
     $('enabled').checked = this.enabled;
     $('sourceCode').value = this.effect.sourceFunction || this.effect.sourceCode;
-    $('editor').style.display = '';
+    $('editor').style.display = 'block';
     EffectUI.fitSourceCodeArea();
 };
 

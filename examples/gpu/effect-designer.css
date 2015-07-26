@@ -38,9 +38,9 @@ input[type=button] {
     font-size: 0.8em;
 }
 
-.tab {
-    display: inline-block;
-    width: 2em;
+.narrow {
+    padding-left: 0.5em !important;
+    padding-right: 0.5em !important;
 }
 
 .error {
@@ -55,11 +55,6 @@ input[type=button] {
     color: gray;
 }
 
-.narrow {
-    padding-left: 0.5em !important;
-    padding-right: 0.5em !important;
-}
-
 .param-button {
     position:relative;
     left:-3.5em;
@@ -69,37 +64,6 @@ input[type=button] {
 
 .param-button:hover {
     opacity: 1;
-}
-
-
-/* Column-wise settings */
-
-.left-column {
-    position: fixed;
-    overflow-x: hidden;
-    overflow-y: auto;
-    left: 0px;
-    width: 180px;
-}
-
-.right-column {
-    overflow-x: auto;
-    margin-left: 200px;  /* = left-column-width + 2 * (margin + padding + border) */
-}
-
-#resizer {
-    position: absolute;
-    width: 4px;
-    right: 0px;
-    top: 0px;
-    bottom: 0px;
-    background-color: #ddd;
-    /* border: 1px solid orange; */
-}
-
-#resizer:hover {
-    cursor: e-resize;
-    background-color: #aaa;
 }
 
 
@@ -120,23 +84,69 @@ body > div {
     border: 1px solid gray;
 }
 
-#menu {
-    top: 0px;
-    bottom: 0px;
-    z-index: +1;
-}
-
-#images {
-}
-
 #editor {
-}
-
-#outputs {
+    display: none;
 }
 
 #outputs:empty::after {
     content: 'Nothing to be displayed :(';
     display: block;
     margin: 1em;
+}
+
+
+/* Movile vs. desktop (481+ and 768+) */
+
+@media only all and (max-width: 481px) {
+
+body > div {
+    margin: 2px !important;
+}
+
+#resizer {
+    display: none;
+}
+
+#menu {
+    width: 100% !important;
+}
+
+}
+
+@media only all and (min-width: 480px) {
+
+#menu {
+    top: 0px;
+    bottom: 0px;
+    z-index: +1;
+}
+
+#resizer {
+    position: absolute;
+    width: 4px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    background-color: #ddd;
+    /* border: 1px solid orange; */
+}
+
+#resizer:hover {
+    cursor: e-resize;
+    background-color: #aaa;
+}
+
+.left-column {
+    position: fixed;
+    overflow-x: hidden;
+    overflow-y: auto;
+    left: 0px;
+    width: 180px;
+}
+
+.right-column {
+    overflow-x: auto;
+    margin-left: 200px;  /* = left-column-width + 2 * (margin + padding + border) */
+}
+
 }
