@@ -55,7 +55,7 @@
         return D;
     };
 
-    Matrix.prototype.colorEnhancementTest = function (gamma, w, K, name, alpha, average) {
+    Matrix.prototype.colorEnhancementTest = function (gamma, w, K, name, alpha, average, stretch) {
         // Default parameters
         alpha = (alpha === undefined) ? 0.1 : alpha;
         gamma = (gamma  === undefined) ? 0.5 : gamma;
@@ -84,8 +84,8 @@
             max[c] = A.max().getDataScalar();
             imMean += mean[c] / nChannel;
         }
-        // var imMin = Math.min(min[0], min[1], min[2]);
-        // var imMax = Math.max(max[0], max[1], max[2]);
+        var imMin = Math.min(min[0], min[1], min[2]),
+            imMax = Math.max(max[0], max[1], max[2]);
    
         for (c = 0; c < nChannel; c++) {
             A = Matrix.appcoef2(wt[c], name, J);
@@ -96,9 +96,10 @@
             } else if (average === "half") {
                 norm = wNorm * 0.5; 
             }
-            // A["-="](imMin)["*="](wNorm / (imMax - imMin));
-            if (window.EDO_RES) {
+            if (stretch === "color") {
                 A["-="](min[c])["*="](wNorm / (max[c] - min[c]));
+            } else if (stretch === "luminance") {
+                A["-="](imMin)["*="](wNorm / (imMax - imMin));
             }
             A["*="](1 - alpha)["+="](norm * alpha);
         }
@@ -108,9 +109,10 @@
                 var d = wt[c][0].getData();
                 var sb = wt[c][1].value([0, 0]) * wt[c][1].value([0, 1]);
                 A = d.subarray(0, sb);
-                processCoeffs(d.subarray(2 * sb, 3 * sb), A, K, w, gamma);
-                processCoeffs(d.subarray(sb, 2 * sb), A, K, w, gamma);
-                processCoeffs(d.subarray(3 * sb, 4 * sb), A, K, w, gamma);
+                var cst = w * (1 + 100 * Math.pow((j / (J - 1)), 10));
+                processCoeffs(d.subarray(2 * sb, 3 * sb), A, K, cst, gamma);
+                processCoeffs(d.subarray(sb, 2 * sb), A, K, cst, gamma);
+                processCoeffs(d.subarray(3 * sb, 4 * sb), A, K, cst, gamma);
                 wt[c] = Matrix.upwlev2(wt[c], name);
             }
             var channel = wt[c][0].reshape(wt[c][1].get(0).getData());

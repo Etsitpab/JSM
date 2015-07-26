@@ -38,21 +38,12 @@
           <hr></hr>
           <fieldset>
             <legend>Options</legend>
-            <label> Stretch dynamic: </label>
-            <select id="stretchDyn">
-              <option value="false"> No </option>
-              <option value="lum"> Luminance only </option>
-              <option value="color"> Each channel </option>
-            </select>
             <label> View: </label>
             <select id="view">
               <option value="proc"> Image processed </option>
               <option value="orig"> Image original </option>
               <option value="diff"> Differences </option>
             </select>
-            <label class="val"> &Gamma; </label>
-            <input type="range" id="Gamma" class="val" min="0.1" step="0.1" max="1.5" value="1.0"/>
-            <input type="text" id="GammaVal" class="val" value="" readonly>
             <label> Paper results </label>
             <select id="paperResults">
               <option value="YES"> YES </option>
@@ -60,10 +51,15 @@
             </select>
           </fieldset>
           <hr></hr>
-
           <fieldset>
-            <legend>Color enhancement</legend>
-            <label> Average value </label>
+            <legend>Approximation coefficients</legend>
+            <label> Stretch dynamic: </label>
+            <select id="stretchDyn">
+              <option value="false"> No </option>
+              <option value="luminance" selected> Luminance only </option>
+              <option value="color"> Each channel </option>
+            </select>
+            <label>Average value </label>
             <select id="averageValue">
               <option value="channel" selected> Channel average </option>
               <option value="image"> Image average </option>
@@ -72,8 +68,12 @@
             <label class="val"> &alpha;  </label>
             <input type="range" id="alpha" class="val" min="0" step="0.05" max="1" value="0.1"/>
             <input type="text" id="alphaVal" class="val" value="" readonly>
+          </fieldset>
+
+          <fieldset>
+            <legend>Contrast enhancement</legend>
             <label class="val"> w </label>
-            <input type="range" id="w" class="val" min="0" step="0.5" max="30" value="15"/>
+            <input type="range" id="w" class="val" min="0" step="0.5" max="100" value="15"/>
             <input type="text" id="wVal" class="val" value="" readonly>
             <label class="val"> K </label>
             <input type="range" id="K" class="val" min="1" step="1" max="100" value="20"/>

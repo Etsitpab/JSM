@@ -37,13 +37,6 @@ function updateOutput() {
     var image;
     if ($V("view") === "proc") {
         image = IMAGE_PROCESSED;
-        if ($V('stretchDyn') === "lum") {
-            image = image.get();
-            stretchLuminance(image);
-        } else if ($V('stretchDyn') === "color") {
-            image = image.get();
-            stretchColorChannels(image);
-        }
     } else if ($V("view") === "orig") {
         image = IMAGE_ORIG;
     } else if ($V("view") === "diff") {
@@ -74,7 +67,8 @@ var colEn = function () {
             w: $F("w") / 255,
             wav: $V("wavelet"),
             colorspace: $V("colorspace"),
-            averageValue: $V("averageValue")
+            averageValue: $V("averageValue"),
+            stretch: $V("stretchDyn")
         };
     };
     
@@ -86,24 +80,27 @@ var colEn = function () {
         $F("w", 15.0);
         $("wavelet").getElementsByTagName("option")[0].selected = "selected";
         $("wavelet").getElementsByTagName("option")[0].selected = "selected";
-        $F("Gamma", 1.0);
         $("stretchDyn").getElementsByTagName("option")[0].selected = "selected";
         $("colorspace").getElementsByTagName("option")[0].selected = "selected";
         onChange();
     };
 
     colEn.fun = function (img, p) {
-        console.log(p.colorspace);
+        console.log(p);
         if (p.colorspace === "Gray") {
             img = Matrix.applycform(img, "RGB to Ohta");
             var L = img.get([], [], 0);
-            L = L.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
+            L = L.colorEnhancementTest(
+                p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue, p.stretch
+            );
             return img.set([], [], 0, L).applycform("Ohta to RGB");
         }
-        if(p.colorspace !== "RGB") {
+        if (p.colorspace !== "RGB") {
             img = Matrix.applycform(img, "RGB to " + p.colorspace);
         }
-        img = img.colorEnhancementTest(p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue);
+        img = img.colorEnhancementTest(
+            p.gamma, p.w, p.K, p.wav, p.alpha, p.averageValue, p.stretch
+        );
         if (p.colorspace !== "RGB") {
             img = img.applycform(p.colorspace + " to RGB");
         }
@@ -113,11 +110,7 @@ var colEn = function () {
     var onApply = function () {
         Tools.tic();
         var img = IMAGE_ORIG.get();
-        if (STRETCH) {
-            stretchColorChannels(img);
-        }
-        img.power($F("Gamma"));
-        IMAGE_PROCESSED = colEn.fun(img, getParameters()).power(1 / $F("Gamma"));
+        IMAGE_PROCESSED = colEn.fun(img, getParameters());
         console.log("Time elapsed:", Tools.toc(), "(ms)");
         $("view").getElementsByTagName("option")[0].selected = "selected";
         $("view").focus();
@@ -126,7 +119,6 @@ var colEn = function () {
     var onChange = function () {
         $V("KVal", $F("K"));
         $V("gammaVal", $F("gamma"));
-        $V("GammaVal", $F("Gamma"));
         $V("alphaVal", $F("alpha"));
         $V("wVal", $F("w"));
     };
@@ -135,7 +127,6 @@ var colEn = function () {
     $("w").addEventListener("change", onChange, false);
     $("alpha").addEventListener("change", onChange, false);
     $("gamma").addEventListener("change", onChange, false);
-    $("Gamma").addEventListener("change", onChange, false);
     $("applyColEn").addEventListener("click", onApply, false);
     $("resetColEn").addEventListener("click", colEn.reset, false);
 };
@@ -185,7 +176,6 @@ window.onload = function () {
     colEn();
 
     $("view").addEventListener("change", updateOutput, false);
-    $('stretchDyn').addEventListener("change", updateOutput, false);
     $('pinImage').addEventListener("click", pinImage, false);
     $('paperResults').addEventListener("change", paperResults, false);
     
