@@ -825,6 +825,7 @@ FileSlot.Loader.video = function (dataURL) {
     var that = this;
     var video = document.createElement('video');
     video.controls = true;
+    video.loop = true;
     video.oncanplaythrough = function () {
         video.width = video.videoWidth;
         video.height = video.videoHeight;

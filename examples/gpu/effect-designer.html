@@ -29,6 +29,26 @@
     <!-- Image set -->
     <div id="images" class="right-column">Images</div>
 
+    <!-- Output image -->
+    <div id="outputs" class="right-column">
+      <p class="bold">How to use it:</p>
+      <ul>
+        <li>Load images or video (drag'n'drop them or click the "<tt class="bold">+</tt>" slot).</li>
+        <li>Import existing effects using the left menu.</li>
+        <li>If any, you can change the parameter's values using the left menu.</li>
+      </ul>
+      <p class="bold">Known bugs:</p>
+      <ul class="small">
+        <li>Firefox throws an error when double-clicking the output, but the format/type pair is correct.</li>
+        <li>When loading mobile version then turning to desktop one, bug when resizing the menu.</li>
+      </ul>
+      <p class="bold">To do:</p>
+      <ul class="small">
+        <li>Allow GLReduction on the result</li>
+        <li>Write interesting stuff here.</li>
+      </ul>
+    </div>
+
     <!-- Effect list -->
     <div id="menu" class="left-column">
       <div>
@@ -98,28 +118,6 @@
              title="Set optional effect arguments"
              onclick="Effects.promptOpts()"/><br/>
       <textarea id="sourceCode" cols="80" rows="5"></textarea>
-    </div>
-
-    <!-- Output image -->
-    <div id="outputs" class="right-column">
-      <p class="bold">How to use it:</p>
-      <ul>
-        <li>Load images or video (drag'n'drop them or click the "<tt class="bold">+</tt>" slot).</li>
-        <li>Import existing effects using the left menu.</li>
-        <li>If any, you can change the parameter's values using the left menu.</li>
-      </ul>
-      <p class="bold">Known bugs:</p>
-      <ul class="small">
-        <li>Firefox throws an error when double-clicking the output, but the format/type pair is correct.</li>
-        <li>When loading mobile version then turning to desktop one, bug when resizing the menu.</li>
-      </ul>
-      <p class="bold">To do:</p>
-      <ul class="small">
-        <li class="bold">Default values for parameters.</li>
-        <li class="bold">Implement conv9x1.</li>
-        <li>Allow GLReduction on the result</li>
-        <li class="italic">Write interesting stuff here.</li>
-      </ul>
     </div>
 
   </body>

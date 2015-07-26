@@ -44,12 +44,14 @@ var GLEffect, GLImage, GLReduction;
  * @param {String} [sourceCode]
  *  The source code of the effect, written in GLSL.<br/>
  *  _Default:_ the identity effect (output = input).
+ * @param {Oject} [parameters = {}]
+ *  Initial values of the parameters.
  * @return {GLEffect | null}
  *  The created effect. If WebGL is not supported, `null` is returned.
  * @throws {Error}
  *  If an error occurs during the source code compilation.
  */
-function GLEffect(sourceCode) {
+function GLEffect(sourceCode, parameters) {
     'use strict';
     var that = this;
     GLEffect._getDefaultContext();  // ensure the context is initialized
@@ -88,6 +90,16 @@ function GLEffect(sourceCode) {
         'aVertexPosition': GLEffect._vertexPositions,
         'aTexturePosition': GLEffect._texturePositions
     });
+
+    // Initialize parameters
+    if (parameters) {
+        var name;
+        for (name in parameters) {
+            if (parameters.hasOwnProperty(name)) {
+                this.setParameter(name, parameters[name]);
+            }
+        }
+    }
 
     return this;
 }
@@ -180,6 +192,8 @@ GLEffect.prototype.setParameter = function (name, value, storeIt) {
  *
  *     vec3 function(vec3 color, ...);  // RGB
  *     vec4 function(vec4 color, ...);  // RGBA
+ * @param {Object} [parameters = {}]
+ *  Initial values of the parameters.
  * @return {GLEffect | null}
  *  The effect which applies `function` to each pixel of the input image(s), or `null` if WebGL is not supported.<br/>
  *  If `function` has a single argument, GLEffect.run expects a single image as argument.<br/>
@@ -187,7 +201,7 @@ GLEffect.prototype.setParameter = function (name, value, storeIt) {
  * @throws {Error}
  *  If an error occurs during the source code compilation.
  * @static */
-GLEffect.fromFunction = function (functionStr, argCount, argType) {
+GLEffect.fromFunction = function (functionStr, parameters, argCount, argType) {
     'use strict';
 
     // Infer prototype
@@ -198,7 +212,7 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
             var match = str.match(/\bvec\d\b/g);
             return match && (match.length === 1) && match.pop();
         };
-        var splitted = functionStr.match(/^([\s\S]*?)function\s*\(([\s\S]*?)\)/);
+        var splitted = functionStr.match(/(\w+)\s+function\s*\(([\s\S]*?)\)/);
         if (!splitted || splitted.length !== 3) {
             throw new Error('Cannot infer function prototype.');
         }
@@ -260,7 +274,7 @@ GLEffect.fromFunction = function (functionStr, argCount, argType) {
     str += functionStr;
 
     // Compile and return the effect
-    var effect = new GLEffect(str);
+    var effect = new GLEffect(str, parameters);
     effect.sourceFunction = functionStr;
     return effect;
 };
