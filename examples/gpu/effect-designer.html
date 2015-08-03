@@ -44,7 +44,8 @@
       </ul>
       <p class="bold">To do:</p>
       <ul class="small">
-        <li>Allow GLReduction on the result</li>
+        <li>Change default effect: use functions rather than constants.</li>
+        <li>Allow GLReduction on the result.</li>
         <li>Write interesting stuff here.</li>
       </ul>
     </div>
@@ -93,6 +94,20 @@
                  onclick="Effects.updateParameter()"/>
           </nobr>
       </p>
+      <p>
+        <label for="reduction">Reductions</label>:<br/>
+        <select id="reduction"
+                title="Reduce the image to a single RGBA value"
+                onchange="Effects.updateReduction()">
+          <option value="">(none)</option>
+        </select><br/>
+        <div id="reduction-RGBA" style="display: none">
+          <input type="text" id="reduction-R" disabled /><br/>
+          <input type="text" id="reduction-G" disabled /><br/>
+          <input type="text" id="reduction-B" disabled /><br/>
+          <input type="text" id="reduction-A" disabled />
+        </div>
+      </p>
       <div id="resizer"></div>
     </div>
 
@@ -118,6 +133,11 @@
              title="Set optional effect arguments"
              onclick="Effects.promptOpts()"/><br/>
       <textarea id="sourceCode" cols="80" rows="5"></textarea>
+    </div>
+
+    <!-- Footer -->
+    <div id="footer" class="right-column">
+      G. Tartavel &copy; 2015
     </div>
 
   </body>

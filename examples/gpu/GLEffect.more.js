@@ -1,6 +1,8 @@
 /*global GLEffect, GLReduction */
 
 
+// TODO: functions rather than constants
+
 /** Sample effects. @singleton @class GLEffect.Sample */
 GLEffect.Sample = {};
 

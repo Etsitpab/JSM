@@ -30,7 +30,7 @@ function createFileLoader() {
     fl.onload = function (slot) {
         if (slot.type === 'webcam') {
             Effects.run(fl);
-        } else if (nloaded++ === 0) {
+        } else if (nloaded++ === 0 && fl.isSelectionEmpty()) {
             slot.select();
         }
     };
@@ -87,5 +87,6 @@ function init() {
     createFileLoader();
     makeColumnResizable();
     Effects.loadSampleList();
+    Effects.loadReductionList();
 }
 

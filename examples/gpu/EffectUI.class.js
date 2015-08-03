@@ -1,5 +1,5 @@
 /*jslint vars: true, nomen: true, plusplus: true, browser: true */
-/*global GLEffect, GLImage, Webcam, HTMLVideoElement */
+/*global GLEffect, GLImage, GLReduction, Webcam, HTMLVideoElement */
 
 // User-Interface for designing a GLEffect
 function EffectUI(name, effect, hidden) {
@@ -158,7 +158,8 @@ EffectUI.fitParametersList = function () {
 
 // List of effects
 var Effects = {
-    list: []
+    list: [],
+    reduction: null
 };
 
 // Load the list of sample effects
@@ -175,6 +176,32 @@ Effects.loadSampleList = function () {
             }
         }
     }
+};
+
+// Load the list of reductions
+Effects.loadReductionList = function () {
+    'use strict';
+    var elmt = document.getElementById('reduction');
+    var key, opt;
+    if (GLReduction.Sample) {
+        for (key in GLReduction.Sample) {
+            if (GLReduction.Sample.hasOwnProperty(key)) {
+                opt = document.createElement('option');
+                opt.appendChild(document.createTextNode(key));
+                elmt.appendChild(opt);
+            }
+        }
+    }
+};
+
+// Use the selected reduction
+Effects.updateReduction = function () {
+    'use strict';
+    var output = document.getElementById('reduction-RGBA');
+    var name = document.getElementById('reduction').value;
+    Effects.reduction = name ? GLReduction.Sample[name] : null;
+    output.style.display = Effects.reduction ? 'block' : 'none';
+    Effects.run();
 };
 
 // Load an effect
@@ -216,12 +243,17 @@ Effects.getSelectedFromParameters = function () {
 };
 
 // Display a time, in ms
-Effects.displayTime = function (t) {
+Effects.displayTime = function (t_start, t_effect, t_reduction) {
     'use strict';
     if (!Effects._displayTime_element) {
         Effects._displayTime_element = document.getElementById('chrono');
     }
-    Effects._displayTime_element.value = 'Run in ' + t + ' ms';
+    var str = 'Run in ' + (t_effect - t_start);
+    if (t_reduction) {
+        str += ' + ' + (t_reduction - t_effect);
+    }
+    str += ' ms';
+    Effects._displayTime_element.value = str;
 };
 
 // Display effect to HTML
@@ -464,15 +496,33 @@ Effects._runOnce = function (image, toImage) {
         Effects._runOnce_imbuffers = [new GLImage(), new GLImage()];
     }
     var imbuffers = Effects._runOnce_imbuffers;
-    var t = new Date().getTime();
+    var t_start = new Date().getTime();
     var current, output;
     var k, n = Effects.list_enabled.length;
     for (k = 0; k < n; ++k) {
         current = Effects.list_enabled[k];
-        output = (k < n - 1) ? imbuffers[k % 2] : toImage ? new GLImage() : null;
+        output = null;
+        if (k < n - 1 || Effects.reduction) {
+            output = imbuffers[k % 2];
+        } else {
+            output = toImage ? new GLImage() : null;
+        }
         image = current.effect.run(image, output);
     }
-    Effects.displayTime(new Date().getTime() - t);
+    var t_effect = new Date().getTime(), t_reduction = 0;
+    if (Effects.reduction) {
+        var rgba = Effects.reduction.run(image);
+        t_reduction = new Date().getTime();
+        if (!Effects._runOnce_ideffect) {
+            Effects._runOnce_ideffect = new GLEffect();
+        }
+        Effects._runOnce_ideffect.run(image);
+        document.getElementById('reduction-R').value = 'R = ' + rgba[0];
+        document.getElementById('reduction-G').value = 'G = ' + rgba[1];
+        document.getElementById('reduction-B').value = 'B = ' + rgba[2];
+        document.getElementById('reduction-A').value = 'A = ' + rgba[3];
+    }
+    Effects.displayTime(t_start, t_effect, t_reduction);
     return image;
 };
 

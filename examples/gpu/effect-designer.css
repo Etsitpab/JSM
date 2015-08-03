@@ -94,6 +94,13 @@ body > div {
     margin: 1em;
 }
 
+#footer {
+    background-color: transparent;
+    border-color: lightgray;
+    color: gray;
+    text-align: center;
+}
+
 
 /* Movile vs. desktop (481+ and 768+) */
 
