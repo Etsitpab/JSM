@@ -66,6 +66,11 @@ input[type=button] {
     opacity: 1;
 }
 
+#help-button {
+    margin-left: 1em;
+    margin-right: 1em;
+}
+
 
 /* Boxes format */
 

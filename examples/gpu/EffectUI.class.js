@@ -162,6 +162,19 @@ var Effects = {
     reduction: null
 };
 
+// Highlight the important fields
+Effects.help = function () {
+    'use strict';
+    var btn = document.getElementById('help-button');
+    var menu = document.getElementById('effect-samples');
+    var slots = document.getElementById('images').getElementsByTagName('div');
+    btn.style.display = 'none';
+    menu.style.backgroundColor = 'lightgreen';
+    if (slots.length) {
+        slots[slots.length - 1].style.backgroundColor = 'lightgreen';
+    }
+};
+
 // Load the list of sample effects
 Effects.loadSampleList = function () {
     'use strict';
@@ -199,7 +212,8 @@ Effects.updateReduction = function () {
     'use strict';
     var output = document.getElementById('reduction-RGBA');
     var name = document.getElementById('reduction').value;
-    Effects.reduction = name ? GLReduction.Sample[name] : null;
+    Effects.reduction = name ? GLReduction.Sample[name]() : null;
+    Effects.displayReduction();
     output.style.display = Effects.reduction ? 'block' : 'none';
     Effects.run();
 };
@@ -210,7 +224,7 @@ Effects.load = function () {
     var elmt = document.getElementById('effect-samples');
     var name = elmt.value;
     if (GLEffect.Sample[name]) {
-        Effects.list.push(new EffectUI(name, GLEffect.Sample[name]));
+        Effects.list.push(new EffectUI(name, GLEffect.Sample[name]()));
     }
     elmt.selectedIndex = 0;
     Effects.run();
@@ -408,6 +422,14 @@ Effects.displayParameter = function () {
     }
 };
 
+Effects.displayReduction = function (rgba) {
+    'use strict';
+    document.getElementById('reduction-R').value = rgba ? 'R = ' + rgba[0] : '';
+    document.getElementById('reduction-G').value = rgba ? 'G = ' + rgba[1] : '';
+    document.getElementById('reduction-B').value = rgba ? 'B = ' + rgba[2] : '';
+    document.getElementById('reduction-A').value = rgba ? 'A = ' + rgba[3] : '';
+};
+
 // Closoe the editing area
 Effects.stopEditing = function (confirmed) {
     'use strict';
@@ -513,14 +535,11 @@ Effects._runOnce = function (image, toImage) {
     if (Effects.reduction) {
         var rgba = Effects.reduction.run(image);
         t_reduction = new Date().getTime();
+        Effects.displayReduction(rgba);
         if (!Effects._runOnce_ideffect) {
             Effects._runOnce_ideffect = new GLEffect();
         }
         Effects._runOnce_ideffect.run(image);
-        document.getElementById('reduction-R').value = 'R = ' + rgba[0];
-        document.getElementById('reduction-G').value = 'G = ' + rgba[1];
-        document.getElementById('reduction-B').value = 'B = ' + rgba[2];
-        document.getElementById('reduction-A').value = 'A = ' + rgba[3];
     }
     Effects.displayTime(t_start, t_effect, t_reduction);
     return image;

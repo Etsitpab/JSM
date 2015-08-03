@@ -31,12 +31,15 @@
 
     <!-- Output image -->
     <div id="outputs" class="right-column">
-      <p class="bold">How to use it:</p>
-      <ul>
-        <li>Load images or video (drag'n'drop them or click the "<tt class="bold">+</tt>" slot).</li>
-        <li>Import existing effects using the left menu.</li>
-        <li>If any, you can change the parameter's values using the left menu.</li>
-      </ul>
+      <p>
+        Load an image/video and import an effect to start the demo.
+        <input type="button" id="help-button" value="HELP" onclick="Effects.help()"/>
+      </p>
+      <p class="bold">What is this?</p>
+      <p>
+        This page allows you to write and run real-time effects on images and videos.
+        It is a graphical interface for the <tt>GLEffect</tt> and <tt>GLReduction</tt> classes.
+      </p>
       <p class="bold">Known bugs:</p>
       <ul class="small">
         <li>Firefox throws an error when double-clicking the output, but the format/type pair is correct.</li>
@@ -44,9 +47,7 @@
       </ul>
       <p class="bold">To do:</p>
       <ul class="small">
-        <li>Change default effect: use functions rather than constants.</li>
-        <li>Allow GLReduction on the result.</li>
-        <li>Write interesting stuff here.</li>
+        <li class="italic" style="list-style-type: none">Nothing!</li>
       </ul>
     </div>
 
@@ -95,11 +96,11 @@
           </nobr>
       </p>
       <p>
-        <label for="reduction">Reductions</label>:<br/>
+        <label for="reduction">Reduction</label>:<br/>
         <select id="reduction"
                 title="Reduce the image to a single RGBA value"
                 onchange="Effects.updateReduction()">
-          <option value="">(none)</option>
+          <option value="">none</option>
         </select><br/>
         <div id="reduction-RGBA" style="display: none">
           <input type="text" id="reduction-R" disabled /><br/>
