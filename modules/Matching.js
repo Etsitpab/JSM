@@ -231,6 +231,21 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             return this;
         },
+        thresholdHistograms: function (t) {
+            var h = this.histograms;
+            var i, j, ei, ej, sum;
+
+            // Normalization w.r.t pps
+            for (i = 0, ei = h.length, sum = 0; i < ei; i++) {
+                // h[i][0] = 0;
+                for (j = 1, ej = h[i].length; j < ej; j++) {
+                    if (h[i][j] > t) {
+                        h[i][j] = t;
+                    }
+                }
+            }
+            return this;
+        },
         /** 
          Compute the cumulative histograms. 
          This is used to decrease 
@@ -447,7 +462,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             return his;
         },
 
-        /** Extract the histograms from a main orientation `o` and an RGB
+        /** Extract the histograms from a main orientation `o` and an
          * image patch `patch`.
          * @param {Number} o
          * @param {Matrix} patch
@@ -459,36 +474,67 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var h = data.histograms;
             var pps = data.pps;
             var sum = data.sum;
+            var dPhase = patch.phase.getData(),
+                dNorm = patch.norm.getData(),
+                view = patch.view;
+            var xs = view.getFirst(2) + view.getFirst(1),
+                dx = view.getStep(1),
+                ys = view.getFirst(0);
 
-            var dPhase = patch.phase.getData(), dNorm = patch.norm.getData();
-            var size = patch.norm.getSize(0);
-            var wSize = Math.floor(size / 2), wSize2 = wSize * wSize;
-
-            // var exp = Math.exp, c = -2 / wSize2;
+            var size = view.getSize(0),
+                wSize = Math.floor(size / 2),
+                wSize2 = wSize * wSize;
+            
+            var exp = Math.exp, c = -2 / wSize2;
             var oR = this.relativeOrientation === true ? o : 0;
 
+            var rings = this.rings, sectors = this.sectors;
+            var rings2 = new Float32Array(rings.length);
+            for (var r = 0; r < rings.length; r++) {
+                rings2[r] = wSize * wSize * rings[r] * rings[r];
+            }
+            
+            var cst = 1 / (2 * Math.PI);
+            
             var i, j, _j, ij;
-            var x, y, x2, r2;
-
-            for (j = 0, _j = 0, x = -wSize; j < size; j++, _j += size, x++) {
-                for (i = 0, ij = _j, x2 = x * x, y = wSize; i < size; i++, ij++, y--) {
-
-                    r2 = x2 + y * y;
-
+            var x, y, x2, r2, j2;
+            
+            for (j = 0, _j = xs; j < size; j++, _j += dx) {
+                for (i = 0, ij = _j + ys, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
+                    r2 = j2 + (i - wSize) * (i - wSize);
+                    
                     if (r2 > wSize2) {
-                        dNorm[ij] = 0;
-                        dPhase[ij] = 0;
                         continue;
                     }
 
                     var bin = indexCircularPhase(dPhase[ij] - oR, this.nBin);
-                    var his = this.getHistogramNumber(y, x, o, wSize);
-                    //dNorm[ij] *= exp(c * r2);
+                    var y = i - wSize, x = j - wSize;
+                    var ring = 0;
+                    while (r2 > rings2[ring]) {
+                        ring++;
+                    }
+                    // Sector corresponding to point (x, y)
+                    var phase = Math.atan2(y, x) * cst;
+                    phase = (phase < 0 ? phase + 1 : phase) - o;
+                    var nBin = sectors[ring];
+                    if (phase < 0) {
+                        phase += 1;
+                    }
+                    var k =  Math.floor(phase * nBin + 0.5);
+                    var sec = (k >= nBin) ? (k - nBin) : k;
+                    
+                    // Histogram corresponding to sector and ring
+                    var s, his = sec;
+                    for (s = 0; s < ring; s++) {
+                        his += sectors[s];
+                    }
                     var norm = dNorm[ij];
-                    //var norm = exp(c * r2) * dNorm[ij];
+                    //dNorm[ij] *= exp(c * r2);
+                    var norm = exp(c * r2) * dNorm[ij];
                     pps[his]++;
                     sum[his] += norm;
                     h[his][bin] += norm;
+                    
                 }
             }
             return data;
@@ -500,14 +546,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * robust color descriptors.
          */
         normalizeColor: function (patchRGB) {
-            //return correctImage(patchRGB, patchRGB.miredHistogram().modes[0].RGB);
-            // patchNorm = patch['.^'](2.4).colorConstancy("grey_world").imcor['.^'](1 / 2.4);
-            // return patchRGB.general_cc(0, 1, 0, patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("shades_of_grey", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("grey_world", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("grey_edge", patchRGB.mask).imcor;
-            // return patchRGB.colorConstancy("max_rgb", patchRGB.mask).imcor;
-
             var R = 1 / patchRGB.mean[0];
             var G = 1 / patchRGB.mean[1];
             var B = 1 / patchRGB.mean[2];
@@ -537,18 +575,17 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             return {patch: patch, mean: patchRGB.mean, mask: patchRGB.mask};
         },
-
-        /** Compute from an RGB image patch an patch adapted to the descriptor
-         * computation. This transformation is constituted by a colorspace conversion
-         * an a gradient phase/norm computation.
+        /** Compute from an RGB image patch an patch adapted to the 
+         * descriptor computation. This transformation is constituted by 
+         * a colorspace conversion an a gradient phase/norm computation.
          */
         getPatch: function (patch) {
             if (this.normalize === true) {
-                patch = this.normalizeColor(patch);
+                // patch = this.normalizeColor(patch);
             }
             var cs = this.colorspace;
             if (cs.name !== "RGB") {
-                patch = patch.patch.applycform(this.convert);
+                patch = patch.applycform(this.convert);
             }
 
             switch (this.type) {
@@ -566,18 +603,15 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             return patch;
         },
-
         /** Extract a `DescriptorData` structure from a main
-         * orientation `o` and an RGB image patch `patchRGB`.
+         * orientation `o` and an image `patch`.
          *
          * @param {Number} o
-         * @param {Matrix} patchRGB
+         * @param {Matrix} patch
          * @param {Array} [mem]
          *  Preallocated memory.
          */
-        extractFromPatch: function (o, patchRGB, data) {
-            var patch = this.getPatch(patchRGB);
-
+        extractFromPatch: function (o, patch, data) {
             var dataStruct = this.extractWeightedHistograms(o, patch, data);
             this.data = dataStruct;
             if (this.extractModes === true) {
@@ -591,6 +625,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 dataStruct.cumulHistograms();
             } else {
                 dataStruct.normalizeHistograms();
+                // dataStruct.thresholdHistograms(0.1);
+                // dataStruct.normalizeHistograms();
             }
 
             return dataStruct;
@@ -1036,10 +1072,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
     /** Number of bins used to compute the histogram of oriented gradient */
     Keypoint.prototype.nBin = 36;
-    /** The algorithm used to compute the main(s) orientation(s) of the keypoint. */
+    /** The algorithm used to compute the main(s) orientation(s) 
+     of the keypoint. */
     Keypoint.prototype.algorithm = "max";
-    /** The factor size used to determine the associated region in the image. */
-    Keypoint.prototype.factorSize = 12;
+    /** The factor size used to determine the associated region 
+     in the image. */
+    Keypoint.prototype.factorSize = 18;
     /** The descriptor(s) used to describe the region of the keypoint. */
     Keypoint.prototype.descriptors = [
         global.descriptorDB["SIFT"],
@@ -1100,68 +1138,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
      * @param {Object} patch
      * @param {String} [algo]
      */
-    Keypoint.prototype.extractMainOrientation_old = function (patch, algo) {
-        this.histogram = new Float32Array(this.nBin);
-        var hist = this.histogram;
-        var nBin = this.nBin;
-        algo = (algo || this.algorithm).toLowerCase();
-        this.algorithm = algo;
-        var getIndex = indexCircularPhase;
-
-        patch = patch.gradient(0, 0, 1, 1);
-        var dPhase = patch.phase.getData(), dNorm = patch.norm.getData();
-
-        var size = patch.norm.getSize(0);
-        var wSize = Math.floor(size / 2), wSize2 = wSize * wSize;
-        var nPoints = 0;
-        var exp = Math.exp, c = -16 / wSize2;
-        var i, ei, j, _j, ij, j2, r2;
-        for (j = 0, _j = 0; j < size; j++, _j += size) {
-            for (i = 0, ij = _j, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
-
-                r2 = j2 + (i - wSize) * (i - wSize);
-
-                if (r2 > wSize2) {
-                    dNorm[ij] = 0;
-                    dPhase[ij] = 0;
-                    continue;
-                }
-
-                var bin = getIndex(dPhase[ij], nBin);
-                nPoints++;
-                //hist[bin] += exp(c * r2) * dNorm[ij];
-                hist[bin] += dNorm[ij];
-            }
-        }
-        var orientations = [];
-        switch (algo) {
-        case "ac":
-            var l = 0;
-            for (i = 0; i < nBin; i++) {
-                l += hist[i];
-            }
-            l = l / nPoints;
-            hist.nPoints = nPoints;
-            hist.lambda = l;
-            var modes = extractModes(hist, true, 0, nPoints, l, l * l);
-            hist.modes = modes;
-            for (i = 0, ei = modes.length; i < ei; i++) {
-                orientations.push(modes[i].phase);
-            }
-            return orientations;
-        case "max":
-            var max = 0;
-            for (i = 0, ei = hist.length; i < ei; i++) {
-                if (hist[i] > hist[max]) {
-                    max = i;
-                }
-            }
-            return [max / nBin];
-        default:
-            throw new Error("Keypoint.extractMainOrientation: " +
-                            "Wrong algorithm choice: "  + this.algorithm + ".");
-        }
-    };
     Keypoint.prototype.extractMainOrientation = function (patch, algo) {
         this.histogram = new Float32Array(this.nBin);
         var hist = this.histogram;
@@ -1178,7 +1154,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         var size = view.getSize(0);
         var wSize = Math.floor(size / 2), wSize2 = wSize * wSize;
         var nPoints = 0;
-        var exp = Math.exp, c = -16 / wSize2;
+        var exp = Math.exp, c = -2 / wSize2;
         var i, ei, j, _j, ij, j2, r2;
         for (j = 0, _j = xs; j < size; j++, _j += dx) {
             for (i = 0, ij = _j + ys, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
@@ -1192,8 +1168,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 }
                 var bin = getIndex(dPhase[ij], nBin);
                 nPoints++;
-                //hist[bin] += exp(c * r2) * dNorm[ij];
-                hist[bin] += dNorm[ij];
+                hist[bin] += exp(c * r2) * dNorm[ij];
+                // hist[bin] += dNorm[ij];
             }
         }
         var orientations = [];
@@ -1593,7 +1569,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return out;
     };
 
-
     global.Keypoint = Keypoint;
 })(Matching);
 /*
@@ -1616,9 +1591,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
 var root = typeof window === 'undefined' ? module.exports : window;
 
-//////////////////////////////////////////////////////////////////
-//                       Scalespace Class                      //
-//////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+//                           Scalespace Class                            //
+///////////////////////////////////////////////////////////////////////////
 
 
 (function (global) {
@@ -1645,9 +1620,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
         this.scale = [];
     }
 
-
     ScaleSpace.prototype = {
-        nScale: 13,
+        nScale: 9,
         sigmaInit: 0.63,
         scaleRatio: 1.26,
         lapThresh: 4e-3,
@@ -1679,24 +1653,20 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * purpose.
          * @return {String}
          */
-        getImage: function (scale, img, norm) {
+        getImage: function (scale, img, norm, gradient) {
             if (img === undefined) {
                 img = this.image;
+                return norm === true ? img : Matrix.rdivide(img, img.max());
+            }
+            var scale = this.scale[scale];
+            if (img === "blur" || img === "gray") {
+                img = scale[img];
+            } else if (img === "phase-norm") {
+                
             } else {
-                img = img.toLowerCase();
-                if (img === "blur" || img === "gray") {
-                    img = this.scale[scale][img];
-                } else if (img === "phase-norm") {
-
-                } else {
-                    img = this.scale[scale].gradient[img];
-                }
+                img = scale.gradient[img];
             }
-
-            if (norm === true) {
-                return img.rdivide(img.max());
-            }
-            return img;
+            return norm === true ? Matrix.rdivide(img, img.max()) : img;
         },
         /** This function computes the scalespace.
          * @param {Number} nScale
@@ -1869,131 +1839,83 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             return this;
         },
-        /** Normalize the colors of an image patch, by using the 
-         * Grey-World hypothesis.
-         * @param {Object} patchRGB
-         * @return {Object}
-         * Oject with the following properties:
-         * 
-         * + patch: The patch normalised (not a copy),
-         * + mean: An array containing the R, G and B average values,
-         *   before normalisation,
-         * + mask: the spatial mask used to compute the normalisation.
-         */
-        normalizePatch: function (patchRGB) {
-            var data = patchRGB.getData();
+        getViewOnImagePatch: function (key, space, type, normalize) {
+            var sigma = key.sigma;
+            // Looking for closer blured image
+            var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
+            for (i = 0, ei = this.nScale; i < ei; i++) {
+                d = this.scale[i].sigma - sigma;
+                if (abs(d) < dMin && d <= 0) {
+                    dMin = abs(d);
+                    sMin = i;
+                }
+            }
+            var scale = this.scale[sMin], 
+                image = scale["gray"],
+                grad = scale.gradient,
+                channel = [];
 
-            var size = patchRGB.getSize(0), wSize = Math.floor(size / 2);
-            var wSize2 = wSize * wSize, c = -2 / wSize2;
+            // Get RGB patch
+            var x = key.x, y = key.y, s = Math.round(key.factorSize * sigma);
+            var round = Math.round;
+            var xMin = round(x - s), xMax = round(x + s);
+            var yMin = round(y - s), yMax = round(y + s);
 
-            var mask = Matrix.ones(size, size, 'logical'), maskData = mask.getData();
-            var i, j, _j, r, g, b;
-            var x, y, x2, r2, dc = size * size;
+            if (xMin < 0 || yMin < 0) {
+                return null;
+            } else if (xMax > image.getSize(1) - 1) {
+                return null;
+            } else if (yMax > image.getSize(0) - 1) {
+                return null;
+            }
+            var view = image.getView().select([yMin, yMax], [xMin, xMax]);
 
-            var R = 0, G = 0, B = 0, nPoints = 0;
-            var exp = Math.exp;
-            for (j = 0, _j = 0, x = -wSize; j < size; j++, _j += size, x++) {
-                r = _j;
-                g = r + dc;
-                b = g + dc;
-                for (i = 0, x2 = x * x, y = wSize; i < size; i++, r++, g++, b++, y--) {
-
-                    r2 = x2 + y * y;
-                    
-                    if (r2 > wSize2) {
-                        maskData[r] = 0;
+            if (space instanceof Object) {
+                var name = space.name;
+                if (scale[name] === undefined) {
+                    scale[name] = {
+                        image: Matrix.applycform(
+                            scale["blur"], "RGB to " + name
+                        )
+                    };
+                }
+                image = scale[name].image;
+                if (type === "GRADIENT") {
+                    if (scale[name].gradient === undefined) {
+                        scale[name].gradient = image.gradient(0, 0, 1, 1);
+                        scale[name].gradientView = scale[name].gradient.norm.getView();
                     }
-                    var cst = exp(c * r2);
-                    data[r] *= cst
-                    data[g] *= cst
-                    data[b] *= cst
-                    R += data[r];
-                    G += data[g];
-                    B += data[b];
-                    nPoints += cst;
+                    grad = scale[name].gradient;
+                    view = scale[name].gradientView.restore().select(
+                        [yMin, yMax], [xMin, xMax], space.channels
+                    );
+                } else if (type === "WEIGHTED-HISTOGRAMS") {
+                    if (scale[name].colorChannels === undefined) {
+                        scale[name].colorChannels = {
+                            norm: image.get([], [], space.weightChannel),
+                            phase: image.get([], [], space.phaseChannel)
+                        };
+                        scale[name].colorChannelsView = scale[name].colorChannels.norm.getView();
+                    }
+                    grad = scale[name].colorChannels;
+                    view = scale[name].colorChannelsView.restore().select(
+                        [yMin, yMax], [xMin, xMax], 0
+                    );
+                } else {
+                    view = image.getView().select(
+                        [yMin, yMax], [xMin, xMax], space.channels
+                    );
                 }
             }
-            R /= nPoints;
-            G /= nPoints;
-            B /= nPoints;
-            var norm = Math.sqrt((R * R + G * G + B * B) / 3);
-            return {patch: patchRGB, mean: [R / norm, G / norm, B / norm], mask: mask};
-        },
-        /** Returns the patch corresponding to a keypoint.
-         * @param {Object} keypoint
-         *  The keypoint.
-         * @param {Boolean} rgb
-         *  True if rgb patch is required false for gray-scale only.
-         * @return {Object} 
-         *  The patch
-         */
-        getImagePatch_old: function (key, rgb, grad) {
-            var sigma = key.sigma;
-            // Looking for closer blured image
-            var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
-            for (i = 0, ei = this.nScale; i < ei; i++) {
-                d = this.scale[i].sigma - sigma;
-                if (abs(d) < dMin && d <= 0) {
-                    dMin = abs(d);
-                    sMin = i;
-                }
+            if (normalize === true) {
+                // patch = this.normalizeColor(patch);
             }
 
-            var image = (rgb === true) ? this.scale[sMin].blur : this.scale[sMin].gray;
-
-            // Get RGB patch
-            var x = key.x, y = key.y, s = Math.round(key.factorSize * sigma);
-            var round = Math.round;
-            var xMin = round(x - s), xMax = round(x + s);
-            var yMin = round(y - s), yMax = round(y + s);
-
-            if (xMin < 0 || yMin < 0) {
-                return null;
-            } else if (xMax > image.getSize(1) - 1) {
-                return null;
-            } else if (yMax > image.getSize(0) - 1) {
-                return null;
-            }
-            
-            var patch = image.get([yMin, yMax], [xMin, xMax]);
-            if (dMin > 1e-2) {
-                var sigmaIm = this.scale[sMin].sigma;
-                sigma = Math.sqrt(sigma * sigma - sigmaIm * sigmaIm);
-                patch = patch.gaussian(sigma);
-            }
-            // return {patch: patch, mean: [1, 1, 1]};
-            return patch;
-        },
-        getViewOnImagePatch: function (key) {
-            var sigma = key.sigma;
-            // Looking for closer blured image
-            var i, ei, sMin = 0, abs = Math.abs, d, dMin = Infinity;
-            for (i = 0, ei = this.nScale; i < ei; i++) {
-                d = this.scale[i].sigma - sigma;
-                if (abs(d) < dMin && d <= 0) {
-                    dMin = abs(d);
-                    sMin = i;
-                }
-            }
-            var scale = this.scale[sMin], image = scale.gray;
-
-            // Get RGB patch
-            var x = key.x, y = key.y, s = Math.round(key.factorSize * sigma);
-            var round = Math.round;
-            var xMin = round(x - s), xMax = round(x + s);
-            var yMin = round(y - s), yMax = round(y + s);
-
-            if (xMin < 0 || yMin < 0) {
-                return null;
-            } else if (xMax > image.getSize(1) - 1) {
-                return null;
-            } else if (yMax > image.getSize(0) - 1) {
-                return null;
-            }
             return {
-                norm: scale.gradient.norm,
-                phase: scale.gradient.phase,
-                view: image.getView().select([yMin, yMax], [xMin, xMax])
+                norm: grad.norm,
+                phase: grad.phase,
+                image: image,
+                view: view,
             };
         },
         /** Extract the main direction(s) of all keypoint detected in 
@@ -2011,10 +1933,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var i, ei, newKeypoints = [], o, eo;
             for (i = 0, ei = keypoints.length; i < ei; i++) {
                 var key = keypoints[i];
-                var patch = this.getViewOnImagePatch(key);
-                //var patch = this.getImagePatch_old(key);
+                var patch = this.getViewOnImagePatch(key, "gray");
                 if (patch !== null) {
-                    //var orientations = key.extractMainOrientation_old(patch, this.algorithm);
                     var orientations = key.extractMainOrientation(patch, this.algorithm);
                     for (o = 0, eo = orientations.length; o < eo; o++) {
                         var k = key.getCopy();
@@ -2026,12 +1946,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
             this.keypoints = newKeypoints;
             return this;
         },
-        /** Extract the descriptor(s) of all keypoint detected in 
-         * the scalespace.
-         * @param {Array} [Descriptor]
-         *  An Array of descriptors to extract
-         * @chainable
-         */
         extractDescriptors: function (descriptors) {
             descriptors = descriptors || global.Keypoint.prototype.descriptors;
 
@@ -2059,19 +1973,25 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
 
             this.descriptorsData = descriptorsData;
-
             for (k = 0, ek = keypoints.length; k < ek; k++) {
-                var key = keypoints[k];
-                var patchRGB = this.getImagePatch_old(key, true);
-                patchRGB = this.normalizePatch(patchRGB);
-                var mem = [];
-                for (i = 0; i < descriptors.length; i++) {
-                    name = descriptors[i].name;
-                    mem[name] = descriptorsData[name][k];
-                }
-                key.extractDescriptors(patchRGB, descriptors, mem);
+                keypoints[k].descriptorsData = keypoints[k].descriptorsData || {};
             }
-
+            for (i = 0; i < descriptors.length; i++) {
+                var desc = descriptors[i],
+                    name = desc.name,
+                    mem = descriptorsData[name],
+                    space = desc.colorspace,
+                    type = desc.type;
+                for (k = 0, ek = keypoints.length; k < ek; k++) {
+                    var key = keypoints[k],
+                        patch = this.getViewOnImagePatch(key, space, type);
+                    key.descriptorsData[name] =
+                        desc.extractFromPatch(
+                            key.orientation, patch, mem[k]
+                        );
+                }
+            }
+            
             return this;
         }
     };
@@ -2144,7 +2064,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.precomputeMaxLaplacian();
                 S.precomputeHarris();
             }
-            console.log("Compute Scale Space: ", Tools.toc());
+            console.log("Compute Scale Space: ", Tools.toc(), "ms");
             return this;
         },
         /** Select keypoints based on harris cornerness and on laplacian.
@@ -2162,7 +2082,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.laplacianThreshold(lapThresh);
                 S.harrisThreshold(harrisThresh);
             }
-            console.log("Compute Thresholds: ", Tools.toc());
+            console.log("Compute Thresholds: ", Tools.toc(), "ms");
             for (i = 0; i < ie; i++) {
                 var S = this.scaleSpaces[i];
                 console.log("\t", "Scalespace[" + i + "]:",
@@ -2184,7 +2104,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 var S = this.scaleSpaces[i];
                 S.extractMainOrientations(algorithm);
             }
-            console.log("Compute Main orientations: ", Tools.toc());
+            console.log("Compute Main orientations: ", Tools.toc(), "ms");
             for (i = 0; i < ie; i++) {
                 var S = this.scaleSpaces[i];
                 console.log("\t", "Scalespace[" + i + "]:",
@@ -2203,7 +2123,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             for (i = 0, ie = this.scaleSpaces.length; i < ie; i++) {
                 this.scaleSpaces[i].extractDescriptors(descriptors);
             }
-            console.log("Compute Descriptors: ", Tools.toc());
+            console.log("Compute Descriptors: ", Tools.toc(), "ms");
             return this;
         },
         /** Compute the matches between two images. The keypoints as well as
@@ -2238,7 +2158,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             this.matchs = this.matchs || [];
             this.matchs[S1] = this.matchs[S1] || [];
             this.matchs[S1][S2] = matchs.sort(global.Match.compar);
-            console.log("Matching time : ", Tools.toc());
+            console.log("Matching time : ", Tools.toc(), "ms");
             return this;
         },
         /** Select good matches based on their similarity measures.
@@ -2279,7 +2199,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             this.matchsList[S1][S2] = matchsList;
             console.log("\t", "matchsList[" + S1 + "][" + S2 + "]:",
                         matchsList.length, "matchs.");
-            console.log("Threshold matchs time : ", Tools.toc());
+            console.log("Threshold matchs time : ", Tools.toc(), "ms");
 
             return this;
         },
@@ -2306,7 +2226,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 .computeDescriptors()
                 .computeMatchs(S1, S2)
                 .thresholdMatchs(S1, S2);
-            console.log("Global match time : ", Tools.toc());
+            console.log("Global match time : ", Tools.toc(), "ms");
             return this;
         },
         /** Export matches list between two scalescapes to string.
@@ -2445,7 +2365,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return nk;
     };
 
-
     global.Keypoint.prototype.matchBenchmark = function (keypoints, criterions, combinations) {
 
         var getDistancesForCombination = function (distances, combinations) {
@@ -2487,7 +2406,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return out;
     };
 
-
     global.ScaleSpace.prototype.projectKeypoints = function (mat) {
         var keypoints = this.keypoints;
         var im = this.image;
@@ -2507,7 +2425,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         }
         return keypointsOut;
     };
-
 
     global.Sift.prototype.computeMatchsBenchmark = function (S1, S2, criterions, combinations) {
         Tools.tic();
@@ -2540,7 +2457,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         this.matchs = this.matchs || [];
         this.matchs[S1] = this.matchs[S1] || [];
         this.matchs[S1][S2] = matchs;
-        console.log("Matching Benchmark time : ", Tools.toc());
+        console.log("Matching time : ", Tools.toc(), "ms");
         return this;
     };
 
@@ -2565,7 +2482,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
             m.isValid = isValid(m.k1, m.k2, mat);
         }
     };
-
 
     global.createCurves = function (matchs) {
         var n = matchs.length;
@@ -2644,6 +2560,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             throw new Error("Sift.benchmark: usage error");
         }
 
+        Tools.tic();
         var S = new global.Sift([im1, im2]);
         S.computeScaleSpace();
 
@@ -2662,7 +2579,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
         S.computeDescriptors()
             .computeMatchsBenchmark(0, 1, criterions, combinations);
         S.curves = {};
-        console.log(mat);
         if (mat) {
             var c;
             for (c in S.matchs[0][1]) {
@@ -2670,31 +2586,40 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 S.curves[c] = global.createCurves(S.matchs[0][1][c]);
             }
         }
+        console.log("Benchmark time:", Tools.toc(), "ms");
 
         return S;
     };
 
     global.ScaleSpace.prototype.getDescriptorPatch = function (n, name, part, sz) {
         var k = this.keypoints[n];
-        var patchRGB = this.getImagePatch(k, true);
+        var patchRGB = this.getViewOnImagePatch(
+            k, {"name": "RGB", "channels": []}
+        );
+        patchRGB = patchRGB.image.extractViewFrom(patchRGB.view)
+
         var mask = patchRGB.mask;
         var descriptor, patch;
 
         if (name !== "RGB" && name !== "RGBNorm") {
             descriptor = k.descriptorsData[name].descriptor;
-            patch = descriptor.getPatch(patchRGB);
+            patch = this.getViewOnImagePatch(
+                k,
+                descriptor.colorspace,
+                descriptor.type,
+                descriptor.normalize
+            );
+            patch.phase = patch.phase.extractViewFrom(patch.view)
+            patch.norm = patch.norm.extractViewFrom(patch.view)
         }
 
         var rings, sectors;
         if (part === "norm") {
             patch = patch[part];
             patch = patch.rdivide(patch.max());
-            mask =  mask.cat(2, mask, mask);
         } else if (name === "RGB" || name === "RGBNorm") {
-            patch = (name === "RGBNorm") ? global.Descriptor.prototype.normalizeColor(patchRGB) : patchRGB;
-            patch = patch.patch;
+            patch = patchRGB;
             patch = patch.cat(2, Matrix.ones(patch.size(0), patch.size(1)));
-            mask = mask.cat(2, mask, mask, mask);
         } else if (name !== undefined) {
             rings = descriptor.rings;
             sectors = descriptor.sectors;
@@ -2703,14 +2628,11 @@ var root = typeof window === 'undefined' ? module.exports : window;
             } else {
                 patch = phaseNormImage(patch.phase, patch.norm, true);
             }
-            mask = mask.cat(2, mask, mask, mask);
         }
-        patch = patch['.*'](mask);
 
         var canvas = document.createElement("canvas");
         sz = sz || 201;
         patch.imshow(canvas, sz / patch.size(0));
-        // var descriptorsData = k.descriptorsData;
         k = k.getCopy();
         k.x = sz / 2;
         k.y = sz / 2;
@@ -2730,34 +2652,12 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return Matrix.imread(canvas).im2single();
     };
 
-    global.ScaleSpace.prototype.patchsToIm = function (ks) {
-        // var im = this.image.getCopy();
-        var im = Matrix.zeros(this.image.getSize());
-        var i;
-        ks = ks || this.keypoints;
-        for (i = ks.length - 1; i > -1; i--) {
-            var k = ks[i];
-            var x = k.x, y = k.y, s = Math.round(k.factorSize * k.sigma);
-            var round = Math.round;
-            var xMin = round(x - s), xMax = round(x + s);
-            var yMin = round(y - s), yMax = round(y + s);
-            var kp = k.patch.RGBNorm || k.patch.RGB;
-            var mask = k.patch.RGB.mask;
-            mask =  mask.cat(2, mask, mask)['>'](0);
-
-            var imP = im.get([yMin, yMax], [xMin, xMax], []);
-            imP.set(mask, kp.get(mask));
-            im.set([yMin, yMax], [xMin, xMax], [], imP);
-        }
-        return im;
-    };
-
     global.Sift.prototype.createView = function (cell, h, w) {
         cell.innerHTML = "";
 
         var f = Math.floor;
         var S = this;
-        w = w || cell.clientWidth;
+        w = w || cell.clientWidth - 50;
         h = h || cell.clientHeight;
         cell.style.setProperty("width", w);
         cell.style.setProperty("height", h);
@@ -2881,7 +2781,6 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 if (v === "histograms") {
                     pDesc = createHistograms();
                 } else if (v === "curves" && this.curves) {
-                    console.log("toto");
                     plotCurves = createCurves(this.curves);
                 }
             }

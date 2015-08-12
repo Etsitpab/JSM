@@ -3058,6 +3058,8 @@
             var cYr = Yr.subarray(_j, m + _j), cYi = Yi.subarray(_j, m + _j);
             fft1d(cXr, cXi, cYr, cYi, inverse);
         }
+        // Ensures that X is not complex if not.
+        X.isreal();
         return Y;
     };
 
