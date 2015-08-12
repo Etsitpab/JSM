@@ -6,6 +6,20 @@ var $ = function (id) {
     return document.getElementById(id);
 };
 
+function displayImage(image) {
+    'use strict';
+
+    // image = limitImageSize(image, MAX_SIZE);
+    // imgOrig = image.im2double();
+    // imgCurrent = image.im2double();
+
+    
+    var imagePlot = $('imagePlot').getPlot().clear();
+    image.toImage(function () {
+        imagePlot.addImage(this, 0, 0, {id: 'workingImage'});
+    });
+}
+
 function updateOutput(image) {
     "use strict";
     var outputCanvas = $("outputImage");
@@ -87,6 +101,43 @@ var readFile = function (file, callback, type) {
     }
 };
 
+Matrix.prototype.demosaic = function () {
+    var size = this.size();
+    var ni = size[0], nj = size[1],
+        ny = ni * 2, nx = nj * 2;
+    var demosaiced = Matrix.zeros(size[0] * 2, size[1] * 2, 3);
+    
+    var Gr = this.get([], [], 0),
+        R  = this.get([], [], 1),
+        B  = this.get([], [], 2),
+        Gb = this.get([], [], 3);
+    var out = Matrix.zeros(ny, nx, 3), od = out.getData();
+    
+    // R Channel
+    var ox = 0, oy = 1;
+    var i, j, _j, ij, _je, ije, y, x, _x, yx;
+    for (_j = 0, _x = ox * ny, _je = ni * nj; _j < _je; _j += ni, _x += ny) {
+        for (ij = _j, yx = _x, ije = _j + ny; ij < ije; ij++, yx += 2) {
+            
+        }                
+    }
+    // NN Demosaicing
+    demosaiced.set([0, 2, -1], [0, 2, -1], 1, Gr);
+    demosaiced.set([1, 2, -1], [0, 2, -1], 1, Gr);
+    demosaiced.set([0, 2, -1], [1, 2, -1], 1, Gb);
+    demosaiced.set([1, 2, -1], [1, 2, -1], 1, Gb);
+    
+    demosaiced.set([0, 2, -1], [0, 2, -1], 0, R);
+    demosaiced.set([1, 2, -1], [0, 2, -1], 0, R);
+    demosaiced.set([0, 2, -1], [1, 2, -1], 0, R);
+    demosaiced.set([1, 2, -1], [1, 2, -1], 0, R);
+    
+    demosaiced.set([0, 2, -1], [0, 2, -1], 2, B);
+    demosaiced.set([1, 2, -1], [0, 2, -1], 2, B);
+    demosaiced.set([0, 2, -1], [1, 2, -1], 2, B);
+    demosaiced.set([1, 2, -1], [1, 2, -1], 2, B);
+    return demosaiced;
+};
 window.onload = function () {
     "use strict";
     var inputs = document.getElementsByTagName('input');
@@ -99,21 +150,83 @@ window.onload = function () {
             inputs[i].addEventListener('click', focus);
         }
     }
+
+    var createPlot = function () {
+        var plotProperties = {
+            'ticks-display': false,
+            'preserve-ratio': true
+        };
+        window.imagePlot = new Plot('imagePlot', [$('image').clientWidth, $('image').clientHeight], 'image', plotProperties);
+    };
+    createPlot();
     var read = function (evt) {
         var callback = function (evt) {
             Tools.tic();
             IMAGE = readRAW(this);
             console.log("RAW of size", IMAGE.size(), "read in", Tools.toc(), "ms");
             Tools.tic();
+            var size = IMAGE.size();
+            var ni = size[0], nj = size[1],
+                ny = ni * 2, nx = nj * 2;
+            var demosaiced = Matrix.zeros(size[0] * 2, size[1] * 2, 3);
+            var Gr = IMAGE.get([], [], 0), grd = Gr.getData(),
+                R  = IMAGE.get([], [], 1), rd = Gr.getData(),
+                B  = IMAGE.get([], [], 2), bd = Gr.getData(),
+                Gb = IMAGE.get([], [], 3), gbd = Gr.getData();
+
+            // Base
+            // demosaiced.set([0, 2, -1], [0, 2, -1], 1, Gr);
+            // demosaiced.set([0, 2, -1], [1, 2, -1], 0, R);
+            // demosaiced.set([1, 2, -1], [0, 2, -1], 2, B);
+            // demosaiced.set([1, 2, -1], [1, 2, -1], 1, Gb);
+
+            // NN Demosaicing
+            demosaiced.set([0, 2, -1], [0, 2, -1], 1, Gr);
+            demosaiced.set([1, 2, -1], [0, 2, -1], 1, Gr);
+            demosaiced.set([0, 2, -1], [1, 2, -1], 1, Gb);
+            demosaiced.set([1, 2, -1], [1, 2, -1], 1, Gb);
+
+            demosaiced.set([0, 2, -1], [0, 2, -1], 0, R);
+            demosaiced.set([1, 2, -1], [0, 2, -1], 0, R);
+            demosaiced.set([0, 2, -1], [1, 2, -1], 0, R);
+            demosaiced.set([1, 2, -1], [1, 2, -1], 0, R);
+
+            demosaiced.set([0, 2, -1], [0, 2, -1], 2, B);
+            demosaiced.set([1, 2, -1], [0, 2, -1], 2, B);
+            demosaiced.set([0, 2, -1], [1, 2, -1], 2, B);
+            demosaiced.set([1, 2, -1], [1, 2, -1], 2, B);
+            
+            IMAGE = demosaiced;
+            // Simplest way;
+            /* 
             IMAGE = IMAGE.get([], [], 1).cat(
                 2,
                 IMAGE.get([], [], 0)["+="](IMAGE.get([], [], 3))["/="](2),
                 IMAGE.get([], [], 2)
             ).im2double();
-            IMAGE["/="](IMAGE.max());
+             */
+            var max = IMAGE.max().display(),
+                min = IMAGE.min().display();
+            IMAGE["-="](min)["/="](max["-"](min));
+            var max = IMAGE.max().display(),
+                min = IMAGE.min().display();
+            var CM = Matrix.toMatrix([
+                1.993689, -1.152317, 0.158628,
+               -0.151371, 1.359525, -0.208153,
+               -0.023086, -0.796688, 1.819774
+            ]).reshape(3, 3).transpose();
+            var CM2 = Matrix.toMatrix([
+                1,    0, 0,
+                0, 0.66, 0,
+                0,    0, 1
+            ]).reshape(3, 3)
+            
+            IMAGE.applycform(CM.mtimes(CM2));
             console.log("RAW demosaiced in", Tools.toc(), "ms");
             console.log(IMAGE.size());
-            updateOutput(IMAGE);
+            IMAGE = IMAGE.get([350, -2200], [1650, -1650]);
+            // updateOutput(IMAGE);
+            displayImage(IMAGE);
         };
 
         // Only call the handler if 1 or more files was dropped.
@@ -129,4 +242,3 @@ window.onload = function () {
 
     hideFieldset();
 };
-
