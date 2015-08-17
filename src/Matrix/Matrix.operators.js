@@ -628,10 +628,8 @@
             '.^': {
                 "name": "power",
                 "real/real": {
-                    scalar_before: "var pow = Math.pow;",
-                    matrix_before: "var pow = Math.pow;",
-                    scalar: "a[x] = pow(a[x], b);",
-                    matrix: "a[x] = pow(a[x], b[x]);"
+                    scalar: "a[x] = Math.pow(a[x], b);",
+                    matrix: "a[x] = Math.pow(a[x], b[x]);"
                 },
                 "real/imag": {
                     scalar: "throw new Error('Matrix.power: This function has not "
