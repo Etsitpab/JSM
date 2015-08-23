@@ -159,7 +159,7 @@
         this.matrix = t.mtimes(this.matrix);
     };
 
-    SuperCanvas.prototype.setImage = function (image) {
+    SuperCanvas.prototype.setImage = function (image, noinit) {
         // Draw Image on a canvas
         var sz = image.size(), width = sz[1], height = sz[0];
         var canvas = document.createElement('canvas');
@@ -168,15 +168,16 @@
         canvas.getContext('2d').putImageData(image.getImageData(), 0, 0);
         this.image = canvas;
 
-        // Initialize drawing matrix at good scale and place
-        var hScale = this.canvas.width / width;
-        var vScale = this.canvas.height / height;
-        var scale = Math.min(hScale, vScale);
-        this.matrix = Matrix.eye(3);
-
-        this.translate(-width / 2, -height / 2);
-        this.zoom(scale, scale);
-        this.translate(this.canvas.width / 2, this.canvas.height / 2);
+        if (!noinit) {
+            // Initialize drawing matrix at good scale and place
+            var hScale = this.canvas.width / width;
+            var vScale = this.canvas.height / height;
+            var scale = Math.min(hScale, vScale);
+            this.matrix = Matrix.eye(3);
+            this.translate(-width / 2, -height / 2);
+            this.zoom(scale, scale);
+            this.translate(this.canvas.width / 2, this.canvas.height / 2);
+        }
         this.update();
     };
 
