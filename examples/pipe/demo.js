@@ -1,23 +1,14 @@
 /*global console, document, Matrix, Colorspaces, CIE, open */
 /*jshint indent: 4, unused: true, white: true */
 
-var IMAGE, RAW, MEASURES, SC;
+var IMAGE, RAW, BUFFERS, MEASURES, SC;
+var diagram = "1976 u'v'Y", addScatter = false;
 
-function displayImage(image) {
-    'use strict';
-    var imagePlot = $('imagePlot').getPlot().clear();
-    Tools.tic();
-    image.toImage(function () {
-        imagePlot.addImage(this, 0, 0, {id: 'workingImage'});
-        console.log("Image displayed in", Tools.toc(), "ms");
-    }, 'image/jpeg', 0.7);
-    drawImageHistogram("histogram", image);
-}
-
-function updateOutput(image) {
+function updateOutput(image, noinit, buffer) {
     "use strict";
     Tools.tic();
-    SC.setImage(image);
+    SC.setImageBuffer(image, buffer);
+    SC.displayImageBuffer(buffer, noinit);
     console.log("Image displayed in", Tools.toc(), "ms");
     // drawImageHistogram("histogram", image);
 }
@@ -51,7 +42,7 @@ var readRAW = function (RAW) {
     console.log("width:", w);
     console.log("height:", h);
     console.log("prec:", prec);
-    console.log("type:", type, infos[3]);
+    console.log("type:", type);
     console.log("nChannels:", c);
     console.log(padding);
     var constructor = Tools.checkType(type);
@@ -59,35 +50,6 @@ var readRAW = function (RAW) {
     var im = new Matrix([w, h, c], data).permute([1, 0, 2]);
     window.im = im;
     return im;
-};
-
-var readFile = function (file, callback, type) {
-    // Deal with arguments
-    type = type.toLowerCase();
-
-    // File handling functions
-    var reader = new FileReader();
-    reader.onload = function (evt) {
-        callback = callback.bind(evt.target.result);
-        callback(evt);
-    };
-    switch (type) {
-    case 'dataurl':
-    case 'url':
-        reader.readAsDataURL(file);
-        break;
-    case 'text':
-    case 'txt':
-        reader.readAsText(file);
-        break;
-    case 'arraybuffer':
-    case 'binary':
-    case 'bin':
-        reader.readAsArrayBuffer(file);
-        break;
-    default:
-        throw new Error("readFile: unknown type " + type + ".");
-    }
 };
 
 Matrix.prototype.demosaic = function () {
@@ -180,26 +142,50 @@ Matrix.prototype.applySRGBGamma = function (resolution) {
 var parameters = {
     'bp': 200,
     'awbScales': [1.8, 1.5],
-    'colorMatrix': [1.82421875, -0.10546875, 0.009765625, -0.978515625, 1.283203125, -0.658203125, 0.154296875, -0.17578125, 1.6484375]
-    // 'colorMatrix': [2.52773308,  0.25255637, 0.456801887, -1.187522717, 1.282750378, -1.717001308, 0.531574993,  0.29519138, 3.1736645]
-    //'colorMatrix': [1.50040757, -1.09400685, -0.821907892, 2.4726743960199724, 5.5861898074911025, 3.980233823833764, -1.6973025709652312, -1.7503258349248325, -0.7896378620413816]
-    // 'colorMatrix': [2.873079181990579, -2.259509600516003, -1.4947969746811658, 3.8773990971906374, 9.980523004501183, 6.644431507344027, -3.8417120823170383, -3.851354503867207, -2.0165997425226587]
-    // 'colorMatrix': [2.6188478147662946, -0.3490482043425507, 0.6491755198871962, -0.6053859282024999, 2.6462704898824474, -3.2805723249583476, 0.5764082596919458, 0.5250529842158762, 5.330607239358602]
-    // 'colorMatrix':[2.4845042444757817, -0.4321723102360087, 0.6278390282791709, -0.6056796601790841, 2.6198328547568783, -3.331207796322422, 0.5048008807512255, 0.39041046281402697, 5.08720600257353]
-    //'colorMatrix':[1.8822833041294111, -0.757891263314495, -0.30761510659279917, 1.4334357463628882, 4.283124157908033, 2.4312801936179476, -0.8423291580634884, -0.9042177794394357, 0.006550670018218689]
+    'colorMatrix': [
+        1.993689, -0.151371, -0.023086,
+       -1.152317,  1.359525, -0.796688,
+        0.158628, -0.208153,  1.819774
+    ],
+    /*'colorMatrix': [
+        1.1265831502874069, -0.04944690055244893, 0.21986243550142767,
+        -0.37759669009061664, 0.8869948356531355, -0.7156763536583168,
+        0.25101353980320984, 0.16245206489931338, 1.4958139181568892
+    ],*/
+    // 'colorMatrix': [0.941707866233828, -0.04241963711006192, 0.10071177087623447, -0.02780983557027569, 1.2148604615507037, -0.1870506259804275, 0.045610194754713715, -0.12013403959730144, 1.0745238448425871],
+    //'colorMatrix': [1.319215472140102, 0.11471590281059008, 0.28865426487493695, -0.5691791735660737, 0.881981945541604, -0.7841446114967072, 0.249963701425972, 0.003302151647805924, 1.4954903466217704],
+    /*
+    'colorMatrix': [
+        1.1296457653783267,  -0.15714409681391037, 0.03090179856844795,
+       -0.13755142280922777,  1.4797971012351165, -0.35020109393176,
+       -0.03583997932673744, -0.24772107747351052, 1.2875930457726927
+    ],
+     */
+    'saturation': 1.0,
+    'gain': 2.0
 };
 
 var changeParameters = function () {
     parameters.bp = $F("bpVal");
     parameters.awbScales = Matrix.dlmread($V("awbScalesVal")).getData();
+    parameters.colorMatrix = eval($V('colorMatrixVal'));
+    parameters.saturation = $F("saturationVal");
+    parameters.gain =  $F("gainVal");
 };
 
 var initParameters = function () {
     $V("bpVal", parameters.bp);
     $V("awbScalesVal", parameters.awbScales[0].toFixed(4) + ", " + parameters.awbScales[1].toFixed(4));
+    $V("saturationVal", parameters.saturation);
+    $V("colorMatrixVal", "[" + parameters.colorMatrix.toString() + "]");
+    $V("gainVal", parameters.gain);
+
     $("bpVal").addEventListener("change", changeParameters);
     $("awbScalesVal").addEventListener("change", changeParameters);
     $("scaleBVal").addEventListener("change", changeParameters);
+    $("saturationVal").addEventListener("change", changeParameters);
+    $("colorMatrixVal").addEventListener("change", changeParameters);
+    $("gainVal").addEventListener("change", changeParameters);
     $("develop").addEventListener("click", develop);
 };
 
@@ -229,7 +215,21 @@ var processRaw = function (RAW) {
         0.00,                    0.00, parameters.awbScales[1]
     ]).reshape(3, 3);
     var CM = Matrix.toMatrix(parameters.colorMatrix).reshape(3, 3);
-    IMAGE.applycform(CM.mtimes(WB));
+    var O = Matrix.toMatrix([
+        0.33, 0.34, 0.33,
+        0.50, 0.00, -0.5,
+            -0.25, 0.5, -0.25
+    ]).reshape(3, 3).transpose();
+    var s = 0, S = Matrix.toMatrix([
+        1.00, 0.00, 0.00,
+        0.00, parameters.saturation,  0.00,
+        0.00, 0.00,  parameters.saturation
+    ]).reshape(3, 3).transpose();
+    S = O.inv().mtimes(S).mtimes(O);
+    CM.display();
+    IMAGE.applycform(S.mtimes(CM).mtimes(WB));
+    max = IMAGE.max().display("MAX").times(1 / parameters.gain);
+    IMAGE['/='](max);
     console.log("Color Matrix applied in", Tools.toc(), "ms");
     
     
@@ -248,8 +248,7 @@ var develop = function () {
     Tools.tic();
     IMAGE = processRaw(RAW.getCopy());
     console.log("Image processed in", Tools.toc(), "ms");
-    updateOutput(IMAGE);
-    // displayImage(IMAGE);
+    updateOutput(IMAGE, true, SC.currentBuffer);
 };
 
 var wbTuningFromMeasures = function () {
@@ -289,6 +288,31 @@ var wbTuningFromMeasures = function () {
     }   
 };
 
+function plotScatter(x1, y1, x2, y2) {
+    'use strict';
+    var min = Math.min, max = Math.max, round = Math.round;
+    var Y1 = round(max(min(y1, y2), 0));
+    var Y2 = round(min(max(y1, y2), IMAGE.getSize(0) - 1));
+    var X1 = round(max(min(x1, x2), 0));
+    var X2 = round(min(max(x2, x2), IMAGE.getSize(1) - 1));
+
+    var subIm = IMAGE.get([Y1, 16, Y2], [X1, 16, X2]);
+    console.log(Y2 - Y1, X2 - X1);
+    var points = [
+        subIm.get([], [], 0).getData(),
+        subIm.get([], [], 1).getData(),
+        subIm.get([], [], 2).getData()
+    ];
+    
+    var p = $('plotSVG').getPlot();
+    if (!addScatter) {
+        while (p.remove('scatter')) {
+	    // Do nothing
+        }
+    }
+    p.addChromaticitiesFromRgb(points[0], points[1], points[2], {}, diagram);
+};
+
 window.onload = function () {
     "use strict";
     var inputs = document.getElementsByTagName('input');
@@ -301,74 +325,111 @@ window.onload = function () {
             inputs[i].addEventListener('click', focus);
         }
     }
-
-    var createPlot = function () {
-        var plotProperties = {
-            'ticks-display': false,
-            'preserve-ratio': true
-        };
-        window.imagePlot = new Plot('imagePlot', [$('image').clientWidth, $('image').clientHeight], 'image', plotProperties);
-        imagePlot.selectarea = function (x1, y1, x2, y2) {
-            var m = Math.min, M = Math.max, r = Math.round;
-            var Y1 = r(M(m(-y1, -y2), 0) / 2);
-            var Y2 = r(m(M(-y1, -y2), IMAGE.getSize(0) - 1) / 2);
-            var X1 = r(M(m(x1, x2), 0) / 2);
-            var X2 = r(m(M(x2, x2), IMAGE.getSize(1) - 1) / 2);
-            var patch = RAW.get([Y1, Y2], [X1, X2]);
-            patch.reshape([patch.size(0) * patch.size(1), patch.size(2)]);
-            var pMean = patch.mean(0),
-                pStd = patch.std(0),
-                pMin = patch.min(0),
-                pMax = patch.max(0);
-            var wp = pMean['-'](parameters.bp).getData();
-            var G = (wp[0] + wp[
-3]) * 0.5;
-            var scales = [G / wp[1], G / wp[2]];
-            MEASURES.push({
-                "patch": patch,
-                "mean": pMean.getData(),
-                "std": pStd.getData(),
-                "min": pMin.getData(),
-                "max": pMax.getData(),
-                "scales": scales
-            });
-            if ($V("Shift+click") === "wb") {
-                parameters.awbScales = scales;
-                $V("awbScalesVal", parameters.awbScales[0].toFixed(4) + ", " + parameters.awbScales[1].toFixed(4));
-                develop();            
-            }
-        };
-        imagePlot.click = function () {
-        };
+    $("buffers").addEventListener(
+        "change",
+        function () {
+            SC.currentBuffer = $I("buffers")
+            SC.update();
+        }
+    );
+    var callbackInit = function (evt) {
+        SC.images = [];
+        SC.currentBuffer = 0;
+        BUFFERS = [];
     };
-    // createPlot();
-    var read = function (evt) {
-        var callback = function (evt) {
+    var callback = function (evt, type) {
+        if (type === "bin") {
             Tools.tic();
             RAW = readRAW(this).double();
+            BUFFERS.push(RAW);
             console.log("RAW of size", RAW.size(), "read in", Tools.toc(), "ms");
             MEASURES = [];
-            develop();
-        };
-
-        // Only call the handler if 1 or more files was dropped.
-        if (this.files.length) {
-            var i;
-            for (i = 0; i < this.files.length; i++) {
-                readFile(this.files[i], callback, "bin");
-            }
+            Tools.tic();
+            IMAGE = processRaw(RAW.getCopy());
+            console.log("Image processed in", Tools.toc(), "ms");
+            addOption($("buffers"), SC.images.length, "Buffer " + SC.images.length);
+            updateOutput(IMAGE);
+        } else if (type === "url") {
+            Tools.tic();
+            // console.profile();
+            IMAGE = new Image();
+            IMAGE.src = this;
+            IMAGE.onload = function () {
+                console.log("Image processed in", Tools.toc(), "ms");
+                addOption($("buffers"), SC.images.length, "Buffer " + SC.images.length);
+                // console.profileEnd();
+                updateOutput(IMAGE);
+            };
         }
-
     };
-    $("loadFile").addEventListener("change", read, false);
+    initFileUpload("loadFile", callback, callbackInit);
 
     var outputCanvas = $("outputImage");
     SC = new SuperCanvas(outputCanvas);
-    var div = $("image");
-    var canvasXSize = div.offsetWidth;
-    var canvasYSize = div.offsetHeight;
+    var canvasXSize = outputCanvas.parentElement.offsetWidth;
+    var canvasYSize = outputCanvas.parentElement.offsetHeight;
     outputCanvas.width = canvasXSize;
     outputCanvas.height = canvasYSize;
+    var canvasXSize = outputCanvas.parentElement.offsetWidth;
+    var canvasYSize = outputCanvas.parentElement.offsetHeight;
+    outputCanvas.width = canvasXSize;
+    outputCanvas.height = canvasYSize;
+    SC.selectArea = function (start, end) {
+        var x1 = start[0], y1 = start[1], x2 = end[0], y2 = end[1];
+        var m = Math.min, M = Math.max, r = Math.round;
+        var Y1 = r(M(m(y1, y2), 0) / 2);
+        var Y2 = r(m(M(y1, y2), IMAGE.getSize(0) - 1) / 2);
+        var X1 = r(M(m(x1, x2), 0) / 2);
+        var X2 = r(m(M(x2, x2), IMAGE.getSize(1) - 1) / 2);
+        var patch = RAW.get([Y1, Y2], [X1, X2]);
+        patch.reshape([patch.size(0) * patch.size(1), patch.size(2)]);
+        var pMean = patch.mean(0),
+            pStd = patch.std(0),
+            pMin = patch.min(0),
+            pMax = patch.max(0);
+        var wp = pMean['-'](parameters.bp).getData();
+        var G = (wp[0] + wp[
+            3]) * 0.5;
+        var scales = [G / wp[1], G / wp[2]];
+        MEASURES.push({
+            "patch": patch,
+            "mean": pMean.getData(),
+            "std": pStd.getData(),
+            "min": pMin.getData(),
+            "max": pMax.getData(),
+            "scales": scales
+        });
+        console.log("Measure done !");
+        plotScatter(x1, y1, x2, y2);
+        if ($V("Shift+click") === "wb") {
+            parameters.awbScales = scales;
+            $V("awbScalesVal", parameters.awbScales[0].toFixed(4) + ", " + parameters.awbScales[1].toFixed(4));
+            develop();            
+        }
+    };
+    var setElementOpacity = function (id, min, max) {
+        $(id).style.opacity = min;
+        $(id).addEventListener("mouseover", function () {
+            this.style.opacity = max;
+        });
+        $(id).addEventListener("mouseout", function () {
+            this.style.opacity = min;
+        });
+
+    };
+    // setElementOpacity("ui", 0.2, 1);
+    // setElementOpacity("plot", 0.0, 1);
+
+    var plotProperties = {
+        'ticks-display': false,
+        'preserve-ratio': true
+    };
+    var plot = new Plot('plotSVG', [$('plot').clientWidth - 20, $('plot').clientHeight - 20], 'plot', plotProperties);
+    plot.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
+    plot.remove("Standards illuminants");
+    plot.remove("Spectrum locus");
+
     initParameters();
+
     // hideFieldset();
 };

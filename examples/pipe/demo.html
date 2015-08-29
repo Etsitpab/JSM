@@ -9,75 +9,86 @@
     <script type="text/javascript" src="../../projects/SuperCanvas.js"></script>
     <script type="text/javascript" src="../../projects/wDenoising.js"></script>
     <script type="text/javascript" src="../../projects/colorEnhancement.js"></script>
+    <script type="text/javascript" src="../../projects/CIE.js"></script>
+    <script type="text/javascript" src="../../projects/CIE.data.js"></script>
     <script type="text/javascript" src="../base.js"></script>
+    <script type="text/javascript" src="colorMatrixEstimate.js"></script>
     <script type="text/javascript" src="demo.js"></script>
     <script src="../../min/drawHistogram.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <!--<link rel="stylesheet" type="text/css" href="../base.css" media="screen" />-->
+    <link rel="stylesheet" type="text/css" href="demo.css" media="screen" />
    
     <title></title>
   </head>
 
   <body>
+    <canvas id="outputImage"></canvas>
 
-    <div id="demo">
-      <h1></h1>
-      <input type="file" id="loadFile"/>
-      <div id="interface">
+    <div id="ui">
+      <input type="file" id="loadFile" multiple/>
+
+      <label class="val" style="width:100%;"> Buffers</label>
+      <select id="buffers">
+      </select>
+      
+      <fieldset id="mouseActions">
+        <legend> Mouse actions </legend>
+        <label class="val" style="width:100%;"> Shift+selection</label>
+        <select id="Shift+click">
+          <option value="nothing"> Nothing    </option>
+          <option value="wb">      Select WB </option>
+        </select>
+      </fieldset>
+      
+      <fieldset id="pipeParameters">
+        <legend> Pipe parameters </legend>
+        <label class="val" style="width:30%;"> BP </label>
+        <input type="text" style="width:65%;" id="bpVal" class="val" value="">
+        <br>
+        <label class="val" style="width:30%;"> G/R G/B </label>
+        <input type="text" style="width:65%;" id="awbScalesVal" class="val" value="">
+        <br>
+        <label class="val" style="width:35%;"> Color Matrix </label>
+        <input type="text" style="width:60%;" id="colorMatrixVal" class="val" value="">
+        <br>
+        <label class="val" style="width:40%;"> Saturation </label>
+        <input type="text" style="width:55%;" id="saturationVal" class="val" value="">
+        <br>
+        <label class="val" style="width:30%;"> Gain </label>
+        <input type="text" style="width:65%;" id="gainVal" class="val" value="">
+        <br>
+        <hr></hr>
+        <input type="button" id="develop" value="Develop"/>
+      </fieldset>
+      
+      <fieldset id="pipeParameters">
+        <legend> RAW statistics </legend>
+        <select id="channels">
+          <option value="All"> All </option>
+          <option value="R">    R  </option>
+          <option value="Gr">  Gr  </option>
+          <option value="Gb">  Gb  </option>
+          <option value="B">    B  </option>
+        </select>
         
-        <div id="ui">
-          <fieldset id="mouseActions">
-            <legend> Mouse actions </legend>
-            <label class="val" style="width:100%;"> Shift+selection</label>
-            <select id="Shift+click">
-                <option value="nothing"> Nothing    </option>
-                <option value="wb">      Select WB </option>
-            </select>
-            
-          </fieldset>
+        <label class="val" style="width:30%;"> Mean </label>
+        <input type="text" style="width:65%;" id="scaleRVal" class="val" value="">
+        <br>
+        <label class="val" style="width:30%;"> &delta; </label>
+        <input type="text" style="width:65%;" id="scaleRVal" class="val" value="">
+        <br>
+        <label class="val" style="width:30%;"> Min </label>
+        <input type="text" style="width:65%;" id="scaleBVal" class="val" value="">
+        <br>
+        <label class="val" style="width:30%;"> Max </label>
+        <input type="text" style="width:65%;" id="scaleBVal" class="val" value="">
+        <br>
+      </fieldset>
+      <hr></hr>          
+      <canvas id="histogram" style="width:100%"></canvas>
+    </div>
 
-          <fieldset id="pipeParameters">
-            <legend> Pipe parameters </legend>
-            <label class="val" style="width:30%;"> BP </label>
-            <input type="text" style="width:65%;" id="bpVal" class="val" value="">
-            <br>
-            <label class="val" style="width:30%;"> G/R G/B </label>
-            <input type="text" style="width:65%;" id="awbScalesVal" class="val" value="">
-            <br>
-            <hr></hr>
-            <input type="button" id="develop" value="Develop"/>
-          </fieldset>
-
-          <fieldset id="pipeParameters">
-            <legend> RAW statistics </legend>
-            <select id="channels">
-                <option value="All"> All </option>
-                <option value="R">    R  </option>
-                <option value="Gr">  Gr  </option>
-                <option value="Gb">  Gb  </option>
-                <option value="B">    B  </option>
-            </select>
-
-            <label class="val" style="width:30%;"> Mean </label>
-            <input type="text" style="width:65%;" id="scaleRVal" class="val" value="">
-            <br>
-            <label class="val" style="width:30%;"> &delta; </label>
-            <input type="text" style="width:65%;" id="scaleRVal" class="val" value="">
-            <br>
-            <label class="val" style="width:30%;"> Min </label>
-            <input type="text" style="width:65%;" id="scaleBVal" class="val" value="">
-            <br>
-            <label class="val" style="width:30%;"> Max </label>
-            <input type="text" style="width:65%;" id="scaleBVal" class="val" value="">
-            <br>
-          </fieldset>
-          <hr></hr>          
-          <canvas id="histogram" style="width:100%"></canvas>
-        </div>
-        <div id="image">
-          <canvas id="outputImage"></canvas>
-        </div>
-      </div>
-
+    <div id="plot">
     </div>
 
   </body>
