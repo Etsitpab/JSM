@@ -5530,8 +5530,8 @@ if (typeof window === 'undefined') {
         };
         var sortDescend = function (a, b) {
             return b - a;
-
         };
+
         var sort = function (data, s, d, N) {
             var i, io, e;
             for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
@@ -5552,6 +5552,15 @@ if (typeof window === 'undefined') {
             for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
                 out[i] = itab[io] * d + s;
             }
+        };
+        var median = function (data, s, d, N) {
+            var i, io, e;
+            for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
+                tab[io] = data[i];
+            }
+            Array.prototype.sort.call(tab, fun);
+            var indice = Math.floor(tab.length / 2);
+            return tab.length % 2 === 0 ? 0.5 * (tab[indice] + tab[indice - 1]) : tab[indice];
         };
 
         /** Sort the elements of the matrix.
@@ -5606,6 +5615,22 @@ if (typeof window === 'undefined') {
             return m.getCopy().asort(dim, mode);
         };
 
+        /** Return the median value.
+         * @param {Number} [dim=undefined]
+         *  Dimension on which the computation must be performed. If undefined,
+         *  return all the elements sorted.
+         * @chainable
+         */
+        Matrix_prototype.med = function (dim) {
+            var size = typeof dim === "number" ? this.getSize(dim) : this.numel();
+            tab = new Float64Array(size);
+            fun = sortAscend;
+            return applyDim(this, median, dim);
+        };
+        
+        Matrix.med = function (m, dim, mode) {
+            return m.getCopy().med(dim);
+        };
     })();
 
     /** Accumate values in an array
