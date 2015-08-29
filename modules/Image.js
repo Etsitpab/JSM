@@ -4234,6 +4234,34 @@
             }
             return color;
         },
+        /** Conversion function.
+         */
+        "LinearRGB to GRGBG": function (color, N, sc, sp) {
+            sc = sc || 1;
+            sp = sp || 3;
+            N = (N || 1) * sp;
+            for (var r = 0, g = sc, b = 2 * sc; r < N; r += sp, g += sp, b += sp) {
+                var R = color[r], G = color[g], B = color[b];
+                color[r] = R !== 0 ? G / R : 0;
+                color[g] = B !== 0 ? G / B : 0;
+                color[b] = G;
+            }
+            return color;
+        },
+        /** Conversion function.
+         */
+        "GRGBG to LinearRGB": function (color, N, sc, sp) {
+            sc = sc || 1;
+            sp = sp || 3;
+            N = (N || 1) * sp;
+            for (var r = 0, g = sc, b = 2 * sc; r < N; r += sp, g += sp, b += sp) {
+                var GR = color[r], GB = color[g], G = color[b];
+                color[r] = GR !== 0 ? G / GR : 0;
+                color[g] = G;
+                color[b] = GB !== 0 ? G / GB : 0;
+            }
+            return color;
+        },
 
         // CIE colorspace
         /** Conversion function.
@@ -4463,65 +4491,65 @@
         // CIE function combinations
         /** Conversion function.
          */
-        "RGB to XYZ": function (color, N, sc, sp) {
+        "RGB to XYZ": function (color, N, sc, sp, wp, prim) {
             CS['sRGB to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp);
+            CS['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
             return color;
         },
         /** Conversion function.
          */
-        "XYZ to RGB": function (color, N, sc, sp) {
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+        "XYZ to RGB": function (color, N, sc, sp, wp, prim) {
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to sRGB'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        "RGB to Lab": function (color, N, sc, sp, wp) {
+        "RGB to Lab": function (color, N, sc, sp, wp, prim) {
             CS['sRGB to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp, wp);
+            CS['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
             CS['XYZ to Lab'](color, N, sc, sp, wp);
             return color;
         },
         /** Conversion function.
          */
-        "Lab to RGB": function (color, N, sc, sp) {
-            CS['Lab to XYZ'](color, N, sc, sp);
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+        "Lab to RGB": function (color, N, sc, sp, wp, prim) {
+            CS['Lab to XYZ'](color, N, sc, sp, wp);
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to sRGB'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        'RGB to Luv': function (color, N, sc, sp, wp) {
+        'RGB to Luv': function (color, N, sc, sp, wp, prim) {
             CS['sRGB to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp);
+            CS['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
             CS['XYZ to Luv'](color, N, sc, sp, wp);
             return color;
         },
         /** Conversion function.
          */
-        'Luv to RGB': function (color, N, sc, sp, wp) {
+        'Luv to RGB': function (color, N, sc, sp, wp, prim) {
             CS['Luv to XYZ'](color, N, sc, sp, wp);
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to sRGB'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        'RGB to Lch': function (color, N, sc, sp, wp) {
+        'RGB to Lch': function (color, N, sc, sp, wp, prim) {
             CS['sRGB to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp);
+            CS['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
             CS['XYZ to Lab'](color, N, sc, sp, wp);
             CS['Lab to Lch'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        'Lch to RGB': function (color, N, sc, sp, wp) {
+        'Lch to RGB': function (color, N, sc, sp, wp, prim) {
             CS['Lch to Lab'](color, N, sc, sp);
             CS['Lab to XYZ'](color, N, sc, sp, wp);
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to sRGB'](color, N, sc, sp);
             return color;
         },
@@ -4755,67 +4783,67 @@
         },
         /** Conversion function.
          */
-        'rgY to xyY': function (color, N, sc, sp) {
+        'rgY to xyY': function (color, N, sc, sp, wp, prim) {
             CS['rgY to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp);
+            CS['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
             CS['XYZ to xyY'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        'xyY to rgY': function (color, N, sc, sp) {
+        'xyY to rgY': function (color, N, sc, sp, wp, prim) {
             CS['xyY to XYZ'](color, N, sc, sp);
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to rgY'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        'RGB to xyY': function (color, N, sc, sp) {
+        'RGB to xyY': function (color, N, sc, sp, wp, prim) {
             CS['sRGB to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp);
+            CS['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
             CS['XYZ to xyY'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        'xyY to RGB': function (color, N, sc, sp) {
+        'xyY to RGB': function (color, N, sc, sp, wp, prim) {
             CS['xyY to XYZ'](color, N, sc, sp);
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to sRGB'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        'RGB to 1960 uvY': function (color, N, sc, sp) {
+        'RGB to 1960 uvY': function (color, N, sc, sp, wp, prim) {
             CS['sRGB to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp);
+            CS['LinearRGB to XYZ'](color, N, sc, wp, prim);
             CS['XYZ to xyY'](color, N, sc, sp);
             CS['xyY to 1960 uvY'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        '1960 uvY to RGB': function (color, N, sc, sp) {
+        '1960 uvY to RGB': function (color, N, sc, sp, wp, prim) {
             CS['1960 uvY to xyY'](color, N, sc, sp);
             CS['xyY to XYZ'](color, N, sc, sp);
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to sRGB'](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        "RGB to 1976 u'v'Y": function (color, N, sc, sp) {
+        "RGB to 1976 u'v'Y": function (color, N, sc, sp, wp, prim) {
             CS['sRGB to LinearRGB'](color, N, sc, sp);
-            CS['LinearRGB to XYZ'](color, N, sc, sp);
+            CS['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
             CS["XYZ to 1976 u'v'Y"](color, N, sc, sp);
             return color;
         },
         /** Conversion function.
          */
-        "1976 u'v'Y to RGB": function (color, N, sc, sp) {
+        "1976 u'v'Y to RGB": function (color, N, sc, sp, wp, prim) {
             CS["1976 u'v'Y to XYZ"](color, N, sc, sp);
-            CS['XYZ to LinearRGB'](color, N, sc, sp);
+            CS['XYZ to LinearRGB'](color, N, sc, sp, wp, prim);
             CS['LinearRGB to sRGB'](color, N, sc, sp);
             return color;
         }
