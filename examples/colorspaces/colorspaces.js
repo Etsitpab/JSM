@@ -33,8 +33,9 @@ function updateOutput(image, init) {
         var m = mask.double().set(mask["<"](1), 0.25).repmat([1, 1, 3]);
         image = image[".*"](m);
     }
-    init = init === true ? false : true;
-    canvas.setImage(image, init);
+    var noinit = init === true ? false : true;
+    canvas.setImageBuffer(image, 0);
+    canvas.displayImageBuffer(0, noinit);
     drawImageHistogram("histogram", image);
 }
 
