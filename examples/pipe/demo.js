@@ -2,7 +2,7 @@
 /*jshint indent: 4, unused: true, white: true */
 
 var IMAGE, RAW, BUFFERS, MEASURES, SC;
-var diagram = "1976 u'v'Y", addScatter = false;
+var diagram = "xyY", addScatter = false;
 
 function updateOutput(image, noinit, buffer) {
     "use strict";
@@ -142,25 +142,40 @@ Matrix.prototype.applySRGBGamma = function (resolution) {
 var parameters = {
     'bp': 200,
     'awbScales': [1.8, 1.5],
+    /* // IMX 135
     'colorMatrix': [
         1.993689, -0.151371, -0.023086,
        -1.152317,  1.359525, -0.796688,
         0.158628, -0.208153,  1.819774
-    ],
-    /*'colorMatrix': [
-        1.1265831502874069, -0.04944690055244893, 0.21986243550142767,
-        -0.37759669009061664, 0.8869948356531355, -0.7156763536583168,
-        0.25101353980320984, 0.16245206489931338, 1.4958139181568892
-    ],*/
-    // 'colorMatrix': [0.941707866233828, -0.04241963711006192, 0.10071177087623447, -0.02780983557027569, 1.2148604615507037, -0.1870506259804275, 0.045610194754713715, -0.12013403959730144, 1.0745238448425871],
-    //'colorMatrix': [1.319215472140102, 0.11471590281059008, 0.28865426487493695, -0.5691791735660737, 0.881981945541604, -0.7841446114967072, 0.249963701425972, 0.003302151647805924, 1.4954903466217704],
-    /*
+    ], // sRGB
     'colorMatrix': [
-        1.1296457653783267,  -0.15714409681391037, 0.03090179856844795,
-       -0.13755142280922777,  1.4797971012351165, -0.35020109393176,
-       -0.03583997932673744, -0.24772107747351052, 1.2875930457726927
+        1.325756, -0.256835,  0.013652,
+       -0.300399,  1.483152, -0.591961,
+       -0.175381, -0.348768,  1.452619
+     ],*/
+    // sRGB v2
+    'colorMatrix': [
+        1.389051, -0.323627, -0.023491,
+       -0.352992,  1.585821, -0.613056,
+       -0.180360, -0.376975,  1.519571
     ],
-     */
+    // Ambarella
+    /*'colorMatrix': [
+        1.605270, -0.246497, -0.011966,
+       -0.379197,  1.752761, -0.677406,
+       -0.323313, -0.575602,  1.656377
+    ],*/
+    /*'colorMatrix': [
+        1.704094, -0.379028, -0.096490,
+       -0.518158,  1.768472, -0.841104,
+       -0.283853, -0.456980,  1.907634
+     ],*/
+    // Ambarella even more saturated
+    /*'colorMatrix': [
+        1.734368, -0.425490, -0.081870,
+       -0.528965,  1.858041, -0.754530,
+       -0.308531, -0.506031,  1.798920
+    ],*/
     'saturation': 1.0,
     'gain': 2.0
 };
@@ -297,7 +312,7 @@ function plotScatter(x1, y1, x2, y2) {
     var X2 = round(min(max(x2, x2), IMAGE.getSize(1) - 1));
 
     var subIm = IMAGE.get([Y1, 16, Y2], [X1, 16, X2]);
-    console.log(Y2 - Y1, X2 - X1);
+
     var points = [
         subIm.get([], [], 0).getData(),
         subIm.get([], [], 1).getData(),
@@ -310,11 +325,12 @@ function plotScatter(x1, y1, x2, y2) {
 	    // Do nothing
         }
     }
-    p.addChromaticitiesFromRgb(points[0], points[1], points[2], {}, diagram);
+    p.addChromaticitiesFromRgb(points[0], points[1], points[2], {}, diagram, [0.3457, 0.3585, 1]);
 };
 
 window.onload = function () {
     "use strict";
+
     var inputs = document.getElementsByTagName('input');
     var focus = function () {
         this.focus();
@@ -364,32 +380,23 @@ window.onload = function () {
     };
     initFileUpload("loadFile", callback, callbackInit);
 
-    var outputCanvas = $("outputImage");
-    SC = new SuperCanvas(outputCanvas);
-    var canvasXSize = outputCanvas.parentElement.offsetWidth;
-    var canvasYSize = outputCanvas.parentElement.offsetHeight;
-    outputCanvas.width = canvasXSize;
-    outputCanvas.height = canvasYSize;
-    var canvasXSize = outputCanvas.parentElement.offsetWidth;
-    var canvasYSize = outputCanvas.parentElement.offsetHeight;
-    outputCanvas.width = canvasXSize;
-    outputCanvas.height = canvasYSize;
+    SC = new SuperCanvas(document.body);
+    
     SC.selectArea = function (start, end) {
         var x1 = start[0], y1 = start[1], x2 = end[0], y2 = end[1];
         var m = Math.min, M = Math.max, r = Math.round;
-        var Y1 = r(M(m(y1, y2), 0) / 2);
-        var Y2 = r(m(M(y1, y2), IMAGE.getSize(0) - 1) / 2);
-        var X1 = r(M(m(x1, x2), 0) / 2);
-        var X2 = r(m(M(x2, x2), IMAGE.getSize(1) - 1) / 2);
-        var patch = RAW.get([Y1, Y2], [X1, X2]);
+        y1 = M(m(y1, y2), 0);
+        y2 = m(M(y1, y2), IMAGE.getSize(0) - 1);
+        x1 = M(m(x1, x2), 0);
+        x2 = m(M(x2, x2), IMAGE.getSize(1) - 1);
+        var patch = RAW.get([r(y1 / 2), r(y2 / 2)], [r(x1 / 2), r(x2 / 2)]);
         patch.reshape([patch.size(0) * patch.size(1), patch.size(2)]);
         var pMean = patch.mean(0),
             pStd = patch.std(0),
             pMin = patch.min(0),
             pMax = patch.max(0);
         var wp = pMean['-'](parameters.bp).getData();
-        var G = (wp[0] + wp[
-            3]) * 0.5;
+        var G = (wp[0] + wp[3]) * 0.5;
         var scales = [G / wp[1], G / wp[2]];
         MEASURES.push({
             "patch": patch,
@@ -397,7 +404,8 @@ window.onload = function () {
             "std": pStd.getData(),
             "min": pMin.getData(),
             "max": pMax.getData(),
-            "scales": scales
+            "scales": scales,
+            "coordinates": [x1, y1, x2, y2]
         });
         console.log("Measure done !");
         plotScatter(x1, y1, x2, y2);
@@ -428,8 +436,10 @@ window.onload = function () {
     plot.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
     plot.remove("Standards illuminants");
     plot.remove("Spectrum locus");
-
+    
     initParameters();
-
-    // hideFieldset();
+    $("resetView").addEventListener("click", function () {
+        SC.displayImageBuffer(undefined, false);
+    })
+    // hideFieldsetx();
 };

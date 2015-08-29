@@ -874,95 +874,52 @@ var gretagAmba = Matrix.toMatrix([
     34, 34, 36
 ]).reshape(3, 24).transpose()['/='](255).display();
 
-var gretagAmba = Matrix.toMatrix([
-    136.17,
-    95.06,
-    70.167,
-    216.543,
-    169.93,
-    146.66,
-    104.096,
-    139.255,
-    177.153,
-    109.951,
-    128.715,
-    54.997,
-    144.875,
-    141.024,
-    191.352,
-    117.694,
-    206.208,
-    188.767,
-    235.931,
-    147.267,
-    18.648,
-    50.642,
-    82.761,
-    177.897,
-    211.345,
-    83.924,
-    94.742,
-    109.968,
-    58.529,
-    120.118,
-    176.614,
-    195.575,
-    42.918,
-    229.059,
-    171.781,
-    7.58,
-    29.828,
-    54.138,
-    166.404,
-    63.016,
-    148.688,
-    55.357,
-    187.664,
-    41.681,
-    35.076,
-    250.725,
-    220.094,
-    22.4,
-    185.935,
-    75.892,
-    144.222,
-    4.636,
-    139.456,
-    173.001,
-    240.166,
-    240.669,
-    238.449,
-    187.251,
-    187.968,
-    182.913,
-    155.282,
-    155.533,
-    152.213,
-    142.22,
-    140.803,
-    140.474,
-    72.232,
-    71.385,
-    73.438,
-    34.546,
-    34.395,
-    36.031
-]).reshape(3, 24).transpose()['/='](255).display();
+var getsAmbaRGBPatches = function () {
 
-var R = gretagAmba.get([], 0);
-var G = gretagAmba.get([], 1);
-var B = gretagAmba.get([], 2);
+    var gretag = Matrix.toMatrix([
+        136.17,   95.06,    70.167,
+        216.543, 169.93,   146.66,
+        104.096, 139.255,  177.153,
+        109.951, 128.715,   54.997,
+        144.875, 141.024,  191.352,
+        117.694, 206.208,  188.767,
+        235.931, 147.267,   18.648,
+         50.642,  82.761,  177.897,
+        211.345,  83.924,   94.742,
+        109.968,  58.529,  120.118,
+        176.614, 195.575,   42.918,
+        229.059, 171.781,    7.58,
+         29.828,  54.138,  166.404,
+         63.016, 148.688,   55.357,
+        187.664,  41.681,   35.076,
+        250.725, 220.094,   22.4,
+        185.935,  75.892,  144.222,
+          4.636, 139.456,  173.001,
+        240.166, 240.669,  238.449,
+        187.251, 187.968,  182.913,
+        155.282, 155.533,  152.213,
+        142.22,  140.803,  140.474,
+         72.232,  71.385,   73.438,
+         34.546,  34.395,   36.031
+    ]).reshape(3, 24).transpose()['/='](255).display();
 
-//var scaleR = G.get(20)['./'](R.get(20))['+'](G.get(21)['./'](R.get(21)))['.*'](0.5);//.display();
-//var scaleB = G.get(20)['./'](B.get(20))['+'](G.get(21)['./'](B.get(21)))['.*'](0.5);//.display();
-var scaleR = G.get(18)['./'](R.get(18))['+'](G.get(19)['./'](R.get(19)))['.*'](0.5);//.display();
-var scaleB = G.get(18)['./'](B.get(18))['+'](G.get(19)['./'](B.get(19)))['.*'](0.5);//.display();
+    var R = gretagAmba.get([], 0);
+    var G = gretagAmba.get([], 1);
+    var B = gretagAmba.get([], 2);
+    var scaleR = G.get(18)['./'](R.get(18))['+'](G.get(19)['./'](R.get(19)))['.*'](0.5);//.display();
+    var scaleB = G.get(18)['./'](B.get(18))['+'](G.get(19)['./'](B.get(19)))['.*'](0.5);//.display();
 
-R['*='](scaleR);
-B['*='](scaleB);
-gretagAmba = R.cat(1, G, B);//.display();
-gretagAmba['/='](gretagAmba.max());
-    
+    R['*='](scaleR);
+    B['*='](scaleB);
+    gretag = R.cat(1, G, B);//.display();
+    gretag['/='](gretag.max());
+        var f = function (color, N, sc, sp, wp, prim) {
+        Matrix.Colorspaces['sRGB to LinearRGB'](color, N, sc, sp);
+        return color;
+    };
+    return Matrix.toMatrix(f(gretag.getData(), 24, 24, 1)).reshape(24, 3).display();
+
+}
 var getGretag = function (MEASURES) {
     var gretag = []
     var concat = function(v, i, t) {
@@ -1018,11 +975,19 @@ var noiseModelEstimate = function (BUFFERS) {
 
 
 var saturateCM = function (M, s1, s2) {
+    /*
     var O = Matrix.toMatrix([
-        0.33, 0.34, 0.33,
-        0.50, 0.00, -0.5,
-       -0.25, 0.5, -0.25
+        0.33,  0.34,  0.33,
+        0.50,  0.00, -0.5,
+       -0.25,  0.50, -0.25
     ]).reshape(3, 3).transpose();
+    */
+    var O = Matrix.toMatrix([
+        0.33,  0.34,  0.33,
+        0.50, -0.50,  0.00,
+       -0.25, -0.25,  0.50
+    ]).reshape(3, 3).transpose();
+    
     var S = Matrix.toMatrix([
         1.00, 0.00, 0.00,
         0.00,   s1, 0.00,
@@ -1065,23 +1030,35 @@ var getsRGBPatches = function () {
         return color;
     };
     var D50 = [0.3457, 0.3585, 1];
-    return linearsRGBPatches = Matrix.toMatrix(f(new Float64Array(sRGBPatches.getData()), 24, 24, 1, D50)).reshape(24, 3).display();
-
+    return Matrix.toMatrix(f(sRGBPatches.getData(), 24, 24, 1, D50)).reshape(24, 3).display();
 };
 
 var fitColors = function(target, measured) {
     // target = Matrix.bsxfun("rdivide", target, target.mean(1));
     // measured = Matrix.bsxfun("rdivide", measured, measured.mean(1));
 
-    target = target.get([[12, 13, 14, 18]], []);
-    measured = measured.get([[12, 13, 14, 18]], []);
+    var sel = [
+         0,  1,  2,  3,      5,
+             7,  8,  9,
+        12, 13, 14,     16,
+        18, 19, 20, 21, 21, 22
+    ];
+    target = target.get([sel], []);
+    measured = measured.get([sel], []);
     var M = target.transpose().mrdivide(measured.transpose());//.display();
     // impose the wp
     var WP = Matrix.diag(M.mtimes(Matrix.ones(3, 1))).inv();//.display()
-    // return M;
+    return M;
     return WP.mtimes(M);
 };
 var addChromaticitiesFromRgb = function (p, patches, id, color) {
+    patches = patches.getCopy();
+    var f = function (color, N, sc, sp) {
+        Matrix.Colorspaces['LinearRGB to sRGB'](color, N, sc, sp);
+        return color;
+    };
+    patches = Matrix.toMatrix(f(patches.getData(), 24, 24, 1)).reshape(24, 3);
+    
     p.addChromaticitiesFromRgb(
         patches.get([], 0).getData(), 
         patches.get([], 1).getData(), 
@@ -1097,7 +1074,9 @@ var addChromaticitiesFromRgb = function (p, patches, id, color) {
                 'size': 5,
                 'stroke': 'none'
             }
-        }
+        },
+        "xyY",
+        [0.3457, 0.3585, 1]
     );
 };
 
@@ -1109,18 +1088,8 @@ window.onload = function () {
         0.158628, -0.208153,  1.819774
     ]).reshape(3, 3);
 
-    // var sRGBPatches = getsRGBPatches();//.display();
-    var sRGBPatches = gretagAmba;
-    //var linearsRGBPatches = Matrix.toMatrix(Matrix.Colorspaces['sRGB to LinearRGB'](new Float64Array(sRGBPatches.getData()), 24, 24, 1)).reshape(24, 3);
-    /*var f = function (color, N, sc, sp, wp, prim) {
-        Matrix.Colorspaces['sRGB to LinearRGB'](color, N, sc, sp);
-        Matrix.Colorspaces['LinearRGB to XYZ'](color, N, sc, sp, wp, prim);
-        Matrix.Colorspaces['XYZ to xyY'](color, N, sc, sp);
-        return color;
-    }*/
-    //var D50 = [0.3457, 0.3585, 1];
-    // var linearsRGBPatches = Matrix.toMatrix(f(new Float64Array(sRGBPatches.getData()), 24, 24, 1, D50)).reshape(24, 3).display();
-    // var XYZPatches = Matrix.Colorspaces['RGB to XYZ'](new Float64Array(sRGBPatches.getData()), 24, 24, 1);
+    //var sRGBPatches = getsRGBPatches();//.display();
+    var sRGBPatches = getsAmbaRGBPatches();
 
     var m, MEASURES = {
         "H":    MEASURESH,
@@ -1142,6 +1111,7 @@ window.onload = function () {
     for (m in MEASURES) {
         gretag[m] = getGretag(MEASURES[m]);
         matrices[m] = fitColors(sRGBPatches, gretag[m]);
+        matrices[m] = saturateCM(matrices[m], 1.13, 0.97);
         matrices[m].display(m);
         console.log(matrices[m].getData());
         gretagCorrected[m] = matrices[m].mtimes(gretag[m].transpose()).transpose();

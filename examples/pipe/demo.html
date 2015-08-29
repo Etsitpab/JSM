@@ -5,7 +5,7 @@
     <script type="text/javascript" src="../../modules/JSM.js"></script>
     <script type="text/javascript" src="../../modules/Image.js"></script>
     <script type="text/javascript" src="../../modules/Linalg.js"></script>
-    <script type="text/javascript" src="../../modules/Plot.js"></script>
+    <script type="text/javascript" src="../../src/Plot/Plot.class.js"></script>
     <script type="text/javascript" src="../../projects/SuperCanvas.js"></script>
     <script type="text/javascript" src="../../projects/wDenoising.js"></script>
     <script type="text/javascript" src="../../projects/colorEnhancement.js"></script>
@@ -22,11 +22,12 @@
   </head>
 
   <body>
-    <canvas id="outputImage"></canvas>
+    <div id="outputImage"></div>
 
     <div id="ui">
       <input type="file" id="loadFile" multiple/>
 
+      <input type="button" id="resetView" value="Reset View"/>
       <label class="val" style="width:100%;"> Buffers</label>
       <select id="buffers">
       </select>
@@ -35,7 +36,7 @@
         <legend> Mouse actions </legend>
         <label class="val" style="width:100%;"> Shift+selection</label>
         <select id="Shift+click">
-          <option value="nothing"> Nothing    </option>
+          <option value="nothing"> Nothing   </option>
           <option value="wb">      Select WB </option>
         </select>
       </fieldset>
