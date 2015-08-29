@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<meta charset="UTF-8">
+<html>
+  <head>
+    <script type="text/javascript" src="../../modules/JSM.js"></script>
+    <script type="text/javascript" src="../../modules/Image.js"></script>
+    <script type="text/javascript" src="../../modules/Linalg.js"></script>
+    <script type="text/javascript" src="../../modules/Plot.js"></script>
+    <script type="text/javascript" src="../../projects/SuperCanvas.js"></script>
+    <script type="text/javascript" src="../../projects/wDenoising.js"></script>
+    <script type="text/javascript" src="../../projects/colorEnhancement.js"></script>
+    <script type="text/javascript" src="../base.js"></script>
+    <script type="text/javascript" src="demo.js"></script>
+    <script src="../../min/drawHistogram.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="demo.css" media="screen" />
+   
+    <title></title>
+  </head>
+
+  <body>
+    <canvas id="outputImage"></canvas>
+
+    <div id="ui" style="padding:10px;">
+      <label> Path </label>
+      <input type="text"  id="path" value="">
+      <label> Image prefix </label>
+      <input type="text"  id="prefix" value="">
+      <hr></hr>
+      <label> Best tuning </label>
+      <select id="bestTuning">
+        <option value="nothing" id="currentTuning"> Current </option>
+      </select>
+      <label> Tuning name</label>
+      <input type="text"  id="tuningName" value="">
+      <input type="button" id="saveTuning" value="Save tuning"/>
+      <hr></hr>
+      <!--
+      <label> hGreen </label>
+      <input type="range" id="hGreen"    class="val2" min="0" step="1" max="3" value="0"/>
+      <input type="text"  id="hGreenVal" class="val2" value="" readonly>
+      <label> alphaLuma </label>
+      <input type="range" id="alphaLuma"    class="val2" min="0" step="1" max="3" value="0"/>
+      <input type="text"  id="alphaLumaVal" class="val2" value="" readonly>
+      <label> alphaChroma </label>
+      <input type="range" id="alphaChroma"    class="val2" min="0" step="1" max="3" value="0"/>
+      <input type="text"  id="alphaChromaVal" class="val2" value="" readonly>
+      <label> nMod </label>
+      <input type="range" id="nMod"    class="val2" min="0" step="1" max="3" value="0"/>
+      <input type="text"  id="nModVal" class="val2" value="" readonly>
+      -->
+    </div>
+
+  </body>
+</html>
