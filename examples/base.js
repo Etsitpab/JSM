@@ -97,20 +97,59 @@ var initInputs = function () {
         }
     }
 };
-
-var initFileUpload = function (id, callback) {
-    var read = function (evt) {
-        // Only call the handler if 1 or more files was dropped.
-        if (this.files.length) {
-            var i;
-            for (i = 0; i < this.files.length; i++) {
-                readFile(this.files[i], callback, "url");
-            }
+(function () {
+    var readFile = function (file, callback) {
+        'use strict';
+        // Deal with arguments
+        var type = (file.type || "bin").toLowerCase();
+        // File handling functions
+        var reader = new FileReader();
+        reader.onload = function (evt) {
+            callback = callback.bind(evt.target.result);
+            callback(evt, type);
+        };
+        switch (type) {
+        case 'image/jpeg':
+        case 'image/png':
+        case 'dataurl':
+        case 'url':
+            type = 'url';
+            reader.readAsDataURL(file);
+            break;
+        case 'text/csv':
+        case 'text/plain':
+        case 'text':
+        case 'txt':
+            type = 'txt';
+            reader.readAsText(file);
+            break;
+        case 'application/x-director':
+        case 'arraybuffer':
+        case 'binary':
+        case 'bin':
+            type = 'bin';
+            reader.readAsArrayBuffer(file);
+            break;
+        default:
+            throw new Error("readFile: unknown type " + type + ".");
         }
     };
-    $(id).addEventListener("change", read, false);
-};
-
+    window.initFileUpload = function (id, callback, callbackInit) {
+        var read = function (evt) {
+            if (callbackInit) {
+                callbackInit(evt);
+            }
+            // Only call the handler if 1 or more files was dropped.
+            if (this.files.length) {
+                var i;
+                for (i = 0; i < this.files.length; i++) {
+                    readFile(this.files[i], callback);
+                }
+            }
+        };
+        $(id).addEventListener("change", read, false);
+    };
+})();
 var limitImageSize = function (image, MAX_SIZE) {
     var maxSize = Math.max(image.size(0), image.size(1));
     if (maxSize > MAX_SIZE) {
@@ -122,82 +161,7 @@ var limitImageSize = function (image, MAX_SIZE) {
     return image;
 }
 
-var superCanvas = function (id, onclick, onmousewheel) {
-    'use strict';
-    var canvas = $(id);
 
-    var getPosition = function (e, event) {
-        var left = 0, top = 0;
-        while (e.offsetParent !== undefined && e.offsetParent !== null) {
-            left += e.offsetLeft + (e.clientLeft !== null ? e.clientLeft : 0);
-            top += e.offsetTop + (e.clientTop !== null ? e.clientTop : 0);
-            e = e.offsetParent;
-        }
-        left = -left + event.pageX;
-        top = -top + event.pageY;
-        return [left, top];
-    };
-  
-    var click = function (e) {
-        var coord = getPosition(canvas, e);
-        if (onclick instanceof Function) {
-            onclick.bind(this)(coord, e);
-        }
-    };
-    var onMouseWheel = function (event) {
-        event.stopPropagation();
-        event.preventDefault();
-        var coord = getPosition(canvas, event);
-        var direction = 0;
-        if (event.hasOwnProperty('wheelDelta')) {
-            direction = -event.wheelDelta / 120.0;
-        } else {
-            direction = event.detail / 3.0;
-        }
-        if (onmousewheel instanceof Function) {
-            onmousewheel.bind(this)(direction * 0.01, coord, event);
-        }
-    };
-    canvas.addEventListener("click", click);
-    canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
-    canvas.addEventListener('mousewheel', onMouseWheel, false);
-};
-
-var readFile = function (file, callback, type) {
-    'use strict';
-    // Deal with arguments
-    type = (file.type || type).toLowerCase();
-    // File handling functions
-    var reader = new FileReader();
-    reader.onload = function (evt) {
-        callback = callback.bind(evt.target.result);
-        callback(evt, type);
-    };
-    switch (type) {
-    case 'image/jpeg':
-    case 'image/png':
-    case 'dataurl':
-    case 'url':
-        type = 'url';
-        reader.readAsDataURL(file);
-        break;
-    case 'text/csv':
-    case 'text/plain':
-    case 'text':
-    case 'txt':
-        type = 'txt';
-        reader.readAsText(file);
-        break;
-    case 'arraybuffer':
-    case 'binary':
-    case 'bin':
-        type = 'bin';
-        reader.readAsArrayBuffer(file);
-        break;
-    default:
-        throw new Error("readFile: unknown type " + type + ".");
-    }
-};
 
 navigator.sayswho = (function(){
     var ua = navigator.userAgent, tem,
