@@ -92,6 +92,7 @@
         testcs("LinearRGB", "XYZ");
         testcs("RGB", "RGB");
         testcs("LinearRGB", "rgY");
+        testcs("LinearRGB", "GRGBG");
         testcs("RGB", "HSV");
         testcs("RGB", "HSL");
         testcs("RGB", "HSI");
