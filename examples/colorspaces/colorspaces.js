@@ -982,10 +982,10 @@ window.onload = function () {
     };
 
     initFileUpload('loadFile', callback);
-    var outputCanvas = $("outputImage"), div = $("image");
-    outputCanvas.width = div.offsetWidth;
-    outputCanvas.height = div.offsetHeight;
-    canvas = new SuperCanvas(outputCanvas);//, onclick, onmousewheel);
+    // var outputCanvas = $("outputImage"), div = $("image");
+    // outputCanvas.width = div.offsetWidth;
+    // outputCanvas.height = div.offsetHeight;
+    canvas = new SuperCanvas("image");//, onclick, onmousewheel);
     hideFieldset();
     initInputs();
     initProcess();
