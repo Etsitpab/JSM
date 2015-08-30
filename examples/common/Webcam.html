@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Webcam</title>
+    <script type="text/javascript" src="Webcam.class.js"></script>
+    <script type="text/javascript">
+    <!--
+        // Shortcut for getElmtById
+        $ = function (str) {
+            return document.getElementById(str);
+        };
+
+        // TODO:
+        //  * GLEffect: store the function when using 'fromFunction'
+        //  * GLEffect: render to canvas with CSS transform:scale(1,-1)
+        //  * EffectUI class + nice interface
+    //-->
+    </script>
+  </head>
+  <body onload="$('content').appendChild(Webcam.std.videoElement)">
+    <input type="button" value="Start" onclick="Webcam.std.start()"/>
+    <input type="button" value="Resume" onclick="Webcam.std.resume()"/>
+    <input type="button" value="Capture!" onclick="Webcam.std.snapshot($('capture'))"/>
+    <input type="button" value="Pause" onclick="Webcam.std.pause()"/>
+    <input type="button" value="Stop" onclick="Webcam.std.stop()"/>
+    <div id="content"></div>
+    <div><canvas id="capture"></canvas></div>
+  </body>
+</html>

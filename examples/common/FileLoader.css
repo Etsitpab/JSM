@@ -1,0 +1,110 @@
+/* Slot formating */
+
+.js-fileslot {
+    display: inline-block;
+    overflow: hidden;
+    position: relative;     /* required for delete button positioning */
+    margin: 5px;            /* overwritten in js-fileslot-selected */
+    min-width: 80px;
+    width: 180px;
+    height: 120px;
+    line-height: 120px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.js-fileslot:hover {
+    cursor: pointer;
+}
+
+.js-fileslot .jsfs-delete-button {
+    cursor: default;
+    position: absolute;
+    border: none;
+    margin: 0px;
+    top: 1px;
+    right: 3px;
+    width: 21px;
+    height: 21px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAVCAQAAADs3AYjAAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQffBwoPBSy20ue1AAACRklEQVQoz12TT0iTARyG3337vm/ft32KSJqptBoEYk6iKOiSS6MQRBQPeSzoGB696KGDXSOwDtUtDGcgRnmoQ2ZCSsg6aFGWi/6CspgO/6zp3NPFYvY7vfA+vKfnJxXdYncqvplcz2VyW8nV+Ifu4s73N3xtrx14Ff2klFIqqEZVqtWp+VR/+HExrnTfW67TQQQXE4sgB+nkLgts9BVha71v6KAcAwc/AfwIA4ca+pmB3l2M2CythDCxsfHjw8LBxcaHQweLbMQkSb8nuyhBOISJYCJcRBl1OIgQl0hPSqL5CaWIEPsYYZgmbFwq6OEB53Dx4fGC7WbtDF7ExEVEyZFngmYOcI0MWW5jYmPSRn5QS4lKDESQKu4BG0xxm+9Akk4C2AQ4RCahdxlRggjip4E7FIBlYJbLuIQI4OExlzEynqmsTGVlaUHjWpVUqU1NaVQF+WRIKtM3zwisG8rLFZIO67w85SX5FFa9/CrI0I4MWet6n9iPi41FhPvkgNc8osAWwzQSIIRDDYsJIzB9UgVtydURdSmvZ7qlG3oqqUUt8gk5OqrqaTM81nb1pVBeSxrXloY0IVc3lVZEKzKEXDXJHJP0cfICDhZBTtCAhYlHiGOcpYpSgrSyMClJSsWeU4+DsDDxE8LDj42HhcdpRtiO/bPnITFcDCxsLFxKsbGp4AxDZHqLRPvVN0oPdQRxCOJhE+Q4Vxhnre8/w9PtywOJ6Bf90JIMlatajYrOV/SX7zV8d7c7G/+cnMnN5VaSa/Gfe37mD3STfLWdAVBVAAAAAElFTkSuQmCC);
+}
+
+
+/* Slot types / borders */
+
+.js-fileslot-dragover {
+    border: 2px dashed gray;
+}
+
+.js-fileslot-ghost {
+    border: 2px dotted lightgray;
+}
+
+.js-fileslot-ghost::after {
+    content: '+';
+    font-weight: bold;
+    font-size: 2em;
+}
+
+.js-fileslot-loading {
+    border: 1px solid blue;
+}
+
+.js-fileslot-loading::after {
+    content: '...';
+    font-weight: bold;
+}
+
+.js-fileslot-error {
+    border: 1px solid red;
+}
+
+.js-fileslot-error::after {
+    content: '!';
+    font-weight: bold;
+}
+
+.js-fileslot-invalid {
+    border: 1px solid red;
+    font-style: italic;
+}
+
+.js-fileslot-unknown {
+    border: 1px solid lightgray;
+}
+
+
+/* Format slot content */
+
+.js-fileslot * {
+    vertical-align: middle;
+}
+
+.js-fileslot-T-image {
+    width: auto;
+}
+
+.js-fileslot-T-text {
+    border: 1px solid black;
+}
+
+.js-fileslot-T-text pre {
+    overflow: hidden;
+    font-size: 0.5em;
+    margin: 3px;
+    width: 100%;
+    height: 100%;
+    text-align: left;
+    line-height: normal;
+    font-family: "Courier New", Courier, monospace;
+}
+
+
+/* Last: overwriting other properties */
+
+.js-fileslot-selected {
+    border: 3px solid limegreen;
+    margin: 2px;  /* overwrite fl-slot margin */
+}

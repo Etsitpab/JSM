@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Video Loader</title>
+    <link rel="stylesheet" type="text/css" href="FileLoader.css"/>
+    <script type="text/javascript" src="FileLoader.class.js"></script>
+    <script type="text/javascript" src="Webcam.class.js"></script>
+    <script type="text/javascript" src="FileLoader-Webcam.ext.js"></script>
+    <script type="text/javascript">
+    <!--
+        var FL;
+
+        // Shortcut for getElmtById
+        $ = function (str) {
+            return document.getElementById(str);
+        };
+
+        // Log any double-clicked elements
+        document.ondblclick = function (evt) {
+            console.log(evt.target);
+        }
+
+        // Initialize the demo
+        function init() {
+            FL = new FileLoader('dropzone', 0, 'image/*,video/*');
+            FL.appendWebcams();
+        }
+
+    //-->
+    </script>
+    <style type="text/css">
+        .js-fileloader {
+            padding: 5px;
+            border: 1px solid black;
+        }
+    </style>
+  </head>
+  <body onload="init()">
+    <div id="dropzone">
+      File loader not supported
+    </div>
+    <div id="content"></div>
+  </body>
+</html>

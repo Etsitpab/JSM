@@ -1,0 +1,164 @@
+optgroup:empty {
+    display: none;
+}
+
+input, select {
+    padding: 2px;
+}
+
+input[type=button] {
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+#menu input[type=text],
+#menu select {
+    min-width: 11em;
+    max-width: 90%;
+}
+
+#menu select {
+    max-height: 20em;
+}
+
+#outputs > p,
+#outputs > ul {
+    margin: 1em;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.small {
+    font-size: 0.8em;
+}
+
+.narrow {
+    padding-left: 0.5em !important;
+    padding-right: 0.5em !important;
+}
+
+.error {
+    color: darkred;
+}
+
+.error::first-line {
+    font-weight: bold;
+}
+
+.disabled-effect {
+    color: gray;
+}
+
+.param-button {
+    position:relative;
+    left:-3.5em;
+    opacity: 0.3;
+    background-color: transparent;
+}
+
+.param-button:hover {
+    opacity: 1;
+}
+
+#help-button {
+    margin-left: 1em;
+    margin-right: 1em;
+}
+
+
+/* Boxes format */
+
+body {
+    background-color: #fafafa;
+    margin: 0px;
+    padding: 0px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+body > div {
+    background-color: white;
+    margin: 6px;
+    padding: 3px;
+    border: 1px solid gray;
+}
+
+#editor {
+    display: none;
+}
+
+#outputs:empty::after {
+    content: 'Nothing to be displayed :(';
+    display: block;
+    margin: 1em;
+}
+
+#footer {
+    background-color: transparent;
+    border-color: lightgray;
+    color: gray;
+    text-align: center;
+}
+
+
+/* Movile vs. desktop (481+ and 768+) */
+
+@media only all and (max-width: 481px) {
+
+body > div {
+    margin: 2px !important;
+}
+
+#resizer {
+    display: none;
+}
+
+#menu {
+    width: 100% !important;
+}
+
+}
+
+@media only all and (min-width: 480px) {
+
+#menu {
+    top: 0px;
+    bottom: 0px;
+    z-index: +1;
+}
+
+#resizer {
+    position: absolute;
+    width: 4px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    background-color: #ddd;
+    /* border: 1px solid orange; */
+}
+
+#resizer:hover {
+    cursor: e-resize;
+    background-color: #aaa;
+}
+
+.left-column {
+    position: fixed;
+    overflow-x: hidden;
+    overflow-y: auto;
+    left: 0px;
+    width: 180px;
+}
+
+.right-column {
+    overflow-x: auto;
+    margin-left: 200px;  /* = left-column-width + 2 * (margin + padding + border) */
+}
+
+}

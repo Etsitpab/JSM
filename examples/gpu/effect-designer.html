@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>GPU Processing UI</title>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" type="text/css" href="../common/FileLoader.css"/>
+    <link rel="stylesheet" type="text/css" href="effect-designer.css"/>
+
+    <script type="text/javascript" src="GLEffect.class.js"></script>
+    <script type="text/javascript" src="GLEffect.more.js"></script>
+    <script type="text/javascript" src="../common/Shortcuts.object.js"></script>
+    <script type="text/javascript" src="../common/FileLoader.class.js"></script>
+    <script type="text/javascript" src="../common/Webcam.class.js"></script>
+    <script type="text/javascript" src="../common/FileLoader-Webcam.ext.js"></script>
+    <script type="text/javascript" src="EffectUI.class.js"></script>
+    <script type="text/javascript" src="effect-designer.js"></script>
+    <script type="text/javascript">
+        function $(id) {
+            return document.getElementById(id);
+        }
+    </script>
+
+  </head>
+  <body onload="init()">
+
+    <!-- Image set -->
+    <div id="images" class="right-column">Images</div>
+
+    <!-- Output image -->
+    <div id="outputs" class="right-column">
+      <p>
+        Load an image/video and import an effect to start the demo.
+        <input type="button" id="help-button" value="HELP" onclick="Effects.help()"/>
+      </p>
+      <p class="bold">What is this?</p>
+      <p>
+        This page allows you to write and run real-time effects on images and videos.
+        It is a graphical interface for the <tt>GLEffect</tt> and <tt>GLReduction</tt> classes.
+      </p>
+      <p class="bold">Known bugs:</p>
+      <ul class="small">
+        <li>Firefox throws an error when double-clicking the output, but the format/type pair is correct.</li>
+        <li>When loading mobile version then turning to desktop one, bug when resizing the menu.</li>
+      </ul>
+      <p class="bold">To do:</p>
+      <ul class="small">
+        <li class="italic" style="list-style-type: none">Nothing!</li>
+      </ul>
+    </div>
+
+    <!-- Effect list -->
+    <div id="menu" class="left-column">
+      <div>
+        <input type="text" id="chrono" disabled
+               title="Last running time of the set of effect"/>
+      </div>
+      <p>
+        <label for="effects">Effects</label>:<br/>
+        <select id="effects" size="4"
+                title="List of active filters (double-click to turn on/off)"
+                onchange="Effects.toHTML()"
+                ondblclick="Effects.toggle(event)">
+        </select><br/>
+        <input type="button" value="&#8657;" class="narrow"
+               title="Move first (Ctrl+Shift+PageUp)"
+               onclick="Effects.move(0, false)" />
+        <input type="button" value="&#8639;" class="narrow"
+               title="Move up (Ctrl+Shift+ArrowUp)"
+               onclick="Effects.move(-1, true)" />
+        <input type="button" value="&#8642;" class="narrow"
+               title="Move down (Ctrl+Shift+ArrowDown)"
+               onclick="Effects.move(+1, true)" />
+        <input type="button" value="&#8659;" class="narrow"
+               title="Move last (Ctrl+Shift+PageDown)"
+               onclick="Effects.move(-1, false)" />
+        <br/>
+        <select id="effect-samples"
+                title="Import predefined effects"
+                onchange="Effects.load()">
+          <option value="">Import...</option>
+        </select>
+      </p>
+      <p>
+        <label for="parameters">Parameters</label>:<br/>
+        <select id="parameters" size="4"
+                title="Parameters of the effects"
+                onchange="Effects.displayParameter()">
+        </select><br/>
+        <nobr>
+          <input type="text" id="parameter"/>
+          <input type="button" value="OK" class="narrow param-button"
+                 onclick="Effects.updateParameter()"/>
+          </nobr>
+      </p>
+      <p>
+        <label for="reduction">Reduction</label>:<br/>
+        <select id="reduction"
+                title="Reduce the image to a single RGBA value"
+                onchange="Effects.updateReduction()">
+          <option value="">none</option>
+        </select><br/>
+        <div id="reduction-RGBA" style="display: none">
+          <input type="text" id="reduction-R" disabled /><br/>
+          <input type="text" id="reduction-G" disabled /><br/>
+          <input type="text" id="reduction-B" disabled /><br/>
+          <input type="text" id="reduction-A" disabled />
+        </div>
+      </p>
+      <div id="resizer"></div>
+    </div>
+
+    <!-- Editing area -->
+    <div id="editor" class="right-column">
+      <input type="text" id="name" size="20" class="bold"
+             oninput="Effects.updateName()"/>
+      <input type="checkbox" id="enabled"
+             title="Toggle the effect"
+             onchange="Effects.toggle()"/>
+      <input type="button" value="Compile" class="bold" id="compileButton"
+             title="Compile the effect (Ctrl+Enter)"
+             onclick="Effects.fromHTML()"/>
+      <input type="button" value="Close"
+             title="Close and discard changes (Escap)"
+             onclick="Effects.stopEditing()"/>
+      <input type="button" value="Delete"
+             title="Delete the effect"
+             onclick="Effects.remove()"/><br/>
+      <input type="text" id="opts" size="40" disabled
+             title="Current options"/>
+      <input type="button" value="Set options..."
+             title="Set optional effect arguments"
+             onclick="Effects.promptOpts()"/><br/>
+      <textarea id="sourceCode" cols="80" rows="5"></textarea>
+    </div>
+
+    <!-- Footer -->
+    <div id="footer" class="right-column">
+      G. Tartavel &copy; 2015
+    </div>
+
+  </body>
+</html>
