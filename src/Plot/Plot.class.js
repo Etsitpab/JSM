@@ -3613,8 +3613,6 @@ var global = typeof window === 'undefined' ? module.exports : window;
         return this;
     };
 
-
-
     Plot.prototype.viewPatch = function (S, n, name, part) {
         'use strict';
         var p = this;
