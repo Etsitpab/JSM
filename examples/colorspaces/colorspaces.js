@@ -39,7 +39,6 @@ function updateOutput(image, init) {
     drawImageHistogram("histogram", image);
 }
 
-
 function initProcess () {
     "use strict";
     if (!window.Disk) {
@@ -107,7 +106,6 @@ function applyProcess (process) {
     updateOutput();
 };
 
-
 function apply (module, parameters) {
     "use strict";
 
@@ -132,7 +130,6 @@ function change (module, parameters) {
     updateOutput(fun(img, parameters));
     console.log("Applying module " + module + " in:", Tools.toc());
 }
-
 
 var undoRedo = function () {
     "use strict";
@@ -982,10 +979,8 @@ window.onload = function () {
     };
 
     initFileUpload('loadFile', callback);
-    // var outputCanvas = $("outputImage"), div = $("image");
-    // outputCanvas.width = div.offsetWidth;
-    // outputCanvas.height = div.offsetHeight;
-    canvas = new SuperCanvas("image");//, onclick, onmousewheel);
+    canvas = new SuperCanvas(document.body);
+    canvas.imageSmoothing(false);
     hideFieldset();
     initInputs();
     initProcess();
