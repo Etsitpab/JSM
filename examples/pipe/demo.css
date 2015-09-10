@@ -92,10 +92,10 @@ p {
 #ui {
     border-radius: 3px;
     background-color: #BBB;
-    padding-top: 10px;
+    padding: 10px;
     top: 10px;
     left: 10px;
-    width: 150px; 
+    width: 170px; 
     height: auto;
     position: fixed;
 }

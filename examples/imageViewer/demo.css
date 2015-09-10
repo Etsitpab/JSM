@@ -91,14 +91,13 @@ p {
 
 #ui {
     border-radius: 3px;
-    background-color: #FFF;
-    padding-top: 10px;
-    margin-top: 20px;
-    margin-left: 20px;
-    width: 150px; 
-    float: left;
+    background-color: #BBB;
+    padding: 10px;
+    top: 10px;
+    left: 10px;
+    width: 170px; 
     height: auto;
-    position: absolute;
+    position: fixed;
 }
 
 #interface {

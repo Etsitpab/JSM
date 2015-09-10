@@ -14,6 +14,7 @@
     <script type="text/javascript" src="../base.js"></script>
     <script type="text/javascript" src="colorMatrixEstimate.js"></script>
     <script type="text/javascript" src="demo.js"></script>
+    <script type="text/javascript" src="pipe.js"></script>
     <script src="../../min/drawHistogram.min.js"></script>
     <!--<link rel="stylesheet" type="text/css" href="../base.css" media="screen" />-->
     <link rel="stylesheet" type="text/css" href="demo.css" media="screen" />
@@ -27,11 +28,19 @@
     <div id="ui">
       <input type="file" id="loadFile" multiple/>
 
-      <input type="button" id="resetView" value="Reset View"/>
-      <label class="val" style="width:100%;"> Buffers</label>
-      <select id="buffers">
+      <label class="val" style="width:100%;">Zoom factor</label>
+      <select id="zoomFactor">
+        <option value="1"> 100% </option>
+        <option value="2"> 200% </option>
+        <option value="3"> 300% </option>
+        <option value="4"> 400% </option>
       </select>
-      
+      <input type="button" id="resetView" value="Reset View"/>
+
+      <label class="val" style="width:100%;"> Buffers</label>
+      <select id="buffers"></select>
+      <input type="button" id="resetBuffers" value="Reset buffers"/>
+
       <fieldset id="mouseActions">
         <legend> Mouse actions </legend>
         <label class="val" style="width:100%;"> Shift+selection</label>
@@ -64,8 +73,11 @@
       
       <fieldset id="pipeParameters">
         <legend> RAW statistics </legend>
-        <select id="channels">
-          <option value="All"> All </option>
+        <select id="measures"></select>
+        <input type="button" id="resetMeasures" value="Reset measures"/>
+
+        <select id="channelMeasures">
+          <!--<option value="All"> All </option>-->
           <option value="R">    R  </option>
           <option value="Gr">  Gr  </option>
           <option value="Gb">  Gb  </option>
@@ -73,16 +85,16 @@
         </select>
         
         <label class="val" style="width:30%;"> Mean </label>
-        <input type="text" style="width:65%;" id="scaleRVal" class="val" value="">
+        <input type="text" style="width:65%;" id="meanVal" class="val" value="">
         <br>
-        <label class="val" style="width:30%;"> &delta; </label>
-        <input type="text" style="width:65%;" id="scaleRVal" class="val" value="">
+        <label class="val" style="width:30%;"> &sigma; </label>
+        <input type="text" style="width:65%;" id="stdVal" class="val" value="">
         <br>
         <label class="val" style="width:30%;"> Min </label>
-        <input type="text" style="width:65%;" id="scaleBVal" class="val" value="">
+        <input type="text" style="width:65%;" id="minVal" class="val" value="">
         <br>
         <label class="val" style="width:30%;"> Max </label>
-        <input type="text" style="width:65%;" id="scaleBVal" class="val" value="">
+        <input type="text" style="width:65%;" id="maxVal" class="val" value="">
         <br>
       </fieldset>
       <hr></hr>          
