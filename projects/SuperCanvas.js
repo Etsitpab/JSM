@@ -68,8 +68,8 @@
         ctx.rect(x, y, w, h);
         ctx.stroke();
         ctx.restore();
-
     };
+
     var initEvent = function () {
         var onClick = function (event) {
             var coord = getPosition(this.canvas, event);
@@ -183,7 +183,13 @@
         this.canvas.addEventListener('mouseout', onMouseOut, false);
         window.addEventListener("resize", onResize);
     };
-    
+
+    // Determine whether or not the zoomed image is smoothed or not
+    SuperCanvas.prototype.imageSmoothing = function (bool) {
+        this.canvas.getContext("2d").imageSmoothingEnabled = bool;
+        this.update();
+    };
+
     SuperCanvas.prototype.zoom = function (x, y) {
         var z = Matrix.toMatrix([x, 0, 0, 0, y, 0, 0, 0, 1]).reshape([3, 3])
         this.matrix = z.mtimes(this.matrix);
@@ -199,7 +205,7 @@
     };
 
     SuperCanvas.prototype.mouseWheel = function (direction, coord) {
-        var scale = 1 - 4 * direction;
+        var scale = 1 - 10 * direction;
         this.translate(-coord[0], -coord[1]);
         this.zoom(scale, scale);
         this.translate(coord[0], coord[1]);
@@ -251,7 +257,7 @@
 
     SuperCanvas.prototype.update = function () {
         var ctx = this.canvas.getContext('2d');
-
+    
         // Clear the canvas
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -260,8 +266,10 @@
 
         // Draw the image
         var image = this.images[this.currentBuffer];
-        var c = this.matrix.get([0, 1]).getData();
-        ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
-        ctx.drawImage(image, 0, 0, image.width, image.height);
+        if (image) {
+            var c = this.matrix.get([0, 1]).getData();
+            ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
+            ctx.drawImage(image, 0, 0, image.width, image.height);
+        }
     };
 })();
