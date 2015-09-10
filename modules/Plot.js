@@ -3608,12 +3608,11 @@ var global = typeof window === 'undefined' ? module.exports : window;
         x.set(r);
         y.set(g);
         z.set(b);
+
         Matrix.Colorspaces['RGB to ' + diagram](data, N, N, 1, wp);
         this.addPath(x, y, defaultArgs);
         return this;
     };
-
-
 
     Plot.prototype.viewPatch = function (S, n, name, part) {
         'use strict';

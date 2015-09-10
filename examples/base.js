@@ -86,7 +86,20 @@ function hideFieldset() {
     }
 }
 
+var setElementOpacity = function (id, min, max) {
+    'use strict';
+    $(id).style.opacity = min;
+    $(id).addEventListener("mouseover", function () {
+        this.style.opacity = max;
+    });
+    $(id).addEventListener("mouseout", function () {
+        this.style.opacity = min;
+    });
+    
+};
+
 var initInputs = function () {
+    'use strict';
     var inputs = document.getElementsByTagName('input');
     var focus = function () {
         this.focus();
@@ -97,16 +110,17 @@ var initInputs = function () {
         }
     }
 };
+
 (function () {
+    'use strict';
     var readFile = function (file, callback) {
-        'use strict';
         // Deal with arguments
         var type = (file.type || "bin").toLowerCase();
         // File handling functions
         var reader = new FileReader();
         reader.onload = function (evt) {
             callback = callback.bind(evt.target.result);
-            callback(evt, type);
+            callback(evt, type, file);
         };
         switch (type) {
         case 'image/jpeg':
@@ -150,6 +164,7 @@ var initInputs = function () {
         $(id).addEventListener("change", read, false);
     };
 })();
+
 var limitImageSize = function (image, MAX_SIZE) {
     var maxSize = Math.max(image.size(0), image.size(1));
     if (maxSize > MAX_SIZE) {
@@ -164,6 +179,7 @@ var limitImageSize = function (image, MAX_SIZE) {
 
 
 navigator.sayswho = (function(){
+    "use strict";
     var ua = navigator.userAgent, tem,
         M = ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
     if (/trident/i.test(M[1])){
@@ -204,12 +220,21 @@ var initHelp = function () {
 var drawImageHistogram = function (id, image) {
     // Histograms
     if (image.size(2) === 3) {
-        var red_hist = image.get([], [], 0).imhist();
-        var green_hist = image.get([], [], 1).imhist();
-        var blue_hist = image.get([], [], 2).imhist();
+        var size = image.size(), nPixels = size[0] * size[1];
+        var data = image.getData();
+        var R = new Matrix([size[0], size[1]], data.subarray(0, nPixels)),
+            G = new Matrix([size[0], size[1]], data.subarray(nPixels, 2 * nPixels)),
+            B = new Matrix([size[0], size[1]], data.subarray(2 * nPixels, 3 * nPixels));
+        var red_hist = R.imhist();
+        var green_hist = G.imhist();
+        var blue_hist = B.imhist();
         var grey_hist = image.rgb2gray().imhist();
-        var M = Math.max(red_hist.max().getDataScalar(), green_hist.max().getDataScalar(),
-                         blue_hist.max().getDataScalar(), grey_hist.max().getDataScalar());
+        var M = Math.max(
+            red_hist.max().getDataScalar(),
+            green_hist.max().getDataScalar(),
+            blue_hist.max().getDataScalar(),
+            grey_hist.max().getDataScalar()
+        );
         $("histogram").drawHistogram(red_hist.getData(), M, "", undefined, 'red');
         $("histogram").drawHistogram(green_hist.getData(), M, "", undefined, 'green', false);
         $("histogram").drawHistogram(blue_hist.getData(), M, "", undefined, 'blue', false);
@@ -226,6 +251,7 @@ var addOption = function (select, value, text) {
     option.setAttribute('value', value);
     option.innerHTML = text;
     select = ($(select) || select).appendChild(option);
+    return option;
 };
 
 var createFieldset = function (title, properties) {

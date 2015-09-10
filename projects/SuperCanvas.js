@@ -19,12 +19,10 @@
 (function () {
     "use strict";
     
-    window.SuperCanvas = function (canvas) {
-        if (typeof canvas === 'string' && document.getElementById(canvas)) {
-            canvas = document.getElementById(canvas);
+    window.SuperCanvas = function (parent) {
+        if (typeof parent === 'string' && document.getElementById(parent)) {
+            parent = document.getElementById(parent);
         }
-        this.canvas = canvas;
-        this.getContext = this.canvas.getContext;
         this.images = [];
         this.currentBuffer = 0;
         this.coordinates = {
@@ -32,9 +30,17 @@
             previous: undefined,
             startSelection: undefined
         };
+        initCanvas.bind(this)(parent)
         initEvent.bind(this)();
     };
 
+    var initCanvas = function (parent) {
+        this.canvas = document.createElement("canvas");
+        parent.appendChild(this.canvas);
+        this.canvas.width = parent.offsetWidth;
+        this.canvas.height = parent.offsetHeight;
+    };
+    
     var getPosition = function (e, event) {
         var left = 0, top = 0;
         while (e.offsetParent !== undefined && e.offsetParent !== null) {
@@ -45,6 +51,23 @@
         left = -left + event.pageX;
         top = -top + event.pageY;
         return [left, top];
+    };
+
+    var drawRectangle = function (canvas, start, current) {
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.beginPath();
+        ctx.lineWidth = "2";
+        ctx.setLineDash([6]);
+        ctx.strokeStyle = "white";
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        var x = Math.min(start[0], current[0]),
+            y = Math.min(start[1], current[1]),
+            w = Math.abs(current[0] - start[0]),
+            h = Math.abs(current[1] - start[1]);
+        ctx.rect(x, y, w, h);
+        ctx.stroke();
+        ctx.restore();
     };
 
     var initEvent = function () {
@@ -79,26 +102,31 @@
         var onMouseDown = function (event) {
             event.stopPropagation();
             event.preventDefault();
-            this.coordinates.startSelection = getPosition(this.canvas, event);
-            this.coordinates.startSelection.clientX = event.clientX;
-            this.coordinates.startSelection.clientY = event.clientY;
-            this.coordinates.previous = this.coordinates.startSelection.slice();
+            var coords = this.coordinates;
+            coords.startSelection = getPosition(this.canvas, event);
+            coords.startSelection.clientX = event.clientX;
+            coords.startSelection.clientY = event.clientY;
+            coords.previous = coords.startSelection.slice();
+            if (event.shiftKey) {
+                this.selectionOccurs = true;
+            }
         }.bind(this);
         var onMouseMove = function (event) {
             event.stopPropagation();
             event.preventDefault();
-            var coord = getPosition(this.canvas, event);
+            var current = getPosition(this.canvas, event);
             var previous = this.coordinates.previous;
             if (previous === undefined) {
                 return;
             }
-            if (event.shiftKey) {
-                // this.updateSelectArea(oldCoord, newCoord);
-            } else {
-                // this.cancelSelectArea();
-                this.translate(coord[0] - previous[0], coord[1] - previous[1]);
+            if (this.selectionOccurs) {
+                var start = this.coordinates.startSelection;
                 this.update();
-                this.coordinates.previous = coord;
+                drawRectangle(this.canvas, start, current);
+            } else {
+                this.translate(current[0] - previous[0], current[1] - previous[1]);
+                this.update();
+                this.coordinates.previous = current;
             }
         }.bind(this);
         var onMouseUp = function (event) {
@@ -114,7 +142,7 @@
             // Else fire event mouseup
             } else {
                 var current = getPosition(this.canvas, event);
-                if (event.shiftKey) {
+                if (this.selectionOccurs) {
                     var matrix = this.matrix.inv();
                     var start = this.coordinates.startSelection;
                     start = Matrix.toMatrix([start[0], start[1], 1]);
@@ -127,16 +155,25 @@
                 } else  {
                     var previous = this.coordinates.previous;
                     this.translate(current[0] - previous[0], current[1] - previous[1]);
-                    this.update();
                 }
             }
+            this.update();
             this.coordinates.startSelection = undefined;
             this.coordinates.previous = undefined;
+            this.selectionOccurs = undefined;
             return false;
-        }.bind(this);;
-        var onMouseOut = function () {
+        }.bind(this);
+        var onMouseOut = function (event) {
             this.coordinates.startSelection = undefined;
             this.coordinates.previous = undefined;
+            this.selectionOccurs = false;
+        }.bind(this);
+        var onResize = function (event) {
+            var canvasXSize = this.canvas.parentNode.offsetWidth;
+            var canvasYSize = this.canvas.parentNode.offsetHeight;
+            this.canvas.width = canvasXSize;
+            this.canvas.height = canvasYSize;
+            this.update()
         }.bind(this);
         this.canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
         this.canvas.addEventListener('mousewheel', onMouseWheel, false);
@@ -144,8 +181,15 @@
         this.canvas.addEventListener('mousemove', onMouseMove, false);
         this.canvas.addEventListener('mouseup', onMouseUp, false);
         this.canvas.addEventListener('mouseout', onMouseOut, false);
+        window.addEventListener("resize", onResize);
     };
-    
+
+    // Determine whether or not the zoomed image is smoothed or not
+    SuperCanvas.prototype.imageSmoothing = function (bool) {
+        this.canvas.getContext("2d").imageSmoothingEnabled = bool;
+        this.update();
+    };
+
     SuperCanvas.prototype.zoom = function (x, y) {
         var z = Matrix.toMatrix([x, 0, 0, 0, y, 0, 0, 0, 1]).reshape([3, 3])
         this.matrix = z.mtimes(this.matrix);
@@ -161,7 +205,7 @@
     };
 
     SuperCanvas.prototype.mouseWheel = function (direction, coord) {
-        var scale = 1 - 4 * direction;
+        var scale = 1 - 10 * direction;
         this.translate(-coord[0], -coord[1]);
         this.zoom(scale, scale);
         this.translate(coord[0], coord[1]);
@@ -172,16 +216,17 @@
 
     SuperCanvas.prototype.setImageBuffer = function (image, buffer) {
         // Draw Image on a canvas
-        var canvas = document.createElement('canvas');
+        var canvas = document.createElement('canvas'),
+            context = canvas.getContext('2d');
         if (image instanceof Matrix) {
             var sz = image.size(), width = sz[1], height = sz[0];
             canvas.width = width;
             canvas.height = height;
-            canvas.getContext('2d').putImageData(image.getImageData(), 0, 0);
+            context.putImageData(image.getImageData(), 0, 0);
         } else if (image instanceof Image) {
             canvas.width = image.width;
             canvas.height = image.height;
-            canvas.getContext('2d').drawImage(image, 0, 0);
+            context.drawImage(image, 0, 0);
         }
 
         // Set image buffer
@@ -212,7 +257,7 @@
 
     SuperCanvas.prototype.update = function () {
         var ctx = this.canvas.getContext('2d');
-
+    
         // Clear the canvas
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -221,8 +266,10 @@
 
         // Draw the image
         var image = this.images[this.currentBuffer];
-        var c = this.matrix.get([0, 1]).getData();
-        ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
-        ctx.drawImage(image, 0, 0, image.width, image.height);
+        if (image) {
+            var c = this.matrix.get([0, 1]).getData();
+            ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
+            ctx.drawImage(image, 0, 0, image.width, image.height);
+        }
     };
 })();
