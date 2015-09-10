@@ -86,7 +86,20 @@ function hideFieldset() {
     }
 }
 
+var setElementOpacity = function (id, min, max) {
+    'use strict';
+    $(id).style.opacity = min;
+    $(id).addEventListener("mouseover", function () {
+        this.style.opacity = max;
+    });
+    $(id).addEventListener("mouseout", function () {
+        this.style.opacity = min;
+    });
+    
+};
+
 var initInputs = function () {
+    'use strict';
     var inputs = document.getElementsByTagName('input');
     var focus = function () {
         this.focus();
@@ -98,15 +111,15 @@ var initInputs = function () {
     }
 };
 (function () {
+    'use strict';
     var readFile = function (file, callback) {
-        'use strict';
         // Deal with arguments
         var type = (file.type || "bin").toLowerCase();
         // File handling functions
         var reader = new FileReader();
         reader.onload = function (evt) {
             callback = callback.bind(evt.target.result);
-            callback(evt, type);
+            callback(evt, type, file);
         };
         switch (type) {
         case 'image/jpeg':
@@ -164,6 +177,7 @@ var limitImageSize = function (image, MAX_SIZE) {
 
 
 navigator.sayswho = (function(){
+    "use strict";
     var ua = navigator.userAgent, tem,
         M = ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
     if (/trident/i.test(M[1])){
@@ -226,6 +240,7 @@ var addOption = function (select, value, text) {
     option.setAttribute('value', value);
     option.innerHTML = text;
     select = ($(select) || select).appendChild(option);
+    return option;
 };
 
 var createFieldset = function (title, properties) {
