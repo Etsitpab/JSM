@@ -1,10 +1,70 @@
 /*global console, document, Matrix, Colorspaces, CIE, open */
 /*jshint indent: 4, unused: true, white: true */
 
-var IMAGE, RAW, BUFFERS, MEASURES, SC;
+(function () {
+    "use strict";
+    /** This function returns a Vandermonde Matrix corresponding to
+    * to the provided vector.
+    * @param {Matrix} x 
+    * Vector used as basis to compute Vandermonde Matrix
+    * @param {Integer} degree 
+    * used to limit the size of the output.
+    */
+    Matrix.vander = function (x, degree) {
+        if (!x.isvector()) {
+            throw new Error("Matrix.vander: Input must be a vector.");
+        }
+        // Test if vector is provided
+        var id = x.getData(), N = id.length;
+        degree = degree === undefined ? N - 1 : degree;
+        var out = Matrix.zeros(N, degree + 1), od = out.getData();
+        for (var y = 0; y < N; y++) {
+            var tmp = 1;
+            for (var oxy = y + N * degree; oxy >= y; oxy -= N) {
+                od[oxy] = tmp;
+                tmp *= id[y];
+            }
+        }
+        return out;
+    };
+    Matrix.prototype.vander = function (degree) {
+        return Matrix.vander(this, degree);
+    };
+    
+    Matrix.polyfit = function (x, y, degree) {
+        // x = x["-"](x.mean())["./"](x.std());
+        return x.vander(degree).mldivide(y);
+    };
+
+    Matrix.polyval = function (p, x) {
+        x = Matrix.toMatrix(x);
+        p = Matrix.toMatrix(p);
+        if (!p.isvector()) {
+            throw new Error("Matrix.polyval: Parameter \"p\" must be a vector.");
+        }
+        if (!x.isvector()) {
+            throw new Error("Matrix.polyval: Parameter \"x\" must be a vector.");
+        }
+        return x.vander(p.numel() - 1).mtimes(p);
+    };
+
+    /*  
+    for (var np = 1; np < 10; np++) {
+        for (var i = 0; i < 10; i++) {
+            var N = 10000 + Math.floor(Math.random() * 50)
+            var p = Matrix.randi([-100, 100], np, 1);
+            var x = Matrix.colon(1, N), y = Matrix.polyval(p, x);
+            var pp = Matrix.polyfit(x, y, p.numel() - 1);
+            console.log(N, np, p['-'](pp).abs().mean().getDataScalar());
+        }
+    }*/
+
+})();
+
+var IMAGE, RAW, BUFFERS, MEASURES = [], SC;
 var diagram = "xyY", addScatter = false;
 var parameters = {
-    'bp': 200,
+    'bp': 212,
     'awbScales': [1.8, 1.5],
     // IMX 135
     /*'colorMatrix': [
@@ -40,7 +100,7 @@ function updateOutput(image, noinit, buffer) {
     SC.setImageBuffer(image, buffer);
     SC.displayImageBuffer(buffer, noinit);
     console.log("Image displayed in", Tools.toc(), "ms");
-    // drawImageHistogram("histogram", image);
+    drawImageHistogram("histogram", image);
 }
 
 var develop = function () {
@@ -74,8 +134,6 @@ var initParameters = function () {
     $("gainVal").addEventListener("change", changeParameters);
     $("develop").addEventListener("click", develop);
 };
-
-
 
 var wbTuningFromMeasures = function () {
     var p01 = MEASURES[0].scales,
@@ -114,18 +172,18 @@ var wbTuningFromMeasures = function () {
     }   
 };
 
-
 var initPlot = function () {
     'use strict';
-
     var plotProperties = {
         'ticks-display': false,
         'preserve-ratio': true
     };
-    var plot = new Plot('plotSVG', [$('plot').clientWidth - 20, $('plot').clientHeight - 20], 'plot', plotProperties);
+    var plot = new Plot('plotSVG', [$('plot1').clientWidth - 20, $('plot1').clientHeight - 20], 'plot1', plotProperties);
     plot.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
     plot.remove("Standards illuminants");
     plot.remove("Spectrum locus");
+
+    var plot2 = new Plot('plotNoise', [$('plot2').clientWidth - 20, $('plot2').clientHeight - 20], 'plot2').setXLabel("Mean").setYLabel("Std.");
 };
 
 var initSuperCanvas = function () {
@@ -155,7 +213,6 @@ var initSuperCanvas = function () {
     };
     
     SC = new SuperCanvas(document.body);
-    SC.imageSmoothing(false);
 
     SC.selectArea = function (start, end) {
         var x1 = start[0], y1 = start[1], x2 = end[0], y2 = end[1];
@@ -190,6 +247,7 @@ var initSuperCanvas = function () {
             console.log("Measure done !");
         }
         plotScatter(x1, y1, x2, y2);
+        plotNoise();
         if ($V("Shift+click") === "wb") {
             parameters.awbScales = scales;
             $V("awbScalesVal", parameters.awbScales[0].toFixed(4) + ", " + parameters.awbScales[1].toFixed(4));
@@ -208,14 +266,64 @@ var setMeasure = function (n) {
     } else {
     }
 };
-    
+
+var plotNoise = function () {
+    var p = $('plotNoise').getPlot().clear();
+    if (MEASURES.length > 1) {
+        var R = [], Gr = [], Gb = [], B = [];
+        var concat = function(v, i, t) {
+            Gr.push(t[i].mean[0], t[i].std[0]);
+            R.push(t[i].mean[1], t[i].std[1]);
+            B.push(t[i].mean[2], t[i].std[2]);
+            Gb.push(t[i].mean[3], t[i].std[3]);
+        };
+        MEASURES.forEach(concat);
+        Gr = Matrix.toMatrix(Gr).reshape(2, MEASURES.length).transpose();
+        R = Matrix.toMatrix(R).reshape(2, MEASURES.length).transpose();
+        B = Matrix.toMatrix(B).reshape(2, MEASURES.length).transpose();
+        Gb = Matrix.toMatrix(Gb).reshape(2, MEASURES.length).transpose();
+        var ALL = Gr.cat(0, R, B, Gb);
+        var order;
+        order = Gr.asort(0, 'ascend').get([], 0);
+        Gr = Gr.get(order, []);
+        order = R.asort(0, 'ascend').get([], 0);
+        R = R.get(order, []);
+        order = B.asort(0, 'ascend').get([], 0);
+        B = B.get(order, []);
+        order = Gb.asort(0, 'ascend').get([], 0);
+        Gb = Gb.get(order, []);
+        order = ALL.asort(0, 'ascend').get([], 0);
+        ALL = ALL.get(order, []);
+        //p.addPath(Gr.get([], 0).getData(), Gr.get([], 1).getData());
+        // p.addPath(R.get([], 0).getData(), R.get([], 1).getData());
+        // p.addPath(B.get([], 0).getData(), B.get([], 1).getData());
+        // p.addPath(Gb.get([], 0).getData(), Gb.get([], 1).getData());
+        var scatterProperties = {
+            'stroke': 'none',
+            'marker': {
+                'shape': 'circle',
+                'fill': 'red',
+                'stroke': 'none',
+            }
+        };        
+        p.addPath(ALL.get([], 0).getData(), ALL.get([], 1).getData(), scatterProperties);
+        
+        var coefs = Matrix.polyfit(ALL.get([], 0), ALL.get([], 1).power(2), 2);
+        coefs.display();
+        var fit = Matrix.polyval(coefs, ALL.get([], 0)).sqrt();
+        if (MEASURES.length > 7) {
+            p.addPath(ALL.get([], 0).getData(), fit.getData(), {'stroke': "black"});
+        }
+    }
+};
 window.onload = function () {
     "use strict";
     initInputs();
     initSuperCanvas();
     initPlot();
     initParameters();
-   
+    $S("ui", "top", 10);
+
     $("buffers").addEventListener("change", function () {
         SC.currentBuffer = $I("buffers");
         SC.update();
@@ -227,7 +335,8 @@ window.onload = function () {
     
    
     $("zoomFactor").addEventListener("click", function () {
-        var coord = [SC.canvas.width / 2, SC.canvas.height / 2], scale = parseInt(this.value);
+        var coord = [SC.canvas.width / 2, SC.canvas.height / 2],
+            scale = parseInt(this.value);
         SC.translate(-coord[0], -coord[1]);
         var currentScaleFactor = SC.matrix.diag().display().getData();
         SC.zoom(scale / currentScaleFactor[0], scale / currentScaleFactor[1]);
@@ -249,6 +358,7 @@ window.onload = function () {
     
     $("resetMeasures").addEventListener("click", function () {
         MEASURES = [];
+        var p = $('plotNoise').getPlot().clear();
         $("measures").innerHTML = "";
     });
 
@@ -261,7 +371,6 @@ window.onload = function () {
             RAW = readRAW(this).double();
             BUFFERS.push(RAW);
             console.log("RAW of size", RAW.size(), "read in", Tools.toc(), "ms");
-            MEASURES = [];
             Tools.tic();
             IMAGE = processRaw(RAW.getCopy());
             console.log("Image processed in", Tools.toc(), "ms");
@@ -283,7 +392,15 @@ window.onload = function () {
         updateOutput(IMAGE);
     };
     initFileUpload("loadFile", callback, callbackInit);
-
-    setElementOpacity("ui", 0.2, 1);
-    setElementOpacity("plot", 0.0, 1);
+    /*
+    var x = Matrix.linspace(0, 24, 100);
+    var y = x.getCopy().sin(x);
+    var p = Matrix.polyfit(x, y, 11);
+    var x1 = Matrix.linspace(0,24, 100);
+    var y1 = Matrix.polyval(p, x1);    
+    var plot = $('plotNoise').getPlot().clear();
+    plot.addPath(x.getData(), y.getData());
+    plot.addPath(x1.getData(), y1.getData(), {'stroke': "black"});*/
+    // setElementOpacity("ui", 0.2, 1);
+    // setElementOpacity("plot", 0.0, 1);
 };

@@ -1,4 +1,56 @@
 (function (global) {
+    'use strict';
+    
+    global.testAnscombe = function () {
+        Matrix.prototype.vst = function (order, a, b, c, anscombe) {
+            anscombe = anscombe || true;
+            var g = b / (1 + a);
+            var n2 = c / (g * g) + ((anscombe === true) ? 3.0 / 8.0 : 0.0)
+            var z = this.getData(), ig = 1 / g;
+            var sqrt = Math.sqrt, log = Math.log;
+            if (order === 2 || a === 0) { 
+                for (var x = 0, ex = z.length; x < ex; x++) {
+                    var y = z[x] < 0 ? 0 : z[x] * ig;
+                        z[x] = 2.0 * sqrt(y + n2);
+                } 
+            } else {
+                for (var x = 0, ex = z.length; x < ex; x++) {
+                    var y = z[x] < 0 ? 0 : z[x] * ig;
+                    z[x] = 1.0 / sqrt(a) * log(2.0 * a * y + (1.0 + a) + 2.0 * sqrt(a) * sqrt(a * y * y + (1.0 + a) * y + n2));
+                }
+            }
+            return this;
+        };
+        Matrix.prototype.ivst = function (order, a, b, c, anscombe) {
+            anscombe = anscombe || true;
+            return this;
+        };
+        var imRand = function (z, a, b, c) {
+            var g = b / (1 + a);
+            var n2 = c / (g * g);
+            var y = Matrix.rdivide(z, g);
+            var size = z.getSize();
+            var x = Matrix.poissrnd(y);
+            var eps = Matrix.randn(size).times(Math.sqrt(a));
+            var n = Matrix.randn(size).times(Math.sqrt(n2));
+            return eps.plus(1).times(x).plus(n).times(g);
+        };
+
+        var imVariance = function (z, a, b, c) {
+            return Matrix.power(z, 2).times(a).plus(Matrix.times(z, b)).plus(c).sqrt();
+        };
+
+        var a = 1e-5, b = 2, c = 1e-2; 
+        var im = Matrix.ones(1024, 4096).cumsum(0).times(1);
+        var out = imRand(im, a, b, c);
+        SC.setImageBuffer(Matrix.rdivide(out, 1024)); SC.displayImageBuffer(0, false);
+        var vstab = out.getCopy().vst(3, a, b, c).std(1);
+        var var1 = out.std(1),
+            var2 = imVariance(Matrix.ones(1024, 1).cumsum(0).times(1), a, b, c); 
+        var1.cat(1, var2, vstab).display();
+        vstab.mean().display();
+    };
+    
     global.readRAW = function (RAW) {
         'use strict';
         var tab2char = function (tab) {
@@ -73,21 +125,6 @@
                 Bo[yx + ny + 1] = 0.5 * (b1 + B[ij + ni]);
             }                
         }
-        return out;
-    };
-
-    Matrix.prototype.demosaicTrivial = function () {
-        var size = this.size();
-        var ni = size[0], nj = size[1],
-            ny = ni, nx = nj;
-        var Gr = this.get([], [], 0),
-            R  = this.get([], [], 1),
-            B  = this.get([], [], 2),
-            Gb = this.get([], [], 3);
-        var out = Matrix.zeros(ny, nx, 3);
-        out.set([], [], 1, Gr['+'](Gb)['/='](2));
-        out.set([], [], 0, R);
-        out.set([], [], 2, B);
         return out;
     };
 

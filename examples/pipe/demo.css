@@ -100,16 +100,24 @@ p {
     position: fixed;
 }
 
-#plot {
+.plot {
     border-radius: 3px;
     background-color: #BBB;
     padding: 10px;
     
-    top:10px;
-    right:10px;
     width: 360px; 
     height: 270px;
     position: fixed;
+}
+
+#plot1 {
+    top:10px;
+    right:10px;
+}
+
+#plot2 {
+    top:310px;
+    right:10px;
 }
 
 #interface {
@@ -130,12 +138,6 @@ p {
     overflow: auto;
     margin-bottom: 2px;
     margin-left: 0px;
-}
-
-#outputImage {
-    image-rendering: pixelated;
-    position: absolute;
-    z-index: 0;
 }
 
 hr {

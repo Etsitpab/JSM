@@ -133,5 +133,4 @@ window.onload = function () {
     var callback = function (evt, type) {
     };
     SC = new SuperCanvas(document.body);
-    SC.imageSmoothing(false);
 };
