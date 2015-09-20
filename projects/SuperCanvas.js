@@ -30,15 +30,20 @@
             previous: undefined,
             startSelection: undefined
         };
+        // Determine whether or not the zoomed image is smoothed or not
+        this.imageSmoothing = false;
         initCanvas.bind(this)(parent)
         initEvent.bind(this)();
     };
 
     var initCanvas = function (parent) {
-        this.canvas = document.createElement("canvas");
-        parent.appendChild(this.canvas);
-        this.canvas.width = parent.offsetWidth;
-        this.canvas.height = parent.offsetHeight;
+        if (parent !== undefined) {
+            this.canvas = document.createElement("canvas");
+            parent.appendChild(this.canvas);
+        }
+        this.canvas.width = this.canvas.parentNode.offsetWidth;
+        this.canvas.height = this.canvas.parentNode.offsetHeight;
+        this.canvas.getContext('2d').imageSmoothingEnabled = this.imageSmoothing;
     };
     
     var getPosition = function (e, event) {
@@ -169,10 +174,7 @@
             this.selectionOccurs = false;
         }.bind(this);
         var onResize = function (event) {
-            var canvasXSize = this.canvas.parentNode.offsetWidth;
-            var canvasYSize = this.canvas.parentNode.offsetHeight;
-            this.canvas.width = canvasXSize;
-            this.canvas.height = canvasYSize;
+            initCanvas.bind(this)();
             this.update()
         }.bind(this);
         this.canvas.addEventListener('DOMMouseScroll', onMouseWheel, false);
@@ -182,12 +184,6 @@
         this.canvas.addEventListener('mouseup', onMouseUp, false);
         this.canvas.addEventListener('mouseout', onMouseOut, false);
         window.addEventListener("resize", onResize);
-    };
-
-    // Determine whether or not the zoomed image is smoothed or not
-    SuperCanvas.prototype.imageSmoothing = function (bool) {
-        this.canvas.getContext("2d").imageSmoothingEnabled = bool;
-        this.update();
     };
 
     SuperCanvas.prototype.zoom = function (x, y) {

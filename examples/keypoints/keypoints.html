@@ -9,84 +9,75 @@
 
     <script src="../../projects/drawHistogram.js"></script>
     <script src="../../projects/Math.object.js"></script>
+    <script src="../../projects/SuperCanvas.js"></script>
 
     <script src="../base.js"></script> 
     <script src="keypoints.js"></script> 
 
     <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
-    <title></title>
+    <title>Keypoints Detection</title>
   </head>
 
   <body>
 
-    <div id="demo">
-      <h1>Keypoints Detection</h1>
-      <input type="file" id="loadFile"/>
-      <div id="interface">
-        
-        <div id="ui">
-          <input type="button" value="Export Image" onclick="exportImage();" />
-          <input type="button" value="Export keypoints" onclick="exportKeypoints();" />
-          <hr></hr>
-          <fieldset id="scalespace">
-            <legend>Scalespace</legend>
-            <label> Sigma initial: </label>
-            <input type="range" id="sigmaInit" min="0.4" step="0.1" max="1.5" value="0.63"/>
-            <label> Scale ratio: </label>
-            <input type="range" id="scaleRatio" min="1.05" step="0.05" max="1.40" value="1.26"/>
-            <label> Scale number: </label>
-            <input type="range" id="scaleNumber" min="3" step="1" max="20" value="13"/>
-            <hr></hr>
-            <input type="button" value="Compute" id="computeScaleSpace">
-          </fieldset>
-
-          <fieldset id="keypoints detection">
-            <legend>Keypoints detection</legend>
-            <label> Laplacian threshold: </label>
-            <input type="range" id="lapThresh" min="0" step="0.001" max="0.01" value="0.004"/>
-            <label> Harris threshold: </label>
-            <input type="range" id="harrisThresh" min="0" step="1000" max="20000" value="10000"/>
-            <label> Orientation algorithm: </label>
-            <select id="orientation">
-              <option value="max"> MAX </option>
-              <option value="ac"> A CONTRARIO </option>
-            </select>
-            <hr></hr>
-            <input type="button" value="Compute orientations" id="computeOrientations">
-          </fieldset>
-
-          <fieldset id="image view">
-            <legend>Image View</legend>
-            <label> Scale: </label>
-            <input type="range" id="scaleView" min="1" step="1" max="11" value="1"/>
-            <label> Keypoint: </label>
-            <input type="range" id="keypoint" min="1" step="1" max="1" value="1"/>
-            <canvas id="histogram" style="width:100%"></canvas>
-            <label> Scale: </label>
-            <select id="filter">
-              <option value="blur"> RGB </option>
-              <option value="gray"> GREY </option>
-              <option value="norm"> NORM </option>
-              <option value="phase"> PHASE </option>
-              <option value="hybrid"> NORM / PHASE </option>
-	      <option value="laplacian"> LAPLACIAN </option>	
-            </select>
-            <select id="colormap">
-              <option value="GRAY"> GRAY </option>
-              <option value="JET"> JET </option>
-              <option value="HUE"> HUE </option>
-            </select>
-          </fieldset>
-
-          <hr></hr>
-
-        </div>
-        <div id="image">
-          <canvas id="outputImage"></canvas>
-        </div>
-      </div>
-
+    <input type="file" id="loadFile"/>
+    <div id="ui">
+      <input type="button" value="Export Image" onclick="exportImage();" />
+      <input type="button" value="Export keypoints" onclick="exportKeypoints();" />
+      <hr></hr>
+      <fieldset id="scalespace">
+        <legend>Scalespace</legend>
+        <label> Sigma initial: </label>
+        <input type="range" id="sigmaInit" min="0.4" step="0.1" max="1.5" value="0.63"/>
+        <label> Scale ratio: </label>
+        <input type="range" id="scaleRatio" min="1.05" step="0.05" max="1.40" value="1.26"/>
+        <label> Scale number: </label>
+        <input type="range" id="scaleNumber" min="3" step="1" max="20" value="13"/>
+        <hr></hr>
+        <input type="button" value="Compute" id="computeScaleSpace">
+      </fieldset>
+      
+      <fieldset id="keypoints detection">
+        <legend>Keypoints detection</legend>
+        <label> Laplacian threshold: </label>
+        <input type="range" id="lapThresh" min="0" step="0.001" max="0.01" value="0.004"/>
+        <label> Harris threshold: </label>
+        <input type="range" id="harrisThresh" min="0" step="1000" max="20000" value="10000"/>
+        <label> Orientation algorithm: </label>
+        <select id="orientation">
+          <option value="max"> MAX </option>
+          <option value="ac"> A CONTRARIO </option>
+        </select>
+        <hr></hr>
+        <input type="button" value="Compute orientations" id="computeOrientations">
+      </fieldset>
+      
+      <fieldset id="image view">
+        <legend>Image View</legend>
+        <label> Scale: </label>
+        <input type="range" id="scaleView" min="1" step="1" max="11" value="1"/>
+        <label> Keypoint: </label>
+        <input type="range" id="keypoint" min="1" step="1" max="1" value="1"/>
+        <canvas id="histogram" style="width:100%"></canvas>
+        <label> Scale: </label>
+        <select id="filter">
+          <option value="blur"> RGB </option>
+          <option value="gray"> GREY </option>
+          <option value="norm"> NORM </option>
+          <option value="phase"> PHASE </option>
+          <option value="hybrid"> NORM / PHASE </option>
+	  <option value="laplacian"> LAPLACIAN </option>	
+        </select>
+        <select id="colormap">
+          <option value="GRAY"> GRAY </option>
+          <option value="JET"> JET </option>
+          <option value="HUE"> HUE </option>
+        </select>
+      </fieldset>
+      
+      <hr></hr>
+      
     </div>
-
-  </body>
+    
+</body>
 </html>

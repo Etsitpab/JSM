@@ -119,8 +119,7 @@ var initInputs = function () {
         // File handling functions
         var reader = new FileReader();
         reader.onload = function (evt) {
-            callback = callback.bind(evt.target.result);
-            callback(evt, type, file);
+            callback.bind(evt.target.result)(evt, type, file);
         };
         switch (type) {
         case 'image/jpeg':
@@ -217,32 +216,82 @@ var initHelp = function () {
     return displayHelp;
 };
 
-var drawImageHistogram = function (id, image) {
+var drawImageHistogram = function (id, image, bins) {
+    var computeHistograms = function (image, bins) {
+        bins = bins || 256;
+        var data = image.getData();
+        var size = image.size(), nPixels = size[0] * size[1];
+        var hist = Matrix.zeros(bins, 1), hd = hist.getData();
+        var R = data.subarray(0, nPixels),
+            G = data.subarray(nPixels, 2 * nPixels),
+            B = data.subarray(2 * nPixels, 3 * nPixels);
+        var histR = Matrix.zeros(bins, 1), hrd = histR.getData(),
+            histG = Matrix.zeros(bins, 1), hgd = histG.getData(),
+            histB = Matrix.zeros(bins, 1), hbd = histB.getData(),
+            hist = Matrix.zeros(bins, 1), hd = hist.getData();
+        
+        var i, ie, cst = bins, cst2 = bins / 3;
+        for (i = 0, ie = nPixels; i < ie; i++) {
+            var iR = R[i], iG = G[i], iB = B[i],
+                iGray = iR + iG + iB;
+            if (iR < 0) {
+                hrd[0]++;
+            } else if(iR >= 1) {
+                hrd[bins - 1]++;
+            } else { 
+                hrd[iR * cst | 0]++;
+            }
+            if (iG < 0) {
+                hgd[0]++;
+            } else if(iG >= 1) {
+                hgd[bins - 1]++;
+            } else { 
+                hgd[iG * cst | 0]++;
+            }
+            if (iB < 0) {
+                hbd[0]++;
+            } else if(iB >= 1) {
+                hbd[bins - 1]++;
+            } else { 
+                hbd[iB * cst | 0]++;
+            }
+            if (iGray < 0) {
+                hd[0]++;
+            } else if(iGray >= 3) {
+                hd[bins - 1]++;
+            } else { 
+                hd[(iGray * cst2) | 0]++;
+            }
+        }
+        var M = Math.max(
+            histR.max().getDataScalar(),
+            histG.max().getDataScalar(),
+            histB.max().getDataScalar(),
+            hist.max().getDataScalar()
+        );
+        return {
+            R: histR.getData(),
+            G: histG.getData(),
+            B: histB.getData(),
+            gray: hist.getData(),
+            max: M
+        };
+    };
+    var cnv = $(id);
+    Tools.tic();
     // Histograms
     if (image.size(2) === 3) {
-        var size = image.size(), nPixels = size[0] * size[1];
-        var data = image.getData();
-        var R = new Matrix([size[0], size[1]], data.subarray(0, nPixels)),
-            G = new Matrix([size[0], size[1]], data.subarray(nPixels, 2 * nPixels)),
-            B = new Matrix([size[0], size[1]], data.subarray(2 * nPixels, 3 * nPixels));
-        var red_hist = R.imhist();
-        var green_hist = G.imhist();
-        var blue_hist = B.imhist();
-        var grey_hist = image.rgb2gray().imhist();
-        var M = Math.max(
-            red_hist.max().getDataScalar(),
-            green_hist.max().getDataScalar(),
-            blue_hist.max().getDataScalar(),
-            grey_hist.max().getDataScalar()
-        );
-        $("histogram").drawHistogram(red_hist.getData(), M, "", undefined, 'red');
-        $("histogram").drawHistogram(green_hist.getData(), M, "", undefined, 'green', false);
-        $("histogram").drawHistogram(blue_hist.getData(), M, "", undefined, 'blue', false);
-        $("histogram").drawHistogram(grey_hist.getData(), M, "", undefined, 'grey', false);
+        var histograms = computeHistograms(image);
+        var max = histograms.max;
+        cnv.drawHistogram(histograms.R, max, "", undefined, 'red');
+        cnv.drawHistogram(histograms.G, max, "", undefined, 'green', false);
+        cnv.drawHistogram(histograms.B, max, "", undefined, 'blue', false);
+        cnv.drawHistogram(histograms.gray, max, "", undefined, 'grey', false);
     } else {
         var hist = image.imhist();
-        $("histogram").drawHistogram(hist.getData(), hist.max().getData(), "", undefined, 'grey');
+        cnv.drawHistogram(hist.getData(), hist.max().getData(), "", undefined, 'grey');
     }
+    console.log("Histogram plotted in", Tools.toc(), "ms");
 };
 
 var addOption = function (select, value, text) {

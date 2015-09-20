@@ -980,7 +980,6 @@ window.onload = function () {
 
     initFileUpload('loadFile', callback);
     canvas = new SuperCanvas(document.body);
-    canvas.imageSmoothing(false);
     hideFieldset();
     initInputs();
     initProcess();
