@@ -1,5 +1,4 @@
 #images {
-
     display: block;
     height: 50px;
     border: 1px solid #e6e6e6;
@@ -42,15 +41,4 @@
     height: auto;
     position: fixed;
     display: inline-block;
-}
-
-#image {
-    width: calc(100% - 290px);
-    height: calc(100% - 20px);
-}
-
-#interface {
-    display: block;
-    width: 100%;
-    height: calc(100% - 120px);
 }

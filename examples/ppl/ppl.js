@@ -6,7 +6,7 @@ var addScatter = false;
 var imgOrig;
 var imgCurrent;
 var MAX_SIZE = 1200;
-
+var imagePlot;
 
 var colorsName = [
     "red", "lime", "blue", "yellow",
@@ -40,11 +40,8 @@ var colorsName = [
  */
 function displayImage(im) {
     'use strict';
-    var dataURL = im.toImage(function () {
-        var image = $('workingImage');
-        image.setAttributeNS('http://www.w3.org/1999/xlink',
-			     'xlink:href', dataURL.src);
-    });
+    imagePlot.setImageBuffer(im, 0);
+    imagePlot.displayImageBuffer(0);
 }
 
 function setImage(im) {
@@ -126,7 +123,6 @@ function changeIlluminant(input) {
 function reset() {
     'use strict';
     setImage(imgOrig.getCopy());
-    $('imagePlot').getPlot().setAxis();
 }
 
 function exportImage() {
@@ -139,8 +135,8 @@ function exportImage() {
 function plotScatter(x1, y1, x2, y2) {
     'use strict';
     var min = Math.min, max = Math.max, round = Math.round;
-    var Y1 = round(max(min(-y1, -y2), 0));
-    var Y2 = round(min(max(-y1, -y2), imgCurrent.getSize(0) - 1));
+    var Y1 = round(max(min(y1, y2), 0));
+    var Y2 = round(min(max(y1, y2), imgCurrent.getSize(0) - 1));
     var X1 = round(max(min(x1, x2), 0));
     var X2 = round(min(max(x2, x2), imgCurrent.getSize(1) - 1));
     var subIm = imgCurrent.get([Y1, Y2], [X1, X2]);
@@ -161,50 +157,47 @@ function plotScatter(x1, y1, x2, y2) {
 
 function callback(image) {
     'use strict';
-
     image = limitImageSize(image, MAX_SIZE);
     imgOrig = image.im2double();
     imgCurrent = image.im2double();
-
     
     $('outputStdIll').selectedIndex = 5; // D65
-    var imagePlot = $('imagePlot').getPlot().clear();
-    imgCurrent.toImage(function () {
-        imagePlot.addImage(this, 0, 0, {id: 'workingImage'});
-    });
+    imagePlot.setImageBuffer(image, 0);
+    imagePlot.displayImageBuffer(0);
 }
 
 var selectAction = function () {
     var action = $V('selectAction');
-    var imagePlot = $('imagePlot').getPlot();
     if (action === "scatter") {
         imagePlot.selectarea = plotScatter;
     } else if (action === "wp") { 
-        imagePlot.selectarea = estimateWhiteRef;
+        imagePlot.selectArea = estimateWhiteRef;
     } else if (action === "chart") {
-        imagePlot.selectarea = removeWhiteChart;
+        imagePlot.selectArea = removeWhiteChart;
     }
 };
 
-var removeWhiteChart = function (x1, y1, x2, y2) {
+var removeWhiteChart = function (start, end) {
     'use strict';
+    var x1 = start[0], y1 = start[1], x2 = end[0], y2 = end[1];
     var m = Math.min, M = Math.max, r = Math.round;
-    var Y1 = r(M(m(-y1, -y2), 0));
-    var Y2 = r(m(M(-y1, -y2), imgCurrent.getSize(0) - 1));
+    var Y1 = r(M(m(y1, y2), 0));
+    var Y2 = r(m(M(y1, y2), imgCurrent.getSize(0) - 1));
     var X1 = r(M(m(x1, x2), 0));
     var X2 = r(m(M(x2, x2), imgCurrent.getSize(1) - 1));
     imgCurrent.set([Y1, Y2], [X1, X2], 0);
     setImage();
 };
 
-var estimateWhiteRef = function (x1, y1, x2, y2) {
+var estimateWhiteRef = function (start, end) {
     'use strict';
+    var x1 = start[0], y1 = start[1], x2 = end[0], y2 = end[1];
     var m = Math.min, M = Math.max, r = Math.round;
-    var Y1 = r(M(m(-y1, -y2), 0));
-    var Y2 = r(m(M(-y1, -y2), imgCurrent.getSize(0) - 1));
-    var X1 = r(M(m(x1, x2), 0));
-    var X2 = r(m(M(x2, x2), imgCurrent.getSize(1) - 1));
-    var wp = imgCurrent.get([Y1, Y2], [X1, X2]);
+    y1 = M(m(y1, y2), 0);
+    y2 = m(M(y1, y2), imgCurrent.getSize(0) - 1);
+    x1 = M(m(x1, x2), 0);
+    x2 = m(M(x2, x2), imgCurrent.getSize(1) - 1);
+    var wp = imgCurrent.get([y1, y2], [x1, x2]);
     wp = wp.reshape([wp.size(0) * wp.size(1), wp.size(2)]).mean(0);
     var xyY = Matrix.Colorspaces['RGB to xyY'](wp.getData());
     xyY[2] = 1;    
@@ -339,6 +332,7 @@ var applyPPL = function (event) {
 
 function startUI() {
     'use strict';
+    $S("ui", "top", 10);
     // UI default parameters and events
     var diagramElement = $('diagram');
     diagramElement.addEventListener('click', function (event) {
@@ -360,10 +354,7 @@ function startUI() {
     $("applyPPL").addEventListener("click", applyPPL);
     initInputs();
 
-    document.body.onresize = resize;
-    var imagePlot = $('imagePlot').getPlot();
-    imagePlot.clear();
-    imagePlot.selectarea = estimateWhiteRef;
+    imagePlot.selectArea = estimateWhiteRef;
     $("selectAction").getElementsByTagName("option")[0].selected = "selected";
 
     $("histogram").getPlot().clear();
@@ -387,19 +378,6 @@ function startUI() {
     $("threshold").addEventListener('change', onChange);
 }
 
-var resize = function () {
-    "use strict";
-    var imagePlot = $('imagePlot').getPlot();
-    var p = $('chromaticityDiagram').getPlot();
-    var pH = $('histogram').getPlot();
-    imagePlot.setWidth($('left').clientWidth);
-    imagePlot.setHeight($('left').clientHeight);
-    p.setWidth($('right').clientWidth)
-    p.setHeight($('right').clientHeight / 2);
-    pH.setWidth($('right').clientWidth);
-    pH.setHeight($('right').clientHeight / 2);
-};
-
 var setChromaticitydiagram = function () {
     var p = $("chromaticityDiagram").getPlot().clear();
     p.addChromaticityDiagram(diagram).setXLabel().setYLabel().setTitle();
@@ -408,46 +386,21 @@ var setChromaticitydiagram = function () {
 };
 
 var createPlots = function () {
-        // Image Plot
-    var width = 500;
-    var height = 400;
-    var plotProperties = {
-        'ticks-display': false,
-        'preserve-ratio': true
-    };
-    $S("right").verticalAlign = 'top';
-
-    var imagePlot = new Plot('imagePlot', [$('left').clientWidth, $('left').clientHeight], 'left', plotProperties);
-    imagePlot.click =  function (coord) {
-        var x = Math.round(coord.x);
-        var y = Math.round(-coord.y);
-        var rgb = imgCurrent.get(y, x, [0, 2]).getData()
-        var xyY = Matrix.Colorspaces['RGB to xyY'](rgb);
-        xyY[2] = 1;
-        changeIlluminant(xyY);
-        if (diagram !== 'xyY') {
-            xyY = Matrix.Colorspaces['xyY to ' + diagram](xyY);
-        }
-    };
+  "use strict";  
     // Diagram Plot
-    plotProperties = {
+    var plotProperties = {
         'ticks-display': false,
         'preserve-ratio': true,
         'legend-display': 'none'
     };
-    imagePlot.selectarea = estimateWhiteRef;
     
-    var p = new Plot('chromaticityDiagram', [$('right').clientWidth, $('right').clientHeight / 2], 'right', plotProperties);
+    var size = [$('plot1').clientWidth - 20, $('plot1').clientHeight - 20]
+    var p = new Plot('chromaticityDiagram', size, 'plot1', plotProperties);
     setChromaticitydiagram();
-
-    plotProperties = {
-        'ticks-display': false,
-        'preserve-ratio': false,
-        'legend-display': 'none'
-    };
-    var pH = new Plot('histogram',
-                      [$('right').clientWidth, $('right').clientHeight / 2], 'right', plotProperties);
-
+    
+    size = [$('plot2').clientWidth - 20, $('plot2').clientHeight - 20]
+    var pH = new Plot('histogram', size, 'plot2', plotProperties);
+    
     // Click on diagram
     p.click = function (coord) {
         var pos = [coord.x, coord.y, 1];
@@ -457,19 +410,35 @@ var createPlots = function () {
         changeIlluminant(pos);
     };
     p.setLegend();
-}
+
+    // Image Plot
+    imagePlot = new SuperCanvas(document.body);
+
+    imagePlot.click =  function (coord) {
+        var x = Math.round(coord[0]);
+        var y = Math.round(coord[1]);
+        var rgb = imgCurrent.get(y, x, [0, 2]).getData();
+        console.log(rgb);
+        var xyY = Matrix.Colorspaces['RGB to xyY'](rgb);
+        xyY[2] = 1;
+        changeIlluminant(xyY);
+        if (diagram !== 'xyY') {
+            xyY = Matrix.Colorspaces['xyY to ' + diagram](xyY);
+        }
+    };
+    imagePlot.selectArea = estimateWhiteRef;
+};
 
 window.onload = function () {
     "use strict";
-    createPlots();
-    startUI();
-    var displayHelp = initHelp();
-    displayHelp();
     initFileUpload("loadFile",function (evt) {
         Matrix.imread(this, callback);
         startUI();
     });
-    //hideFieldset();
+    createPlots();
+    startUI();
+    var displayHelp = initHelp();
+    displayHelp();
 };
 
 Plot.prototype.drawMode = function (h, s, m, c) {

@@ -6,25 +6,24 @@
     <script type="text/javascript" src="../../modules/Image.js"></script>
     <script type="text/javascript" src="../../modules/Linalg.js"></script>
     <script type="text/javascript" src="../../modules/Plot.js"></script>
+    <script type="text/javascript" src="../../projects/SuperCanvas.js"></script>
+
+    <script src="../../min/drawHistogram.min.js"></script>
     <script type="text/javascript" src="../base.js"></script>
     <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
+    <script type="text/javascript" src="demo.js"></script>
     <title></title>
   </head>
 
   <body>
 
-    <div id="demo">
-      <h1>Title</h1>
-      <input type="file" id="loadFile"/>
-      <div id="interface">
-        
-        <div id="ui">
-        </div>
-        <div id="image">
-          <canvas id="outputImage"></canvas>
-        </div>
-      </div>
-
+    <div id="imageSelector">
+      <input type="file" id="loadFile" multiple/>
+      <div id="images"></div>
+    </div>
+    
+    <div id="ui">
+      <canvas id="histogram" style="width:100%"></canvas>
     </div>
 
   </body>

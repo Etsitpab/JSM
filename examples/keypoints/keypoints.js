@@ -1,10 +1,10 @@
 /*global console, document, Matrix, Colorspaces, CIE, open, ScaleSpace, extractModes, Blob, URL, $, $F, $I, window */
 /*jshint indent: 4, unused: true, white: true */
-var IMAGE, SCALESPACE, KNUM;
+var IMAGE, SCALESPACE, KNUM, sCanvas;
 
 function exportImage() {
     "use strict";
-    open($("outputImage").toDataURL());
+    open(sCanvas.images[0].toDataURL());
 }
 
 function exportKeypoints() {
@@ -26,14 +26,8 @@ function exportKeypoints() {
 
 function updateOutput(image) {
     "use strict";
-    var outputCanvas = $("outputImage");
-    var div = $("image");
-    var canvasXSize = div.offsetWidth;
-    var canvasYSize = div.offsetHeight;
-    outputCanvas.width = canvasXSize;
-    outputCanvas.height = canvasYSize;
-    image.imshow(outputCanvas, "fit");
-    outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
+    sCanvas.setImageBuffer(image, 0);
+    sCanvas.displayImageBuffer(0, false);
 }
 
 HTMLCanvasElement.prototype.plotKeypoint = function (k, ring, orientation, color1, color2) {
@@ -96,7 +90,7 @@ var plotKeypoints = function (scale, color) {
         //return;
     }
     var keypoints = SCALESPACE.keypoints;
-    var canvas = $("outputImage");
+    var canvas = sCanvas.images[0];
     if (scale === true) {
         scale = parseInt($("scaleView").value, 10);
     }
@@ -144,10 +138,9 @@ var changeKeypoint = function () {
     var modes = extractModes(h, true, 0, h.nPoints, l, l * l);
     $("scaleView").value = key.nScale;
     changeView();
-    $("outputImage").plotKeypoint(key, true, true, "white");
+    sCanvas.images[0].plotKeypoint(key, true, true, "white");
     $("histogram").drawHistogram(h, 0.1, "", modes, true);
 };
-
 
 var threshold = function () {
     "use strict";
@@ -202,8 +195,6 @@ function computeScaleSpace() {
     window.fieldset.show("keypoints detection");
 }
 
-
-
 window.onload = function () {
     "use strict";
     $("computeScaleSpace").addEventListener("click", computeScaleSpace);
@@ -218,44 +209,21 @@ window.onload = function () {
 
     $("computeOrientations").addEventListener("click", computeOrientations);
 
-    var inputs = document.getElementsByTagName('input');
-    var focus = function () {
-        this.focus();
-    };
-    var i;
-    for (i = 0; i < inputs.length; i++) {
-        if (inputs[i].type == 'range') {
-            inputs[i].addEventListener('click', focus);
-        }
-    }
-
-    var read = function (evt) {
-
-        var callback = function (evt) {
-            var onread = function () {
-                updateOutput(this);
-                IMAGE = Matrix.imread($("outputImage")).im2single();
-                KNUM = undefined;
-                var legends = document.getElementsByTagName("legend");
-                var evObj = document.createEvent('Events');
-                evObj.initEvent("click", true, false);
-                fieldset.hideAll();
-                fieldset.show("scalespace");
-
-            };
-            Matrix.imread(this, onread);
+    var callback = function (evt) {
+        var onread = function () {
+            IMAGE = this.im2single();
+            KNUM = undefined;
+            updateOutput(IMAGE);
+            // var legends = document.getElementsByTagName("legend");
+            // var evObj = document.createEvent('Events');
+            // evObj.initEvent("click", true, false);
+            // fieldset.show("scalespace");
         };
-
-        // Only call the handler if 1 or more files was dropped.
-        if (this.files.length) {
-            var i;
-            for (i = 0; i < this.files.length; i++) {
-                readFile(this.files[i], callback, "url");
-            }
-        }
-
+        Matrix.imread(this, onread);
     };
 
-    $("loadFile").addEventListener("change", read, false);
+    initFileUpload("loadFile", callback);
+    initInputs();
     hideFieldset();
+    sCanvas = new SuperCanvas(document.body);
 };
