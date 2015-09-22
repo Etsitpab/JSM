@@ -32,7 +32,6 @@
     };
     
     Matrix.polyfit = function (x, y, degree) {
-        // x = x["-"](x.mean())["./"](x.std());
         return x.vander(degree).mldivide(y);
     };
 
@@ -58,7 +57,6 @@
             console.log(N, np, p['-'](pp).abs().mean().getDataScalar());
         }
     }*/
-
 })();
 
 var IMAGE, RAW, BUFFERS, MEASURES = [], SC;
@@ -307,10 +305,19 @@ var plotNoise = function () {
             }
         };        
         p.addPath(ALL.get([], 0).getData(), ALL.get([], 1).getData(), scatterProperties);
-        
+        /*
         var coefs = Matrix.polyfit(ALL.get([], 0), ALL.get([], 1).power(2), 2);
-        coefs.display();
+        console.log(coefs.display());
         var fit = Matrix.polyval(coefs, ALL.get([], 0)).sqrt();
+*/
+
+        var glv = ALL.get([], 0),
+            std = ALL.get([], 1);
+        var W = Matrix.ldivide(glv.cat(1, glv.mean(0)["./"](10)).max(1), 1);
+        var coefs = Matrix.diag(W).mtimes(Matrix.toMatrix(glv).vander(2)).mldivide(Matrix.toMatrix(std).power(2).times(W));
+        console.log(coefs.display());
+        var fit = Matrix.polyval(coefs, glv).sqrt();
+
         if (MEASURES.length > 7) {
             p.addPath(ALL.get([], 0).getData(), fit.getData(), {'stroke': "black"});
         }
@@ -335,8 +342,7 @@ window.onload = function () {
     
    
     $("zoomFactor").addEventListener("click", function () {
-        var coord = [SC.canvas.width / 2, SC.canvas.height / 2],
-            scale = parseInt(this.value);
+        var coord = [SC.canvas.width / 2, SC.canvas.height / 2], scale = parseInt(this.value);
         SC.translate(-coord[0], -coord[1]);
         var currentScaleFactor = SC.matrix.diag().display().getData();
         SC.zoom(scale / currentScaleFactor[0], scale / currentScaleFactor[1]);
@@ -403,4 +409,75 @@ window.onload = function () {
     plot.addPath(x1.getData(), y1.getData(), {'stroke': "black"});*/
     // setElementOpacity("ui", 0.2, 1);
     // setElementOpacity("plot", 0.0, 1);
+    var glv = Matrix.toMatrix([
+        0.0011819154024124146,
+        0.011310584843158722,
+        0.046297885477542877,
+        0.12497371435165405,
+        0.16532610356807709,
+        0.19624066352844238,
+        0.26719647645950317,
+        0.35253793001174927,
+        0.40119442343711853,
+        0.54355931282043457,
+        0.66823941469192505,
+        0.89584565162658691
+    ]),
+        std = Matrix.toMatrix([
+            0.0030973609536886215,
+            0.0048409318551421165,
+            0.0085341725498437881,
+            0.013085655868053436,
+            0.015321914106607437,
+            0.01649029552936554,
+            0.019927067682147026,
+            0.022173978388309479,
+            0.024384701624512672,
+            0.027702733874320984,
+            0.030221376568078995,
+            0.031410649418830872
+        ]);
+    var scatterProperties = {
+        'stroke': 'none',
+        'marker': {
+            'shape':  'circle',
+            'fill':   'red',
+            'stroke': 'none'
+        }
+    };   
+
+
+
+    Matrix.fgls = function (x, y, name) {
+        var beta = x.mldivide(y);
+        console.log(beta.size(), x.size(), y.size());
+        var epsh = x["*"](beta)["-="](y)['.^'](2);
+        return coefs;
+    };
+    var x = Matrix.linspace(0, 256, 256)["./"](256);
+
+    var a = 10;
+    var W = Matrix.ldivide(glv.cat(1, glv.mean(0)["./"](a)).max(1), 1);
+
+    var coefs = Matrix.diag(W).mtimes(glv.vander(2)).mldivide(std['.^'](2)['.*'](W));
+    console.log(coefs.getData());
+    var fit = Matrix.polyval(coefs, x).abs().sqrt();
+
+    var p = $('plotNoise').getPlot().clear();
+    p.addPath(glv.getData(), std.getData(), scatterProperties);
+    p.addPath(x.getData(), fit.getData(), {'stroke': "black"});
+
+    var coefs = Matrix.fgls(glv.vander(2), std['.^'](2));
+    console.log(coefs.getData());
+    var fit = Matrix.polyval(coefs, x).abs().sqrt();
+
+    p.addPath(x.getData(), fit.getData(), {'stroke': "blue"});
+
+
+
+    var coefs = glv.vander(2).mldivide(std['.^'](2));
+    console.log(coefs.getData());
+    var fit = Matrix.polyval(coefs, x).abs().sqrt();
+
+    p.addPath(x.getData(), fit.getData(), {'stroke': "red"});
 };
