@@ -1858,10 +1858,12 @@ var global = typeof window === 'undefined' ? module.exports : window;
             event.preventDefault();
             var coord = thisPlot.getCoordinates(event.clientX, event.clientY);
             var direction = 0;
-            if (event.hasOwnProperty('wheelDelta')) {
+            if (event.wheelDelta) {
                 direction = -event.wheelDelta / 120.0;
-            } else {
+            } else if (event.detail) {
                 direction = event.detail / 3.0;
+            } else {
+                throw new Error('Mouse wheel event error: what is your browser ?');
             }
             switch (event.target.parentNode.id) {
             case 'xAxis':
@@ -2277,7 +2279,6 @@ var global = typeof window === 'undefined' ? module.exports : window;
      *  Zoom axis view.
      */
     Plot.prototype.zoomAxis = function (coord, fx, fy) {
-
         fx = fx || 1;
         fy = fy || fx;
         var axis = this.getCurrentAxis();
@@ -3588,7 +3589,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
                                                              'fill': 'blue'}
                                                  };
 
-    Plot.prototype.addChromaticitiesFromRgb = function (r, g, b, args, diagram) {
+    Plot.prototype.addChromaticitiesFromRgb = function (r, g, b, args, diagram, wp) {
         diagram = diagram || 'xyY';
 
         var defaultArgs = this.getProperties('chromaticityPath');
@@ -3607,7 +3608,8 @@ var global = typeof window === 'undefined' ? module.exports : window;
         x.set(r);
         y.set(g);
         z.set(b);
-        Matrix.Colorspaces['RGB to ' + diagram](data, N, N, 1);
+
+        Matrix.Colorspaces['RGB to ' + diagram](data, N, N, 1, wp);
         this.addPath(x, y, defaultArgs);
         return this;
     };

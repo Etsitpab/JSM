@@ -1,7 +1,7 @@
 /*global console, document, Matrix, Colorspaces, CIE, open */
 /*jshint indent: 4, unused: true, white: true */
 
-var stack, stackIt, image, mask, modules;
+var stack, stackIt, image, mask, modules, canvas;
 
 var onclick, onmousewheel;
 
@@ -19,19 +19,12 @@ function exportImage() {
     });
 }
 
-function updateOutput(image) {
+function updateOutput(image, init) {
     "use strict";
 
     if (!stack) {
         return;
     }
-
-    var outputCanvas = $("outputImage"), div = $("image");
-    var canvasXSize = div.offsetWidth;
-    var canvasYSize = div.offsetHeight;
-
-    outputCanvas.width = canvasXSize;
-    outputCanvas.height = canvasYSize;
 
     if (!(image instanceof Matrix)) {
         image = stack[stackIt].image;
@@ -40,12 +33,9 @@ function updateOutput(image) {
         var m = mask.double().set(mask["<"](1), 0.25).repmat([1, 1, 3]);
         image = image[".*"](m);
     }
-    image.imshow(outputCanvas, "fit");
-    outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
-
+    canvas.displayImage(image, 0, init);
     drawImageHistogram("histogram", image);
 }
-
 
 function initProcess () {
     "use strict";
@@ -114,7 +104,6 @@ function applyProcess (process) {
     updateOutput();
 };
 
-
 function apply (module, parameters) {
     "use strict";
 
@@ -139,7 +128,6 @@ function change (module, parameters) {
     updateOutput(fun(img, parameters));
     console.log("Applying module " + module + " in:", Tools.toc());
 }
-
 
 var undoRedo = function () {
     "use strict";
@@ -967,20 +955,10 @@ window.onload = function () {
         var onread = function () {
             stack = [];
             stackIt = 0;
-            if ($V("workImage") === "visible") {
-                var outputCanvas = $("outputImage"), div = $("image");
-                var canvasXSize = div.offsetWidth, canvasYSize = div.offsetHeight;
-                outputCanvas.width = canvasXSize;
-                outputCanvas.height = canvasYSize;
-                outputCanvas.style.marginTop = (div.offsetHeight - outputCanvas.height) / 2;
-                this.imshow(outputCanvas, "fit");
-                image = Matrix.imread(outputCanvas).im2double();
-            } else {
-                image = this.im2double()
-            }
+            image = this.im2double()
             stack[0] = {image: image};
             mask = undefined;
-            updateOutput(image);
+            updateOutput(image, true);
             var legends = document.getElementsByTagName("legend");
             var evObj = document.createEvent('Events');
             evObj.initEvent("click", true, false);
@@ -999,7 +977,7 @@ window.onload = function () {
     };
 
     initFileUpload('loadFile', callback);
-    superCanvas("outputImage", onclick, onmousewheel);
+    canvas = new SuperCanvas(document.body);
     hideFieldset();
     initInputs();
     initProcess();

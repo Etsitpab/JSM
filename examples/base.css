@@ -1,7 +1,7 @@
 html, body {
     font-size: 11px;
     font-family: "Open Sans", Helvetica, Arial, sans-serif;
-    background-color: #e6e6e6;
+    background-color: #000;
     margin: 0px;
     margin-top: 0px;
     height: 100%;
@@ -88,50 +88,6 @@ p {
     text-align: justify; 
 }
 
-#ui {
-    padding-top: 10px;
-    width: 135px; 
-    float: left;
-}
-
-#demo {
-    background-color: white;
-    box-shadow: 0 8px 24px rgba(100, 100, 100, 0.5);
-    padding: 20px;
-    margin: auto;
-    display: absolute;
-    width: calc(100% - 100px);
-    height: calc(100% - 70px);
-}
-
-#interface {
-    display: block;
-    width: 100%;
-    height: calc(100% - 75px);
-}
-
-#image {
-    display: inline-block;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    margin-left: 10px;
-    width: calc(100% - 147px);
-    height: calc(100%);
-    border: 1px solid #e6e6e6;
-    border-radius: 0px;
-}
-
-#warn {
-    padding: 5px;
-    display: inline-block;
-    float: right;
-    width: calc(100% - 147px - 10px);
-    height: 40px;
-    border: 1px solid #e6e6e6;
-    border-radius: 0px;
-    overflow: auto;
-}
-
 #log {
     font-size: inherit;
     font-family: monospace;
@@ -149,8 +105,6 @@ p {
 #outputImage {
     padding-left: 0;
     padding-right: 0;
-    margin: auto;
-    display: block;
 }
 
 h1 {
@@ -164,7 +118,7 @@ hr {
     font-size: 14px;
     display: none;
     position: fixed;
-    top: 15%;
+    top: 7%;
     left: 15%;
     width: 70%;
     height: 70%;
@@ -175,4 +129,70 @@ hr {
     background-color: #FFF;
     box-shadow: 0px 0px 200px 24px rgba(100, 100, 100, 0.5);
     overflow: auto;
+}
+
+#images {
+    display: block;
+    height: 50px;
+    border: 1px solid #e6e6e6;
+    padding: 3px;
+    margin-top: 7px;
+    border-radius: 3px;
+}
+
+#imageSelector {
+    border-radius: 3px;
+    background-color: #BBB;
+    padding: 10px;
+    top: 10px;
+    left: 10px;
+    width: auto; 
+    height: auto;
+    position: fixed;
+    display: inline-block;
+}
+
+#ui, #uiLeft {
+    border-radius: 3px;
+    background-color: #BBB;
+    padding: 10px;
+    top: 130px;
+    left: 10px;
+    width: 170px; 
+    height: auto;
+    position: fixed;
+    display: inline-block;
+}
+
+#uiRight {
+    border-radius: 3px;
+    background-color: #BBB;
+    padding: 10px;
+    top: 10px;
+    right: 10px;
+    width: 170px; 
+    height: auto;
+    position: fixed;
+    display: inline-block;
+}
+
+
+.plot {
+    border-radius: 3px;
+    background-color: #BBB;
+    padding: 10px;
+    
+    width: 360px; 
+    height: 270px;
+    position: fixed;
+}
+
+#plot1 {
+    top:10px;
+    right:10px;
+}
+
+#plot2 {
+    top:310px;
+    right:10px;
 }

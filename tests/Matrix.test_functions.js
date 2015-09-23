@@ -92,6 +92,7 @@
         testcs("LinearRGB", "XYZ");
         testcs("RGB", "RGB");
         testcs("LinearRGB", "rgY");
+        testcs("LinearRGB", "GRGBG");
         testcs("RGB", "HSV");
         testcs("RGB", "HSL");
         testcs("RGB", "HSI");
@@ -428,7 +429,6 @@
         var s, fft, out, time, psnr;
         for (var sz = 1; sz < 6; sz += 2) {
             s = Matrix.rand(sz, sz + 1);
-            log(s.size());
             var res = test1(s);
             log("FFT 1D decomposition/reconstruction", res.psnr, res.time);
             var res = test2(s);

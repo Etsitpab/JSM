@@ -2509,7 +2509,7 @@ if (typeof window === 'undefined') {
                 fun(mat.getData(), 0, 1, mat.numel());
                 return mat;
             }
-            var v = fun(mat.getData(), 0, 1, mat.numel());
+            var v = fun(mat.getCopy().getData(), 0, 1, mat.numel());
             return Matrix.toMatrix(v);
         } 
 
@@ -2545,15 +2545,6 @@ if (typeof window === 'undefined') {
         return mat;
     };
 
-    /** Return the minimum of a matrix.
-     * @param {Number} [dim=undefined]
-     *  Dimension on which the computation must be performed. If undefined,
-     *  return the global minimum.
-     * @return {Matrix}
-     */
-    Matrix_prototype.min = function (dim) {
-        return applyDim(this, min, dim);
-    };
     /** Return the argmin of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2561,16 +2552,20 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.amin = function (dim) {
-        return applyDim(this, amin, dim, undefined, 'uint32');
+        var mat = this.isreal() ? this : Matrix.abs(this);
+        return applyDim(mat, amin, dim, undefined, 'uint32');
     };
-    /** Return the maximum of a matrix.
+    /** Return the minimum of a matrix.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
-     *  return the global maximum.
+     *  return the global minimum.
      * @return {Matrix}
      */
-    Matrix_prototype.max = function (dim) {
-        return applyDim(this, max, dim);
+    Matrix_prototype.min = function (dim) {
+        if (this.isreal()) {
+            return applyDim(this, min, dim);
+        }
+        return this.get(this.amin(dim));
     };
     /** Return the argmax of a matrix.
      * @param {Number} [dim=undefined]
@@ -2579,7 +2574,20 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.amax = function (dim) {
-        return applyDim(this, amax, dim, undefined, 'uint32');
+        var mat = this.isreal() ? this : Matrix.abs(this);
+        return applyDim(mat, amax, dim, undefined, 'uint32');
+    };
+    /** Return the maximum of a matrix.
+     * @param {Number} [dim=undefined]
+     *  Dimension on which the computation must be performed. If undefined,
+     *  return the global maximum.
+     * @return {Matrix}
+     */
+    Matrix_prototype.max = function (dim) {
+        if (this.isreal()) {
+            return applyDim(this, max, dim);
+        }
+        return this.get(this.amax(dim));
     };
     /** Return the sum of the matrix elements.
      * @param {Number} [dim=undefined]
@@ -2588,7 +2596,14 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.sum = function (dim) {
-        return applyDim(this, sum, dim);
+        if (this.isreal()) {
+            return applyDim(this, sum, dim);
+        }
+        var size = this.getSize();
+        return Matrix.complex(
+            applyDim(new Matrix(size, this.getRealData()), sum, dim),
+            applyDim(new Matrix(size, this.getImagData()), sum, dim)
+        );
     };
     /** Return the product of the matrix elements.
      * @param {Number} [dim=undefined]
@@ -2597,7 +2612,10 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.prod = function (dim) {
-        return applyDim(this, prod, dim);
+        if (this.isreal) {
+            return applyDim(this, prod, dim);
+        }
+        throw new Error("Matrix.prod: Is not yet implement for complex values.");
     };
     /** Return the average value of the matrix elements.
      * @param {Number} [dim=undefined]
@@ -2606,7 +2624,14 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.mean = function (dim) {
-        return applyDim(this, mean, dim);
+        if (this.isreal()) {
+            return applyDim(this, mean, dim);
+        }
+        var size = this.getSize();
+        return Matrix.complex(
+            applyDim(new Matrix(size, this.getRealData()), mean, dim),
+            applyDim(new Matrix(size, this.getImagData()), mean, dim)
+        );
     };
     /** Return the variance of the matrix elements.
      * @param {Number} [dim=undefined]
@@ -2637,6 +2662,10 @@ if (typeof window === 'undefined') {
         default:
             throw new Error('Matrix.variance: Invalid argument.');
         }
+        if (!this.isreal()) {
+            throw new Error("Matrix.variance: Is not yet implement for complex values.");
+        }
+
         if (norm === -1) {
             return applyDim(this, variance, dim);
         } 
@@ -2652,6 +2681,9 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.std = function (norm, dim) {
+        if (!this.isreal()) {
+            throw new Error("Matrix.std: Is not yet implement for complex values.");
+        }
         var v = this.variance(norm, dim);
         if (typeof v === 'number') {
             return Math.sqrt(v);
@@ -2665,9 +2697,16 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.cumsum = function (dim) {
-        return applyDim(this, cumsum, dim, true);
+        var fun = cumsum;
+        if (this.isreal()) {
+            return applyDim(this, fun, dim, true);
+        }
+        var size = this.getSize();
+        return Matrix.complex(
+            applyDim(new Matrix(size, this.getRealData()), fun, dim, true),
+            applyDim(new Matrix(size, this.getImagData()), fun, dim, true)
+        );
     };
-
     /** Return the cumulative product of the matrix elements.
      * @param {Number} [dim=undefined]
      *  Dimension on which the computation must be performed. If undefined,
@@ -2675,9 +2714,11 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix_prototype.cumprod = function (dim) {
+        if (!this.isreal()) {
+            throw new Error("Matrix.cumprod: Is not yet implement for complex values.");
+        }
         return applyDim(this, cumprod, dim, true);
     };
-
 
     (function () {
         var poissrnd_lambda = function (data, lambda) {
@@ -2771,8 +2812,8 @@ if (typeof window === 'undefined') {
         };
         var sortDescend = function (a, b) {
             return b - a;
-
         };
+
         var sort = function (data, s, d, N) {
             var i, io, e;
             for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
@@ -2793,6 +2834,15 @@ if (typeof window === 'undefined') {
             for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
                 out[i] = itab[io] * d + s;
             }
+        };
+        var median = function (data, s, d, N) {
+            var i, io, e;
+            for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
+                tab[io] = data[i];
+            }
+            Array.prototype.sort.call(tab, fun);
+            var indice = Math.floor(tab.length / 2);
+            return tab.length % 2 === 0 ? 0.5 * (tab[indice] + tab[indice - 1]) : tab[indice];
         };
 
         /** Sort the elements of the matrix.
@@ -2847,6 +2897,22 @@ if (typeof window === 'undefined') {
             return m.getCopy().asort(dim, mode);
         };
 
+        /** Return the median value.
+         * @param {Number} [dim=undefined]
+         *  Dimension on which the computation must be performed. If undefined,
+         *  return all the elements sorted.
+         * @chainable
+         */
+        Matrix_prototype.med = function (dim) {
+            var size = typeof dim === "number" ? this.getSize(dim) : this.numel();
+            tab = new Float64Array(size);
+            fun = sortAscend;
+            return applyDim(this, median, dim);
+        };
+        
+        Matrix.med = function (m, dim, mode) {
+            return m.getCopy().med(dim);
+        };
     })();
 
     /** Accumate values in an array
@@ -2859,6 +2925,10 @@ if (typeof window === 'undefined') {
      * @return {Matrix}
      */
     Matrix.accumarray = function (subs, val, size) {
+        if (!this.isreal()) {
+            throw new Error("Matrix.accumarray: Is not yet implement for complex values.");
+        }
+
         subs = Matrix.toMatrix(subs);
         // Check subs for array of positive integers
         if (!Tools.isArrayOfIntegers(subs.getData(), 0)) {
@@ -3230,6 +3300,9 @@ if (typeof window === 'undefined') {
 
     /** Returns the phase angle for complex Matrix.
      *
+     * When used as Matrix object method, this function acts in place. 
+     * Use the Matrix.angle property to work on a copy.
+     *
      * __Also see:__
      *  {@link Matrix#abs}.
      *
@@ -3237,7 +3310,7 @@ if (typeof window === 'undefined') {
      * @matlike
      * @method angle
      */
-    (function (Matrix_prototype) {
+    (function () {
         var angle_real = function (data) {
             for (var i = 0, ie = data.length; i < ie; i++) {
                 data[i] = 0;
@@ -3259,10 +3332,17 @@ if (typeof window === 'undefined') {
             }
             return this;
         };
-    })(Matrix_prototype);
+        Matrix.angle = function (m) {
+            return m.getCopy().angle();
+        };
+
+    })();
 
     /** Returns the absolute value for real Matrix and
      * the complex magnitude for complex Matrix.
+     *
+     * When used as Matrix object method, this function acts in place. 
+     * Use the Matrix.abs property to work on a copy.
      *
      * __Also see:__
      *  {@link Matrix#angle}.
@@ -3271,7 +3351,7 @@ if (typeof window === 'undefined') {
      * @matlike
      * @method abs
      */
-    (function (Matrix_prototype) {
+    (function () {
         var abs_real = function (data) {
             for (var i = 0, ie = data.length; i < ie; i++) {
                 data[i] = data[i] > 0 ? data[i] : -data[i];
@@ -3294,10 +3374,17 @@ if (typeof window === 'undefined') {
             }
             return this;
         };
-    })(Matrix_prototype);
+        Matrix.abs = function (m) {
+            return m.getCopy().abs();
+        };
+    })();
 
     /** Returns the complex conjugate of each element of the Matrix.
      *
+     * When used as Matrix object method, this function acts in place. 
+     * Use the Matrix.conj property to work on a copy.
+     *
+     * @matlike
      * @chainable
      */
     Matrix_prototype.conj = function () {
@@ -3309,6 +3396,9 @@ if (typeof window === 'undefined') {
             imag[i] = -imag[i];
         }
         return this;
+    };
+    Matrix.conj = function (m) {
+        return m.getCopy().conj();
     };
 
 })(Matrix, Matrix.prototype);

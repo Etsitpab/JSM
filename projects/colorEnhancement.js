@@ -136,7 +136,7 @@
         for (var c = 0; c < im.size(2); c++) {
             var channel = im.get([], [], c);
             var wt = Matrix.wavedec2(channel, J, name);
-            var A = Matrix.appcoef2(wt, name, J - 1);
+            var A = Matrix.appcoef2(wt, name, J);
             A["*="](1 - alpha)["+="](A.mean()[".*"](alpha));
             for (var j = J - 1; j >= 0; j--) { 
                 var d = wt[0].getData();

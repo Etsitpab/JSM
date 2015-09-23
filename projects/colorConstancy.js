@@ -195,7 +195,6 @@ Matrix.prototype.miredHistogram = function (params) {
         hs.hist = hs.hist.conv(ker, 'same');
     }
 
-    var max = hs.histw.max();
     var indice = hs.histw.amax().getDataScalar();
     var indiceMin = Math.max(indice - (p.sigma || 2), 0);
     var indiceMax = Math.min(indice + (p.sigma || 2), scaleMired.numel() - 1);

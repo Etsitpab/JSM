@@ -1515,7 +1515,7 @@
         var K = B.getSize(1);
 
         // Check if size are compatible
-        if (M !== B.getSize(0)) {
+        if (N !== B.getSize(0)) {
             throw new Error('Matrix.mtimes: Matrix sizes must match.');
         }
 

@@ -2,6 +2,7 @@
 /*jshint indent: 4, unused: true, white: true */
 
 var IMAGE_ORIG, IMAGE_PROCESSED, DIFF, MAX_SIZE = 1200;
+var sCanvas;
 var STRETCH = false;
 
 var stretchLuminance = function (im) {
@@ -29,7 +30,7 @@ var stretchColorChannels = function (im) {
     }
 };
 
-function updateOutput() {
+function updateOutput(init) {
     "use strict";
     if (!IMAGE_ORIG) {
         return;
@@ -44,15 +45,7 @@ function updateOutput() {
         var min = DIFF.min(), max = DIFF.max();
         image = DIFF["-="](min)["/="](max["-"](min));
     }
-    
-    var canvas = $("outputImage");
-    var div = $("image");
-    var canvasXSize = div.offsetWidth;
-    var canvasYSize = div.offsetHeight;
-    canvas.width = canvasXSize;
-    canvas.height = canvasYSize;
-    image.imshow(canvas, "fit");
-    canvas.style.marginTop = (div.offsetHeight - canvas.height) / 2;
+    sCanvas.displayImage(image, 0, init);
     drawImageHistogram("histogram", image);
 }
 
@@ -114,7 +107,7 @@ var colEn = function () {
         console.log("Time elapsed:", Tools.toc(), "(ms)");
         $("view").getElementsByTagName("option")[0].selected = "selected";
         $("view").focus();
-        updateOutput();
+        updateOutput(false);
     };
     var onChange = function () {
         $V("KVal", $F("K"));
@@ -140,7 +133,7 @@ window.onload = function () {
         IMAGE_PROCESSED = IMAGE_ORIG;
         $("view").getElementsByTagName("option")[1].selected = "selected";
         $("applyColEn").focus();
-        updateOutput();
+        updateOutput(true);
     };
     var addImage = function (src) {
         var im = new Image();
@@ -174,6 +167,8 @@ window.onload = function () {
     var displayHelp = initHelp();
     displayHelp();
     colEn();
+
+    sCanvas = new SuperCanvas(document.body);
 
     $("view").addEventListener("change", updateOutput, false);
     $('pinImage').addEventListener("click", pinImage, false);
