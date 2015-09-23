@@ -152,4 +152,32 @@
         }
         return out;
     };
+    Matrix.prototype.computeScaleSpace = function (sigmaInit, nScale, scaleRatio) {
+        var computeScale = function (image, sigma) {
+            var approx = image.gaussian(sigma);
+            var detail = image['-'](approx);
+            return {approx: approx, detail: detail, sigma: sigma};
+        };
+
+        var nScale = nScale || 13,
+            sigmaInit = sigmaInit || 0.63,
+            scaleRatio = scaleRatio || 1.26;
+        
+        var image = this.im2double(), i;
+        // First scale
+        var scales = [computeScale(image, sigmaInit)];
+        for (i = 1; i < nScale; i++) {
+            var s2old = Math.pow(scales[i - 1].sigma, 2);
+            var s2new = Math.pow(sigmaInit * Math.pow(scaleRatio, i), 2);
+            var sigma = Math.sqrt(s2new - s2old);
+            scales.push(computeScale(scales[i - 1].approx, sigma));
+        }/*
+        console.log(scales);
+        var approx = scales[scales.length - 1].approx.getCopy();
+        for (i = nScale - 1; i >= 0; i--) {
+            approx["+="](scales[i].detail)
+        }
+          return approx;*/
+        return scales;
+    };
 })();

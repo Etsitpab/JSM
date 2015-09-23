@@ -46,3 +46,11 @@ window.onload = function () {
         console.log(Tools.toc());
     })
 };
+
+window.onload = function () {
+    Matrix.imread("/home/mazin/Images/images_test/pout.png", function () {
+        var image = this.im2double();
+        window.S = image.computeScaleSpace();
+        //console.log(Matrix.psnr(image, window.S).display());
+    });
+};           
