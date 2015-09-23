@@ -26,8 +26,7 @@ function exportKeypoints() {
 
 function updateOutput(image) {
     "use strict";
-    sCanvas.setImageBuffer(image, 0);
-    sCanvas.displayImageBuffer(0, false);
+    sCanvas.displayImage(image, 0, true);
 }
 
 HTMLCanvasElement.prototype.plotKeypoint = function (k, ring, orientation, color1, color2) {

@@ -40,8 +40,7 @@ var colorsName = [
  */
 function displayImage(im) {
     'use strict';
-    imagePlot.setImageBuffer(im, 0);
-    imagePlot.displayImageBuffer(0);
+    imagePlot.displayImage(im, 0);
 }
 
 function setImage(im) {
@@ -162,8 +161,7 @@ function callback(image) {
     imgCurrent = image.im2double();
     
     $('outputStdIll').selectedIndex = 5; // D65
-    imagePlot.setImageBuffer(image, 0);
-    imagePlot.displayImageBuffer(0);
+    imagePlot.displayImage(image, 0);
 }
 
 var selectAction = function () {

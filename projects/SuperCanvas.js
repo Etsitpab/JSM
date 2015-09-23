@@ -168,12 +168,12 @@
             this.selectionOccurs = undefined;
             return false;
         }.bind(this);
-        var onMouseOut = function (event) {
+        var onMouseOut = function () {
             this.coordinates.startSelection = undefined;
             this.coordinates.previous = undefined;
             this.selectionOccurs = false;
         }.bind(this);
-        var onResize = function (event) {
+        var onResize = function () {
             initCanvas.bind(this)();
             this.update()
         }.bind(this);
@@ -196,7 +196,7 @@
         this.matrix = t.mtimes(this.matrix);
     };
 
-    SuperCanvas.prototype.click = function (coord, e) {
+    SuperCanvas.prototype.click = function (coord) {
         console.log(coord);
     };
 
@@ -208,7 +208,7 @@
         this.update();
     };
 
-    SuperCanvas.prototype.selectArea = function (start, end) {};
+    SuperCanvas.prototype.selectArea = function () {};
 
     SuperCanvas.prototype.setImageBuffer = function (image, buffer) {
         // Draw Image on a canvas
@@ -229,43 +229,49 @@
         buffer = buffer === undefined ? this.images.length : buffer;
         this.images[buffer] = canvas;
         this.currentBuffer = buffer;
-        return buffer;
+        return this;
     };
     
-    SuperCanvas.prototype.displayImageBuffer = function (b, noinit) {
+    SuperCanvas.prototype.update = function (buffer, init) {
+        var init = init === true ? true : false;
         // Draw Image on a canvas
-        b = b === undefined ? this.currentBuffer : b;
-        this.currentBuffer = b;
+        if (buffer === undefined) {
+            buffer = this.currentBuffer;
+        } else {
+            this.currentBuffer = buffer;
+        }
+        var image = this.images[buffer];
 
-        if (!noinit) {
-            var im = this.images[b];
+        if (init) {
             // Initialize drawing matrix at good scale and place
-            var hScale = this.canvas.width / im.width;
-            var vScale = this.canvas.height / im.height;
+            var hScale = this.canvas.width / image.width;
+            var vScale = this.canvas.height / image.height;
             var scale = Math.min(hScale, vScale);
             this.matrix = Matrix.eye(3);
-            this.translate(-im.width / 2, -im.height / 2);
+            this.translate(-image.width / 2, -image.height / 2);
             this.zoom(scale, scale);
             this.translate(this.canvas.width / 2, this.canvas.height / 2);
         }
-        this.update();
-    };
-
-    SuperCanvas.prototype.update = function () {
-        var ctx = this.canvas.getContext('2d');
     
         // Clear the canvas
+        var ctx = this.canvas.getContext('2d');
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         ctx.restore();
 
         // Draw the image
-        var image = this.images[this.currentBuffer];
         if (image) {
             var c = this.matrix.get([0, 1]).getData();
             ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
             ctx.drawImage(image, 0, 0, image.width, image.height);
         }
+        return this;
+    };
+
+    SuperCanvas.prototype.displayImage = function (image, buffer, init) {
+        return this
+            .setImageBuffer(image, buffer)
+            .update(buffer, init);
     };
 })();

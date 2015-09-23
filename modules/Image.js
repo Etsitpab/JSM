@@ -1111,9 +1111,16 @@
         } else {
             throw new Error("Matrix.imhist: unknow data type.");
         }
-        var i, ie, cst = 1 / M * bins;
+        var i, ie, cst = bins / M, f = Math.floor;
         for (i = 0, ie = data.length; i < ie; i++) {
-            hd[data[i] * cst | 0]++;
+            var indice = data[i] * cst | 0;
+            if (indice < 0) {
+                hd[0]++;
+            } else if(indice >= bins) {
+                hd[bins - 1]++;
+            } else { 
+                hd[indice]++;
+            }
         }
         return hist;
     };

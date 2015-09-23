@@ -5,8 +5,7 @@ var IMAGE, TIMER, sCanvas;
 
 function updateOutput(image, init) {
     'use strict';
-    sCanvas.setImageBuffer(image, 0);
-    sCanvas.displayImageBuffer(0, init === true ? false : true);
+    sCanvas.displayImage(image, 0, init);
 }
 
 window.GAME_OF_LIFE = 1;
@@ -45,8 +44,7 @@ function createGameOfLife(image) {
 
     var isFirst = true;
     function display() {
-        sCanvas.setImageBuffer(A, 0);
-        sCanvas.displayImageBuffer(0, !isFirst);
+        sCanvas.displayImage(A, 0, isFirst);
         if (isFirst === true) {
             isFirst = false;
         }

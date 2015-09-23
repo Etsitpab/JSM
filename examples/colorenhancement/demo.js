@@ -52,9 +52,7 @@ function updateOutput(init) {
         var min = DIFF.min(), max = DIFF.max();
         image = DIFF["-="](min)["/="](max["-"](min));
     }
-    
-    sCanvas.setImageBuffer(image, 0);
-    sCanvas.displayImageBuffer(0, init === true ? false : true);
+    sCanvas.displayImage(image, 0, init);
     drawImageHistogram("histogram", image);
 }
 
