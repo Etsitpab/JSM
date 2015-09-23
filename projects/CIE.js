@@ -424,7 +424,7 @@
                 if (!Tools.isSet(convert)) {
                     throw new Error("CIE.getIlluminantLocus: " + e.message);
                 }
-                var chrTmp = convert(data, T.length, T.length, 1);
+                convert(data, T.length, T.length, 1);
             }
             var out = [chr1, chr2];
             out.CCT = T;

@@ -30,7 +30,7 @@
         "use strict";
 
         var ctx = this.getContext('2d'), xSize = this.width, ySize = this.height;
-        var max = 0, hMax = ySize - 30;
+        var max = 0;
         var xHisto = xSize - 80, yHisto = ySize - 45, binWidth = 0;
 
         var setTitle = function (title) {
