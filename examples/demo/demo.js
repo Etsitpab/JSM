@@ -5,9 +5,7 @@ var image, canvas;
 
 function updateOutput(image, init) {
     "use strict";
-    var noinit = init === true ? false : true;
-    canvas.setImageBuffer(image, 0);
-    canvas.displayImageBuffer(0, noinit);
+    canvas.displayImage(image, 0, init);
     drawImageHistogram("histogram", image);
 }
 
