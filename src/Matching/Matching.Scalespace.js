@@ -125,7 +125,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
                 // Laplacian normalization
                 var normFactor = Math.pow(s.sigma, 2);
-                s.gradient.laplacian.abs().times(normFactor);;
+                s.gradient.laplacian.abs().times(normFactor);
                 this.scale[i] = s;
             }
             return this;
