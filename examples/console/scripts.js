@@ -48,9 +48,13 @@ window.onload = function () {
 };
 
 window.onload = function () {
-    Matrix.imread("/home/mazin/Images/images_test/pout.png", function () {
+    $("leftPanel").style.display = "none"
+    Matrix.imread("/home/mazin/Images/images_test/1326.png", function () {
         var image = this.im2double();
-        window.S = image.computeScaleSpace();
-        //console.log(Matrix.psnr(image, window.S).display());
+        var out = image.gaussianColorEnhancement(0.2, 3 / 255, 10, 0.1);
+        //out["-="](out.min())["/="](out.max());
+        var canvas = createSuperCanvas([1000, 1000], "test");
+        canvas.displayImage(image, 0, true);
+        canvas.displayImage(out, 1, true);
     });
 };           

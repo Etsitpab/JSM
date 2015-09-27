@@ -159,9 +159,9 @@
             return {approx: approx, detail: detail, sigma: sigma};
         };
 
-        var nScale = nScale || 13,
-            sigmaInit = sigmaInit || 0.63,
-            scaleRatio = scaleRatio || 1.26;
+        var nScale = nScale || 20,
+            sigmaInit = sigmaInit || 0.25,
+            scaleRatio = scaleRatio || 1.25;
         
         var image = this.im2double(), i;
         // First scale
@@ -171,13 +171,42 @@
             var s2new = Math.pow(sigmaInit * Math.pow(scaleRatio, i), 2);
             var sigma = Math.sqrt(s2new - s2old);
             scales.push(computeScale(scales[i - 1].approx, sigma));
-        }/*
-        console.log(scales);
+        }
+        return scales;
+    };
+    Matrix.reconstruct = function (scales) {
         var approx = scales[scales.length - 1].approx.getCopy();
-        for (i = nScale - 1; i >= 0; i--) {
+        for (var i = scales.length - 1; i >= 0; i--) {
             approx["+="](scales[i].detail)
         }
-          return approx;*/
-        return scales;
+        return approx;
+    };
+    Matrix.prototype.gaussianColorEnhancement = function(gamma, w, K, alpha) {
+        // Default parameters
+        alpha = (alpha === undefined) ? 0.1 : alpha;
+        gamma = (gamma  === undefined) ? 0.5 : gamma;
+        w = (w === undefined) ? 15 / 255 : w;
+        K = (K === undefined) ? 20 : K;
+
+        var image = this.im2double();
+        var out = Matrix.zeros(this.size());
+        
+        for (var c = 0; c < image.size(2); c++) {
+            Tools.tic();
+            var scales = image.get([], [], c).computeScaleSpace();
+            console.log("Scalespace time", Tools.toc());
+            Tools.tic();
+            var A = scales[scales.length - 1].approx;
+            A["*="](1 - alpha)["+="](A.mean()[".*"](alpha));
+            var A = scales[scales.length - 1].approx;
+            for (var j = scales.length - 1; j >= 0; j--) { 
+                var D = scales[j].detail;
+                processCoeffs(D.getData(), A.getData(), K, w, gamma);
+                A = A["+="](scales[j].detail);
+            }
+            out.set([], [], c, A);
+            console.log("Processing time", Tools.toc());
+        }
+        return out;
     };
 })();

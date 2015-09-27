@@ -74,6 +74,17 @@ function createCanvas(size, id, onclick) {
     $("tableCanvas").appendChild(canvas);
     return canvas.id;
 }
+function createSuperCanvas(size, id, onclick) {
+    'use strict';
+    var div = document.createElement("div");
+    div.id = id || "id";
+    div.style.height = size[0];
+    div.style.width = size[1];
+    div.style.display = "inline-block"
+    $("tableCanvas").appendChild(div);
+    var canvas = new SuperCanvas(div);
+    return canvas;
+}
 
 var createPlot = function (size, id) {
     'use strict';
