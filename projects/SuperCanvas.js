@@ -100,7 +100,16 @@
             } else {
                 throw new Error('Mouse wheel error: What your browser is ?');
             }
-            if (this.mouseWheel instanceof Function) {
+            if (event.ctrlKey) {
+                this.currentBuffer += direction > 0 ? 1 : -1
+                if (this.currentBuffer >= this.images.length) {
+                    this.currentBuffer = 0;
+                } else if (this.currentBuffer < 0) {
+                    this.currentBuffer = this.images.length - 1;
+                }
+                console.log("Buffer", this.currentBuffer, "is now selected.");
+                this.update();
+            } else if (this.mouseWheel instanceof Function) {
                 this.mouseWheel.bind(this)(direction * 0.01, coord, event);
             }
         }.bind(this);
