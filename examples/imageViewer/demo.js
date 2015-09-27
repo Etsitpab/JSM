@@ -43,8 +43,7 @@ function updateImage(name) {
     console.log(name);
     var image = new Image();
     image.onload = function () {
-        SC.setImageBuffer(this, 0);
-        SC.displayImageBuffer(0, SC.matrix === undefined ? false : true);
+        SC.displayImage(this, 0, SC.matrix === undefined ? true : false);
     };
     image.src = name;
     window.image = image;

@@ -92,11 +92,10 @@ var parameters = {
     'gain': 1.0
 };
 
-function updateOutput(image, noinit, buffer) {
+function updateOutput(image, init, buffer) {
     "use strict";
     Tools.tic();
-    SC.setImageBuffer(image, buffer);
-    SC.displayImageBuffer(buffer, noinit);
+    SC.displayImage(image, buffer, init);
     console.log("Image displayed in", Tools.toc(), "ms");
     drawImageHistogram("histogram", image);
 }
@@ -108,7 +107,7 @@ var develop = function () {
     Tools.tic();
     IMAGE = processRaw(RAW.getCopy());
     console.log("Image processed in", Tools.toc(), "ms");
-    updateOutput(IMAGE, true, SC.currentBuffer);
+    updateOutput(IMAGE, false, SC.currentBuffer);
 };
 
 var initParameters = function () {
@@ -375,11 +374,32 @@ window.onload = function () {
         if (type === "bin") {
             Tools.tic();
             RAW = readRAW(this).double();
-            BUFFERS.push(RAW);
             console.log("RAW of size", RAW.size(), "read in", Tools.toc(), "ms");
-            Tools.tic();
-            IMAGE = processRaw(RAW.getCopy());
-            console.log("Image processed in", Tools.toc(), "ms");
+            // Tools.tic();
+            // IMAGE = processRaw(RAW.getCopy());
+            // console.log("Image processed in", Tools.toc(), "ms");
+            var C1 = RAW.get([], [], 0),
+                C2 = RAW.get([], [], 1),
+                C3 = RAW.get([], [], 2),
+                C4 = RAW.get([], [], 3);
+            C1['-='](C1.min())["/="](C1.max());
+            C2['-='](C2.min())["/="](C2.max());
+            C3['-='](C3.min())["/="](C3.max());
+            C4['-='](C4.min())["/="](C4.max());
+            BUFFERS.push(C1);
+            BUFFERS.push(C2);
+            BUFFERS.push(C3);
+            BUFFERS.push(C4);
+            var option = addOption($("buffers"), SC.images.length, file.name + "0");
+            option.selected = true;
+            updateOutput(BUFFERS[0], true);
+            var option = addOption($("buffers"), SC.images.length, file.name + "1");
+            updateOutput(BUFFERS[1], true);
+            var option = addOption($("buffers"), SC.images.length, file.name + "2");
+            updateOutput(BUFFERS[2], true);
+            var option = addOption($("buffers"), SC.images.length, file.name + "3");
+            updateOutput(BUFFERS[3], true);
+            return;
         } else if (type === "url") {
             Tools.tic();
             var image = new Image();
@@ -395,7 +415,7 @@ window.onload = function () {
         }
         var option = addOption($("buffers"), SC.images.length, file.name);
         option.selected = true;
-        updateOutput(IMAGE);
+        updateOutput(IMAGE, true);
     };
     initFileUpload("loadFile", callback, callbackInit);
     /*
@@ -410,19 +430,19 @@ window.onload = function () {
     // setElementOpacity("ui", 0.2, 1);
     // setElementOpacity("plot", 0.0, 1);
     var glv = Matrix.toMatrix([
-        0.0011819154024124146,
-        0.011310584843158722,
-        0.046297885477542877,
-        0.12497371435165405,
-        0.16532610356807709,
-        0.19624066352844238,
-        0.26719647645950317,
-        0.35253793001174927,
-        0.40119442343711853,
-        0.54355931282043457,
-        0.66823941469192505,
-        0.89584565162658691
-    ]),
+            0.0011819154024124146,
+            0.011310584843158722,
+            0.046297885477542877,
+            0.12497371435165405,
+            0.16532610356807709,
+            0.19624066352844238,
+            0.26719647645950317,
+            0.35253793001174927,
+            0.40119442343711853,
+            0.54355931282043457,
+            0.66823941469192505,
+            0.89584565162658691
+        ]),
         std = Matrix.toMatrix([
             0.0030973609536886215,
             0.0048409318551421165,
