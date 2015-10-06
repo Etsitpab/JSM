@@ -47,14 +47,40 @@ window.onload = function () {
     })
 };
 
+
 window.onload = function () {
     $("leftPanel").style.display = "none"
-    Matrix.imread("/home/mazin/Images/images_test/1326.png", function () {
+    Matrix.imread("/home/mazin/Images/images_test/J7/1.png", function () {
         var image = this.im2double();
-        var out = image.gaussianColorEnhancement(0.2, 3 / 255, 10, 0.1);
+        var out = image.gaussianColorEnhancement(0.4, 0.25 / 255, 50, 0.1);
+        var diff = out["-"](image);
+        diff["-="](diff.min())["/="](diff.max());
         //out["-="](out.min())["/="](out.max());
         var canvas = createSuperCanvas([1000, 1000], "test");
         canvas.displayImage(image, 0, true);
+        canvas.displayImage(diff, 2, true);
         canvas.displayImage(out, 1, true);
+    });
+};
+
+window.onload = function () {
+    $("leftPanel").style.display = "none"
+    Matrix.imread("/home/mazin/Images/images_test/koala.png", function () {
+        var image = this.im2double();
+        var alpha = 0.2;
+        Tools.tic();
+        var out1 = image.guidedFilter(image, 40, 0.001);
+
+        var details = image["-"](out1)["*="](5);
+        out1["*="](1 - alpha)["+="](out1.mean()[".*"](alpha));
+        var out2 = details["+"](out1);
+        
+        console.log("Time", Tools.toc());
+        var canvas = createSuperCanvas([700, 1000], "test");
+        canvas.displayImage(image, 0, true);
+        // canvas.displayImage(out1, 1, true);
+        canvas.displayImage(details.abs(), 1, true);
+        canvas.displayImage(out2, 2, true);
+        // canvas.displayImage(fun(image), 3, true);
     });
 };           

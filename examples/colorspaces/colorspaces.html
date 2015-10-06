@@ -249,16 +249,14 @@
         <input type="button" value="Reset" id="resetThreshold"/>
       </fieldset>
 
-      <!--
-          <fieldset>
-            <legend>Selection</legend>
-            <label> Threshold: </label>
-            <input type="range" id="select_threshold" min="0" step="0.001" max="1" value="0.25"/>
-            <hr></hr>
-            <input type="button" value="Invert" id="invertSelect"/>
-            <input type="button" value="Reset" id="resetSelect"/>
-          </fieldset>
-          -->
+      <fieldset id="selection">
+        <legend>Selection</legend>
+        <label> Threshold: </label>
+        <input type="range" id="select_threshold" min="0" step="0.001" max="1" value="0.25"/>
+        <hr></hr>
+        <input type="button" value="Invert" id="invertSelect"/>
+        <input type="button" value="Reset" id="resetSelect"/>
+      </fieldset>
       <fieldset>
         <legend>Noise</legend>
         <label> Law </label>
@@ -287,14 +285,16 @@
       </fieldset>
 
       <fieldset>
-        <legend>Sharpening</legend>
-        <label> Gradient </label>
-        <input type="range" id="gradSharp" min="0" step="0.01" max="1" value="0"/>
+        <legend>Guided filter</legend>
+        <label> Neighborhood size </label>
+        <input type="range" id="neighborGF" min="0" step="1" max="50" value="0"/>
+        <label> Sigma </label>
+        <input type="range" id="sigmaGF" min="0" step="0.001" max="0.1" value="0"/>
         <label> Proportion </label>
-        <input type="range" id="propSharp" min="0" step="0.01" max="1" value="0"/>
+        <input type="range" id="detailsGF" min="0" step="0.01" max="1" value="0"/>
         <hr></hr>
-        <input type="button" value="Apply" id="applySharp">
-        <input type="button" value="Reset" id="resetSharp"/>
+        <input type="button" value="Apply" id="applyGF">
+        <input type="button" value="Reset" id="resetGF"/>
       </fieldset>
 
       <fieldset>

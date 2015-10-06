@@ -29,7 +29,8 @@ window.onload = function () {
     };
     initFileUpload('loadFile', callback);
     canvas = new SuperCanvas(document.body);
-    hideFieldset();
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
     initInputs();
     document.body.onresize = updateOutput;
 };

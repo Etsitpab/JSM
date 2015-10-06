@@ -123,6 +123,7 @@ window.onload = function () {
     sCanvas = new SuperCanvas(document.body);
     initFileUpload("loadFile", callback);
     initInputs();
-    hideFieldset();
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
     document.body.onresize = updateOutput;
 };

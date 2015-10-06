@@ -41,10 +41,11 @@ var $F = function (id, v) {
     document.getElementById(id).value = v;
 };
 
-function hideFieldset() {
+function initFieldset() {
     "use strict";
     var i, ei;
     var legends = document.getElementsByTagName("legend");
+    var fieldset = document.getElementsByTagName("fieldset");
 
     var hide = function (f) {
         var toHide = ($(f) || this).childNodes;
@@ -68,22 +69,32 @@ function hideFieldset() {
             hide.bind(legends[i].parentNode)();
         }
     };
-    hideAll();
-
-    window.fieldset = {
-        hide: hide,
-        show: show,
-        hideAll: hideAll
-    };
-
+    var currentFieldset;
     var f = function () {
         hideAll();
-        show.bind(this.parentNode)();
+        if (currentFieldset && currentFieldset.close) {
+            currentFieldset.close();
+        };
+        currentFieldset = this.parentNode
+        show.bind(currentFieldset)();
+        if (currentFieldset && currentFieldset.open) {
+            currentFieldset.open();
+        };
     };
 
     for (i = 0, ei = legends.length; i < ei; i++) {
         legends[i].addEventListener("click", f);
     }
+
+    for (i = 0, ei = fieldset.length; i < ei; i++) {
+        if (legends[i]) 
+        legends[i].addEventListener("click", f);
+    }
+    return {
+        hide: hide,
+        show: show,
+        hideAll: hideAll
+    };
 }
 
 var setElementOpacity = function (id, min, max) {

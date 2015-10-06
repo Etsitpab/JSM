@@ -175,6 +175,7 @@ window.onload = function () {
     $('paperResults').addEventListener("change", paperResults, false);
     
     document.body.onresize = updateOutput;
-    //hideFieldset();
+    // var fieldsets = initFieldset();
+    // fieldsets.hideAll();
 };
 

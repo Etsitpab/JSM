@@ -3,8 +3,6 @@
 
 var stack, stackIt, image, mask, modules, canvas;
 
-var onclick, onmousewheel;
-
 function exportImage() {
     "use strict";
     var output = stack[stackIt].image;
@@ -25,7 +23,7 @@ function updateOutput(image, init) {
     if (!stack) {
         return;
     }
-
+    
     if (!(image instanceof Matrix)) {
         image = stack[stackIt].image;
     } 
@@ -386,7 +384,30 @@ var thresholding = function () {
 
 var selection = function () {
     "use strict";
-
+    var fieldset = $("selection");
+    fieldset.open = function () {
+        canvas.click = function (c) {
+            coord = c;
+            onChange();
+        };
+        canvas.mouseWheel = function (direction, coord, event) {
+            if (event.shiftKey) {
+                $F("select_threshold", $F("select_threshold") + direction);
+                onChange();
+            } else {
+                var scale = 1 - 10 * direction;
+                this.translate(-coord[0], -coord[1]);
+                this.zoom(scale, scale);
+                this.translate(coord[0], coord[1]);
+                this.update();
+            }
+        };
+    };
+    fieldset.close = function () {
+        delete canvas.click;
+        delete canvas.mouseWheel;
+        selection.reset();
+    };
     var coord;
     
     selection.reset = function () {
@@ -412,17 +433,8 @@ var selection = function () {
     var onChange = function () {
         change("selection", getParameters());
     };
-
-    onclick = function (c) {
-        coord = c;
-        onChange();
-    };
-
-    onmousewheel = function (direction) {
-        $F("select_threshold", $F("select_threshold") + direction);
-        onChange();
-    };
     
+
     var invert = function () {
         mask = mask.neg();
         updateOutput();
@@ -783,38 +795,48 @@ var geometric = function () {
     $("scale").addEventListener("change", onChange);
 };
 
-var sharpening = function () {
+var guidedFilter = function () {
     "use strict";
 
-    sharpening.reset = function () {
-        $F("gradSharp", 0);
-        $F("propSharp", 0);
+    guidedFilter.reset = function () {
+        $F("sigmaGF", 0);
+        $F("neighborGF", 0);
+        $F("detailsGF", 0);
         updateOutput();
     };
 
     var getParameters = function () {
        return {
-           gradient: $F("gradSharp"),
-           proportion: $F("propSharp")
+           sigma: $F("sigmaGF"),
+           neighbor: $F("neighborGF"),
+           details: $F("detailsGF")
        };
     };
-    sharpening.fun = function (img, p) {
-        var blur = img.fastBlur(p.gradient * 5);
-        var grad = img['-'](blur);
-        return img['+'](grad['.*'](p.proportion * 5));
+    guidedFilter.fun = function (img, p) {
+        if (p.neighbor === 0 || p.sigma === 0) {
+            return img;
+        }
+        var filtered = img.guidedFilter(img, p.neighbor, p.sigma);
+        if (p.details === 0) {
+            return filtered;
+        } else {
+            var details = img["-"](filtered)["*="](p.details * 3);
+            return details["+"](img);
+        }
     };
     var onChange = function () {
-        change("sharpening", getParameters());
+        change("guidedFilter", getParameters());
     };
     var onApply = function () {
-        apply("sharpening", getParameters());
-        sharpening.reset();
+        apply("guidedFilter", getParameters());
+        guidedFilter.reset();
     };
 
-    $("applySharp").addEventListener("click", onApply);
-    $("resetSharp").addEventListener("click", sharpening.reset);
-    $("gradSharp").addEventListener("change", onChange);
-    $("propSharp").addEventListener("change", onChange);
+    $("applyGF").addEventListener("click", onApply);
+    $("resetGF").addEventListener("click", guidedFilter.reset);
+    $("sigmaGF").addEventListener("change", onChange);
+    $("neighborGF").addEventListener("change", onChange);
+    $("detailsGF").addEventListener("change", onChange);
 };
 
 var colorspace = function () {
@@ -926,6 +948,13 @@ var morphology = function () {
 
 window.onload = function () {
     "use strict";
+    canvas = new SuperCanvas(document.body);
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
+    initInputs();
+    initProcess();
+    document.body.onresize = updateOutput;
+
     modules =  [
         crop,
         contrast,
@@ -936,11 +965,11 @@ window.onload = function () {
         noise,
         filter,
         thresholding,
-        // selection,
+        selection,
         colorspace,
         geometric,
         morphology,
-        sharpening,
+        guidedFilter,
         undoRedo
     ];
 
@@ -977,10 +1006,5 @@ window.onload = function () {
     };
 
     initFileUpload('loadFile', callback);
-    canvas = new SuperCanvas(document.body);
-    hideFieldset();
-    initInputs();
-    initProcess();
-    document.body.onresize = updateOutput;
 };
 
