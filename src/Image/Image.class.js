@@ -679,68 +679,46 @@
             throw new Error("Matrix.conv: Invalid shape parameter.");
         }
     };
-    
-    var computeImageIntegral = function(im) {
-        var view = im.getView(), d = im.getData();
-        var dc = view.getStep(2), lc = view.getEnd(2);
-        var dx = view.getStep(1), lx = view.getEnd(1), nx;
-        var ly = view.getEnd(0), ny;
-        var c, y, x;
-        for (c = 0; c < lc; c += dc) {
-            for (y = c + 1, ny = c + ly; y < ny; y++) {
-                d[y] += d[y - 1];
-            }
-            for (x = c + dx, nx = c + lx; x < nx; x += dx) {
-                var sum = d[x];
-                d[x] += d[x - dx];
-                for (y = x + 1, ny = x + ly; y < ny; y++) {
-                    sum += d[y];     
-                    d[y] = d[y - dx] + sum;
+
+    (function () {
+        var computeImageIntegral = function(im) {
+            var view = im.getView(), d = im.getData();
+            var dc = view.getStep(2), lc = view.getEnd(2);
+            var dx = view.getStep(1), lx = view.getEnd(1), nx;
+            var ly = view.getEnd(0), ny;
+            var c, y, x;
+            for (c = 0; c < lc; c += dc) {
+                for (y = c + 1, ny = c + ly; y < ny; y++) {
+                    d[y] += d[y - 1];
+                }
+                for (x = c + dx, nx = c + lx; x < nx; x += dx) {
+                    var sum = d[x];
+                    d[x] += d[x - dx];
+                    for (y = x + 1, ny = x + ly; y < ny; y++) {
+                        sum += d[y];     
+                        d[y] = d[y - dx] + sum;
+                    }
                 }
             }
-        }
-    };
-    /** Gaussian bluring based on box filtering. 
-     * It computes a fast approximation of gaussian blur 
-     * in constant time.
-     *
-     * @param {Number} sigmaX
-     *  Standard deviation of the gausian.
-     * @param {Number} [sigmaY=sigmaX]
-     * @param {Number} [k=2]
-     *  Number of times than the image is boxfiltered.
-     * @return {Matrix}
-     */
-    Matrix_prototype.fastBlur = function (sx, sy, k) {
-        k = k || 3;
-        sy = sy || sx;
-        var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1;
-        var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1;
-        var imout = Matrix.zeros(this.getSize());
-        // Iterator to scan the view
-        var view = this.getView();
-        var dc = view.getStep(2), lc = view.getEnd(2);
-        var dx = view.getStep(1), lx = view.getEnd(1);
-        var ly = view.getEnd(0);
+        };
+        var meanFilter = function (imcum, imout, wx, wy) {
+            var view = imcum.getView();
+            var dc = view.getStep(2), lc = view.getEnd(2);
+            var dx = view.getStep(1), lx = view.getEnd(1);
+            var ly = view.getEnd(0);
 
-        sy = (wy / 2) | 0;
-        sx = ((wx / 2) | 0) * dx;
-        var sx2 = ((wx / 2) | 0);
-
-	var nx, ny, c, x, y, y_, yx;
-        var cst, csty, cste;
-
-        var imcum = this.im2double();
-        for (var p = 0; p < k; p++) {
-
-            computeImageIntegral(imcum);
+            var sy = (wy / 2) | 0;
+            var sx = ((wx / 2) | 0) * dx;
+            var sx2 = ((wx / 2) | 0);
 
             var din = imcum.getData(), dout = imout.getData();
             var e = (sx + sy + dx + 1), f = sx + sy, g = -(sx + dx) + sy, h = sx - sy - 1;
             var dinf = din.subarray(f), dinh = din.subarray(h);
+            var nx, ny, c, x, y, y_, yx;
+            var cst, csty, cste;
 
             for (c = 0; c < lc; c += dc) {            
-
+                
                 // First rows
                 for (y_ = c, y = 0, ny = c + sy + 1; y_ < ny; y_++, y++) {
                     csty = (y + sy + 1);
@@ -808,13 +786,51 @@
                     }
                 }
             }
-            var tmp = imout;
-            imout = imcum;
-            imcum = tmp;
-        }
-        return tmp;
-    };
+        };
+        
+        /** Gaussian bluring based on box filtering. 
+         * It computes a fast approximation of gaussian blur 
+         * in constant time.
+         *
+         * @param {Number} sigmaX
+         *  Standard deviation of the gausian.
+         * @param {Number} [sigmaY=sigmaX]
+         * @param {Number} [k=2]
+         *  Number of times than the image is boxfiltered.
+         * @return {Matrix}
+         */
+        Matrix_prototype.fastBlur = function (sx, sy, k) {
+            k = k || 3;
+            sy = sy || sx;
+            var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1;
+            var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1;
+            var imout = Matrix.zeros(this.getSize()), imcum = this.im2double();
+            for (var p = 0; p < k; p++) {
+                computeImageIntegral(imcum);
+                meanFilter(imcum, imout, wx, wy);
+                var tmp = imout;
+                imout = imcum;
+                imcum = tmp;
+            }
+            return tmp;
+        };
 
+        /** Box filtering. Compute the average of square patches in constant time 
+         * using integral image.
+         * @param {Number} wx
+         *  x size of the box filter
+         * @param {Number} [wy=wx]
+         *  y size of the box filter
+         * @return {Matrix}
+         */
+        Matrix_prototype.boxFilter = function (wx, wy) {
+            wy = wy === undefined ? wx : wy;
+            var imout = Matrix.zeros(this.getSize()), imcum = this.im2double();
+            computeImageIntegral(imcum);
+            meanFilter(imcum, imout, wx, wy);
+            return imout;
+        };
+    })()
     
     //////////////////////////////////////////////////////////////////
     //                          KERNEL TOOLS                        //
