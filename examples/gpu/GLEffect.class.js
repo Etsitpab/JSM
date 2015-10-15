@@ -873,6 +873,9 @@ GLImage.count = 0;
  */
 GLImage.prototype.resize = function (width, height) {
     'use strict';
+    if (this.width === width && this.height === height) {
+        return;
+    }
     var gl = this._context;
     var type = this._dataType();
     this.type = type;
