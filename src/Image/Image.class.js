@@ -804,6 +804,12 @@
             sy = sy || sx;
             var wx = Math.round(Math.sqrt(12 / k * sx * sx + 1) / 2) * 2 + 1;
             var wy = Math.round(Math.sqrt(12 / k * sy * sy + 1) / 2) * 2 + 1;
+            if (wy > this.getSize(0)) {
+                throw new Error("Matrix.fastBlur: sigma on y axis is too large.");
+            }
+            if (wx > this.getSize(1)) {
+                throw new Error("Matrix.fastBlur: sigma on x axis is too large.");
+            }
             var imout = Matrix.zeros(this.getSize()), imcum = this.im2double();
             for (var p = 0; p < k; p++) {
                 computeImageIntegral(imcum);

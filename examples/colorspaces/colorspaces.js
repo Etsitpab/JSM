@@ -235,18 +235,19 @@ var contrast = function () {
         updateOutput();
     };
     contrast.fun = function (img, p) {
-        var im = img;
+        var im = img.getCopy();;
         if (p.channel.length !== 0) {
             im = im.get([], [], p.channel);
         }
         if (p.gamma !== 1) {
-            im = im[".^"](p.gamma);
+            im.power(p.gamma);
         }
         if (p.brightness !== 0.5) {
-            im = im["+"](p.brightness - 0.5);
+            im["+="](p.brightness - 0.5);
         }
         if (p.contrast !== 0.5) {
-            im = im[".*"](p.contrast * 2)["-"](p.contrast - 0.5);
+            var mean = im.mean();
+            im["-="](mean)["*="](p.contrast * 2)["+="](mean);
         }
         if (p.channel.length !== 0) {
             im = Matrix.set(img, [], [], p.channel, im);
@@ -802,6 +803,7 @@ var guidedFilter = function () {
         $F("sigmaGF", 0);
         $F("neighborGF", 0);
         $F("detailsGF", 0);
+        $F("lowfreqGF", 0);
         updateOutput();
     };
 
@@ -809,19 +811,24 @@ var guidedFilter = function () {
        return {
            sigma: $F("sigmaGF"),
            neighbor: $F("neighborGF"),
-           details: $F("detailsGF")
+           details: $F("detailsGF"),
+           low: $F("lowfreqGF")
        };
     };
     guidedFilter.fun = function (img, p) {
+        console.log(p);
         if (p.neighbor === 0 || p.sigma === 0) {
             return img;
         }
         var filtered = img.guidedFilter(img, p.neighbor, p.sigma);
-        if (p.details === 0) {
+        if (p.details === 0 && p.low === 0) {
             return filtered;
         } else {
-            var details = img["-"](filtered)["*="](p.details * 3);
-            return details["+"](img);
+            var details = img["-"](filtered)["*="](1 + p.details * 3);
+            if (p.low !== 0) {
+                filtered["*="](1 - p.low)["+="](filtered.mean()[".*"](p.low));
+            }
+            return details["+"](filtered);
         }
     };
     var onChange = function () {
@@ -837,6 +844,7 @@ var guidedFilter = function () {
     $("sigmaGF").addEventListener("change", onChange);
     $("neighborGF").addEventListener("change", onChange);
     $("detailsGF").addEventListener("change", onChange);
+    $("lowfreqGF").addEventListener("change", onChange);
 };
 
 var colorspace = function () {
