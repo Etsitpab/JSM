@@ -867,18 +867,77 @@ function GLImage() {
  * @readonly @static @type {Number} */
 GLImage.count = 0;
 
+/** Change the storage of an image. @type {GLEffect} @static @private */
+GLImage._channelGroupper = (function () {
+    'use strict';
+    return new GLEffect.fromFunction([
+        'vec2 divideAndRemain(float p, float q) {',
+        '   float d = floor(p / q);',
+        '   return vec2(d, p - d * q);',
+        '}',
+        'float getComponent(vec4 c, float k) {',
+        '   vec4 mask = 1.0 - step(0.5, abs(k - vec4(0., 1., 2., 3.)));',
+        '   return dot(c, mask);',
+        '}',
+        'float valueAt(float k, float nx) {  // For RGBA',
+        '   vec2 pc = divideAndRemain(k, 4.0);',
+        '   vec2 yx = divideAndRemain(pc[0], nx) + 0.5;',
+        '   return getComponent(texture2D(uImage, yx.yx * uPixel), pc[1]);',
+        '}',
+        'vec4 indexOf(vec2 xy, vec2 dims) {  // For R-G-B-A-',
+        '   vec4 c = dims.x * dims.y * vec4(0.0, 1.0, 2.0, 3.0);',
+        '   return c + dot(xy, vec2(1.0, dims.x));',
+        '}',
+        'vec4 function(vec4 unused) {',
+        '   vec2 d = vec2(uSize);',
+        '   vec4 p = indexOf(floor(vPosition * d), d);',
+        '   return vec4(valueAt(p.r, d.x), valueAt(p.g, d.x), valueAt(p.b, d.x), valueAt(p.a, d.x));',
+        '}'
+    ].join('\n'));
+}());
+
+/** Change the storage of an image. @type {GLEffect} @static @private */
+GLImage._channelUngroupper = (function () {
+    'use strict';
+    return new GLEffect.fromFunction([
+        'vec2 divideAndRemain(float p, float q) {',
+        '   float d = floor(p / q);',
+        '   return vec2(d, p - d * q);',
+        '}',
+        'float getComponent(vec4 c, float k) {',
+        '   vec4 mask = 1.0 - step(0.5, abs(k - vec4(0., 1., 2., 3.)));',
+        '   return dot(c, mask);',
+        '}',
+        'float valueAt(float k, vec2 dims) {  // For R-G-B-A-',
+        '   vec2 vx = divideAndRemain(k, dims.x);',
+        '   vec2 cy = divideAndRemain(vx[0], dims.y);',
+        '   vec2 xy = vec2(vx[1], cy[1]) + 0.5;',
+        '   return getComponent(texture2D(uImage, xy * uPixel), cy[0]);',
+        '}',
+        'vec4 indexOf(vec2 xy, vec2 dims) {  // For RGBA',
+        '   vec4 c = vec4(0.0, 1.0, 2.0, 3.0);',
+        '   return c + 4.0 * dot(xy, vec2(1.0, dims.x));',
+        '}',
+        'vec4 function(vec4 unused) {',
+        '   vec2 d = vec2(uSize);',
+        '   vec4 p = indexOf(floor(vPosition * d), d);',
+        '   return vec4(valueAt(p.r, d), valueAt(p.g, d), valueAt(p.b, d), valueAt(p.a, d));',
+        '}'
+    ].join('\n'));
+}());
+
 /** Clear and resize the image.
  * @param {Number} width
  * @param {Number} height
  */
 GLImage.prototype.resize = function (width, height) {
     'use strict';
-    if (this.width === width && this.height === height) {
-        return;
-    }
     var gl = this._context;
     var type = this._dataType();
     this.type = type;
+    if (this.width === width && this.height === height) {
+        return;
+    }
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, type, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -904,12 +963,57 @@ GLImage.prototype.load = function (image) {
     this.height = image.height;
 };
 
+/** Load the image from a typed array (Float32 or Uint8).
+ * @param {Float32Array | Uint8Array} array
+ *  Input array.
+ * @param {Number} width
+ *  Width of the image.
+ * @param {Number} height
+ *  Height of the image.
+ * @param {Boolean} [groupedChannels = false]
+ *  If `false`, expects RGBA values grouped together.
+ *  If `true`, read all the R values first, then the G, the B, and the A.
+ * @throws {Error}
+ *  If the array is too small compared to given width and height.
+ * @static*/
+GLImage.prototype.fromArray = function (array, width, height, groupedChannels) {
+    'use strict';
+    if (groupedChannels) {
+        if (!GLImage._fromArray_imbuffer) {
+            GLImage._fromArray_imbuffer = new GLImage();
+        }
+        var im = GLImage._fromArray_imbuffer;
+        im.fromArray(array, width, height);
+        GLImage._channelGroupper.run(im, this);
+        return;
+    }
+    if (array.length < 4 * width * height) {
+        throw new Error('Argument error: array does not contain enough values.');
+    }
+    var intTypes = {'Float32Array': false, 'Uint8Array': true};
+    var isByte = intTypes[array.constructor.name];
+    if (isByte === undefined) {
+        throw new Error('Argument error: array type must be either Float32Array or Uint8Array.');
+    }
+    var gl = this._context;
+    var type = this._dataType(isByte);
+    this.type = type;
+    gl.bindTexture(gl.TEXTURE_2D, this._texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, type, array);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    this.width = width;
+    this.height = height;
+};
+
 /** Export the image to an array.
  * @param {Float32Array | Uint8Array | Function} [outArray]
  *  Can be:
  *
  *  * the array to be filled, which must be big enough
  *  * an array constructor, which must be either `Float32Array` or `Uint8Array`.
+ * @param {Boolean} [groupChannels = false]
+ *  If `true`, all the R values are stored first, then the G, the B, and the A.
+ *  By default, the RGBA values are grouped by pixels.
  * @return {Float32Array | Uint8Array}
  *  An array containing the pixels' values, stored as RGBA values row by row.<br/>
  *  _Length:_ `4*width*height`<br/>
@@ -918,8 +1022,15 @@ GLImage.prototype.load = function (image) {
  * @throws {Error}
  *  If a float array is requested but GLEffect does not support floating-point images.
  */
-GLImage.prototype.toArray = function (outArray) {
+GLImage.prototype.toArray = function (outArray, groupChannels) {
     'use strict';
+    if (groupChannels) {
+        if (!GLImage._fromArray_imbuffer) {
+            GLImage._fromArray_imbuffer = new GLImage();
+        }
+        var im = GLImage._channelUngroupper.run(this, GLImage._fromArray_imbuffer);
+        return im.toArray(outArray);
+    }
     var gl = this._context;
     var type = this._dataType();
     var ArrayType = (type === gl.FLOAT) ? Float32Array : Uint8Array;
@@ -993,7 +1104,7 @@ GLImage.prototype._dataType = function (useBytes) {
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
-//  CLASS: GLREDUCTION
+//  CLASS: GL REDUCTION
 ////////////////////////////////////////////////////////////////////////////////
 
 /** @class GLReduction
