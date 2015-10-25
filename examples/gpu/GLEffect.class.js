@@ -297,6 +297,15 @@ GLEffect.doesSupportFloat = function () {
     return Boolean(ext);
 };
 
+/** Get the rendering canvas (if WebGL is supported).
+ * @return {HTMLCanvasElement | null}
+ * @static */
+GLEffect.getRenderingCanvas = function () {
+    'use strict';
+    var gl = GLEffect._getDefaultContext();
+    return gl && gl.canvas;
+};
+
 /** Get the default WebGL context (if supported).
  * @return {WebGLRenderingContext | null}
  * @static @private */
