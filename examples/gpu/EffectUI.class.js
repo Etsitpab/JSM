@@ -567,7 +567,7 @@ Effects.run = function (fileLoader) {
     var runningLoop = Boolean(Effects._runLoop_images);
     delete Effects._runLoop_images;
     if (selection) {
-        output.appendChild(GLEffect._getDefaultContext().canvas);
+        output.appendChild(GLEffect.getRenderingCanvas());
         var isVideo = function (elmt) { return elmt instanceof HTMLVideoElement; };
         var hasVideo = selection.length ? selection.some(isVideo) : isVideo(selection);
         if (!hasVideo) {

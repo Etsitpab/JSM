@@ -974,17 +974,17 @@ GLImage.prototype.load = function (image) {
 
 /** Load the image from a typed array (Float32 or Uint8).
  * @param {Float32Array | Uint8Array} array
- *  Input array.
+ *  Input array, containing either 1 or 4 channels.
  * @param {Number} width
  *  Width of the image.
  * @param {Number} height
  *  Height of the image.
  * @param {Boolean} [groupedChannels = false]
  *  If `false`, expects RGBA values grouped together.
- *  If `true`, read all the R values first, then the G, the B, and the A.
+ *  If `true`, read all the R values first, then G, B, and A.
  * @throws {Error}
  *  If the array is too small compared to given width and height.
- * @static*/
+ */
 GLImage.prototype.fromArray = function (array, width, height, groupedChannels) {
     'use strict';
     if (groupedChannels) {
@@ -996,7 +996,7 @@ GLImage.prototype.fromArray = function (array, width, height, groupedChannels) {
         GLImage._channelGroupper.run(im, this);
         return;
     }
-    if (array.length < 4 * width * height) {
+    if (!width || !height || array.length < 4 * width * height) {
         throw new Error('Argument error: array does not contain enough values.');
     }
     var intTypes = {'Float32Array': false, 'Uint8Array': true};

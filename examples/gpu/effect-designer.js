@@ -36,7 +36,7 @@ function createFileLoader() {
     };
 
     // Load output image when double-clicked
-    var canvas = GLEffect._getDefaultContext().canvas;
+    var canvas = GLEffect.getRenderingCanvas();
     canvas.addEventListener('dblclick', function () {
         var inputs = Effects._getInputs();
         if (inputs) {
