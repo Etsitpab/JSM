@@ -542,11 +542,11 @@
      * @return {Matrix}
      */
     Matrix.accumarray = function (subs, val, size) {
-        if (!this.isreal()) {
-            throw new Error("Matrix.accumarray: Is not yet implement for complex values.");
-        }
 
         subs = Matrix.toMatrix(subs);
+        if (!subs.isreal()) {
+            throw new Error("Matrix.accumarray: Is not yet implement for complex values.");
+        }
         // Check subs for array of positive integers
         if (!Tools.isArrayOfIntegers(subs.getData(), 0)) {
             throw new Error('Matrix.accumarray: Subs should be an array of positive integers.');

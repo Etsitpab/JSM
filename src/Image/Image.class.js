@@ -810,7 +810,8 @@
             if (wx > this.getSize(1)) {
                 throw new Error("Matrix.fastBlur: sigma on x axis is too large.");
             }
-            var imout = Matrix.zeros(this.getSize()), imcum = this.im2double();
+            var imout = Matrix.zeros(this.getSize(), this.getDataType()), 
+                imcum = this.im2double();
             for (var p = 0; p < k; p++) {
                 computeImageIntegral(imcum);
                 meanFilter(imcum, imout, wx, wy);
@@ -829,10 +830,13 @@
          *  y size of the box filter
          * @return {Matrix}
          */
-        Matrix_prototype.boxFilter = function (wx, wy) {
+        Matrix_prototype.boxFilter = function (wx, wy, imcum) {
             wy = wy === undefined ? wx : wy;
-            var imout = Matrix.zeros(this.getSize()), imcum = this.im2double();
-            computeImageIntegral(imcum);
+            var imout = Matrix.zeros(this.getSize(), this.getDataType())
+            if (imcum === undefined) {
+                imcum = this.im2double();
+                computeImageIntegral(imcum);
+            }
             meanFilter(imcum, imout, wx, wy);
             return imout;
         };

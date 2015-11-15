@@ -486,6 +486,9 @@ var global = typeof window === 'undefined' ? module.exports : window;
      */
     Plot.prototype.addPath = function (x, y, args) {
 
+        x = x instanceof Matrix ? x.getData() : x; 
+        y = y instanceof Matrix ? y.getData() : y;
+        
         // Add (or replace) user arguments
         var defaultArgs = this.getProperties('path');
         var i;
@@ -583,6 +586,8 @@ var global = typeof window === 'undefined' ? module.exports : window;
      *  document.body.appendChild (myPlot.getDrawing ());
      */
     Plot.prototype.addHistogram = function (x, y, args) {
+        x = x instanceof Matrix ? x.getData() : x; 
+        y = y instanceof Matrix ? y.getData() : y;
 
         x = x || new Vector(1, y.length);
 

@@ -20,7 +20,7 @@
 
 (function (Matrix, Matrix_prototype) {
     "use strict";
-
+    var $M = Matrix.toMatrix;
 
     //////////////////////////////////////////////////////////////////
     //          Primitives Extraction/Insertion Functions           //
@@ -187,7 +187,7 @@
      */
     Matrix_prototype.set = function () {
         var sel = Array.prototype.slice.apply(arguments);
-        var val = Matrix.toMatrix(sel.pop());
+        var val = $M(sel.pop());
         var view = this.selectView(sel);
         if (sel.length === 1 && sel[0] instanceof Matrix) {
             var valSize = val.getSize(), selSize = sel[0].getSize();
@@ -441,7 +441,8 @@
      * @matlike
      */
     Matrix_prototype.cat = function () {
-        var dim = arguments[0];
+        var args = Array.prototype.slice.apply(arguments)
+        var dim = args[0];
 
         // Ouptut Size
         var outputSize = this.getSize();
@@ -451,12 +452,12 @@
 
         var i;
         for (i = 1; i < arguments.length; i++) {
-            outputSize[dim] += arguments[i].getSize(dim);
+            args[i] = $M(arguments[i]);
+            outputSize[dim] += args[i].getSize(dim);
         }
 
         // Output matrix
-        var O = new Matrix(outputSize);
-        var v = O.getView();
+        var O = new Matrix(outputSize), v = O.getView();
 
         // Copy first Matrix
         var start = this.getSize(dim) - 1;
@@ -466,11 +467,16 @@
 
         // Copy others matrix
         for (i = 1; i < arguments.length; i++) {
-            v.selectDimension(dim, [start + 1, start += arguments[i].getSize(dim)]);
-            arguments[i].extractViewTo(v, O);
+            v.selectDimension(dim, [start + 1, start += args[i].getSize(dim)]);
+            args[i].extractViewTo(v, O);
             v.restore();
         }
         return O;
     };
-
+    
+    Matrix.cat = function () {
+        var newArgs = Array.prototype.slice.apply(arguments)
+        var mat = $M(newArgs.splice(1, 1)[0]);
+        return Matrix.prototype.cat.apply(mat, newArgs);
+    };
 })(Matrix, Matrix.prototype);
