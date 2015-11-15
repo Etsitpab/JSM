@@ -20,7 +20,7 @@
     'use strict';
     
     /** @class Matrix */
-    var filter1DPad = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    var filter1DPad = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
@@ -33,7 +33,7 @@
             odH[oy] += sumH;
         }
     };
-    var filter1DPadMono = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernel, id, od) {
+    var filter1DPadMono = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, kernel, id, od) {
         var y, oy, k, s, sum;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
@@ -45,7 +45,7 @@
         }
     };
 
-    var filter1DPadDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    var filter1DPadDebug = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH;
         console.log("y0", y0, "ny", ny, "dy", dy, "oys", oys, "ody", ody);
         console.log("orig", orig, "K", K, "Kdy", kdy);
@@ -71,7 +71,7 @@
         }
         console.log("");
     };
-    var filter1DPadCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernelL, kernelH, idL, idH, odL, odH) {
+    var filter1DPadCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, kernelL, kernelH, idL, idH, odL, odH) {
         var y, oy, k, s, sumL, sumH;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
@@ -99,7 +99,7 @@
             odH[oy] += sumH;
         }
     };
-    var filter1DPadMonoCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, isOdd, kernel, id, od) {
+    var filter1DPadMonoCheck = function (y0, o, oys, ny, dy, ody, orig, K, kdy, ly, kernel, id, od) {
         var y, oy, k, s, sum;
         y0 += (K - 1) * kdy - orig;
         ny -= orig;
@@ -177,7 +177,6 @@
         var kL = wav[0].getData(), kH = wav[1].getData(), K = kL.length;
         
         origin = (origin === 'cl' ? Math.floor : Math.ceil)((K - 1) / 2);
-        var isOdd = vI.getSize(0) % 2 ? true : false; 
      
         var ys = vI.getFirst(0), dy = vI.getStep(0);
         var ly = vI.getEnd(0);
@@ -191,7 +190,7 @@
         var y, i, it = itI.iterator, bi = itI.begin, ei = itI.end();
         var oy, o, ot = itO.iterator, bo = itO.begin;
 
-        var s, sTmp, sumL, sumH;
+        var sumL, sumH;
         var yx0, nyx;
         if (!inL || !inH) {
             var id = (inL || inH).getData(), 
@@ -200,7 +199,7 @@
             for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
                 yx0 = ys + i;
                 nyx = ly + i;
-                filter1DMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, k, id, od);
+                filter1DMono(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, k, id, od);
             }
         } else {
             var idL = inL.getData(),  idH = inH.getData(),
@@ -208,7 +207,7 @@
             for (i = bi(), o = bo(); i !== ei; i = it(), o = ot()) {
                 yx0 = ys + i;
                 nyx = ly + i;
-                filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, isOdd, kL, kH, idL, idH, odL, odH);
+                filter1D(yx0, o, oys, nyx, dy, ody, orig, K, kdy, ly, kL, kH, idL, idH, odL, odH);
             }
         }
     };
@@ -234,8 +233,6 @@
         if (isOdd && (K % 4) !== 0) {
             ro--;
         }
-        if (dwtmode === 'per') {
-        } 
         return {"lk": lk, "rk": rk, "li": li, "lo": lo, "ri": ri, "ro": ro};
     };
     var padTest = function (isOdd) {
@@ -362,7 +359,7 @@
             var K = Matrix.wfilters(name)[0].numel();
             var lc = Math.ceil((K - 2) / 4), rc = Math.floor((K - 2) / 4);
             for (var b = 0; b < 4; b++) {
-                bands[b] = bands[b] ? bands[b].padarray(dwtmode === "per" ? "per" : dwtmode, [lc, rc], [lc, rc]) : undefined;
+                bands[b] = bands[b] ? bands[b].padarray(dwtmode, [lc, rc], [lc, rc]) : undefined;
             }
         }   
         var size = (bands[0] || bands[1] || bands[2] || bands[3]).getSize();
