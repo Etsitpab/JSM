@@ -25,12 +25,11 @@
      * - The second apply some processing on approximation coefficients
      *   that are not described in the paper.
      */
-    window.USE_CST = true; 
-    window.EDO_RES = false;
-    var nBin = 100;
-    // window.histApprox = new Uint32Array(nBin * 4);
-    // window.histDetails = new Uint32Array(nBin * 4);
-    var processCoeffs = function (D, A, K, w, gamma) {
+    var root = this;
+    root.USE_CST = true; 
+    root.EDO_RES = false;
+    root.processCoeffs = function (D, A, K, w, gamma, nIter) {
+        nIter = nIter || 1;
         var max = D[0] > 0 ? D[0] : -D[0];
         for (var i = 1, ei = D.length; i < ei; i++) {
             var v = D[i] > 0 ? D[i] : -D[i];
@@ -39,7 +38,7 @@
             }
         }
         var T = Math.max(1.01 / 255, max / K);
-        var c = window.USE_CST ? 1 / (Math.pow(255, gamma - 1)) : 1;
+        var c = root.USE_CST ? 1 / (Math.pow(255, gamma - 1)) : 1;
         for (i = 0; i < ei; i++) {
             var sign = D[i] > 0 ? 1 : -1, d0 = sign === 1 ? D[i] : -D[i];
             if (d0 <= T) {
@@ -47,39 +46,39 @@
             }
            
             var a = A[i] > 0 ? A[i] : -A[i], d = d0;
-            /*var ai = ((a < 0 ? 0 : (a > 1 ? 1 : a)) * (nBin - 1)) | 0;
-            var di = ((d < 0 ? 0 : (d > 1 ? 1 : d)) * (nBin - 1)) | 0;
-            window.histApprox[ai]++;
-            window.histDetails[di]++;
-             */
             var c1 = w * gamma, c2 = c1 * gamma * a * c;
-            for (var n = 0; n < 5; n++) {
+            // var c1 = w * gamma * a, c2 = c1 * gamma * c;
+            for (var n = 0; n < nIter; n++) {
                 var y = d - d0 - c1 * Math.pow(a / d, gamma);
                 var yp = 1 + c2 / Math.pow(d, 1 + gamma);
+                // var cst = 1 / Math.pow(d, gamma);
+                // var y = d - d0 - c1 * cst;
+                // var yp = 1 + c2 * cst / d;
                 d = d - y / yp;
             }
             D[i] = d * sign;
-        }
+        }        
         return D;
     };
-    window.getLUT = function (K, w, gamma, bin) {
-        bin = bin || 256;
-        var A = Matrix.ones(bin).cumsum(0)["-="](1)["/="](bin / 2 - 1);
-        //A.display();
-        var D = Matrix.ones(bin).cumsum(1)["-="](1)["/="](bin - 1);
-        processCoeffs(D.getData(), A.getData(), K, w, gamma);
+    root.getLUT = function (K, w, gamma, sz, nIter) {
+        sz = sz || [256, 256];
+        var A = Matrix.ones(sz).cumsum(0)["-="](1)["/="](sz[0] - 1);
+        var D = Matrix.ones(sz).cumsum(1)["-="](1)["/="](sz[1] * 2 - 1);
+        processCoeffs(D.getData(), A.getData(), K, w, gamma, nIter);
         return D;
     };
-    var processCoeffsLUT = function (D, A, lut, K, w, gamma) {
-        //var lut = getLUT(K, w, gamma);
+    var processCoeffsLUT = function (D, A, lut) {
         var nx = lut.getSize(1), ny = lut.getSize(0), lut = lut.getData();
+        var cst = (nx - 1) * ny;
         for (var i = 1, ei = D.length; i < ei; i++) {
-            var sign = D[i] > 0 ? 1 : -1, d = sign === 1 ? D[i] : -D[i];
-            var a = A[i] > 0 ? A[i] : -A[i];
-            a /= 2;
-            var t = lut[Math.floor(d * (nx - 1)) * ny + Math.floor(a * (nx - 1)) ] * sign;
-            // console.log(a, d, t, processCoeffs([D[i]], [A[i]], K, w, gamma));
-            D[i] = t;
+            var a = A[i], d = D[i];
+            var sign = d > 0 ? true : false;
+            a = (a < 0 ? 0 : (a < 1 ? a : 1));
+            d = d = sign ? d : -d
+            d *= 2;
+            d = d < 1 ? d : 1;
+            var index = (d * cst | 0) + (a * (nx - 1) | 0);
+            D[i] = sign ? lut[index] : -lut[index];
         }
         return D;
     };
@@ -95,7 +94,7 @@
 
         var im = this.im2double(), out = Matrix.zeros(im.size());
         var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
-        if (window.EDO_RES) {
+        if (root.EDO_RES) {
             J = J - 1;
         }
         var nChannel = im.size(2), wt = [];
@@ -150,28 +149,6 @@
 
         return out;
     };
-
-    Matrix.prototype.scaleDown = function () {
-        var a = this.get([0, 2, -1], [0, 2, -1]),
-            b = this.get([1, 2, -1], [0, 2, -1]),
-            c = this.get([0, 2, -1], [1, 2, -1]),
-            d = this.get([1, 2, -1], [1, 2, -1]);
-        console.log(a.size(), b.size());
-        return a["+="](b)["+="](c)["+="](d)["/="](4);
-    };
-    Matrix.prototype.scaleUp = function () {
-        var sizeOut = [
-            this.getSize(0) * 2,
-            this.getSize(1) * 2,
-            this.getSize(2)
-        ];
-        var out = Matrix.zeros(sizeOut);
-        out.set([0, 2, -1], [0, 2, -1], this);
-        out.set([1, 2, -1], [0, 2, -1], this);
-        out.set([0, 2, -1], [1, 2, -1], this);
-        out.set([1, 2, -1], [1, 2, -1], this);
-        return out;
-    };
     
     Matrix.prototype.colorEnhancement = function(gamma, w, K, name, alpha) {
         // Default parameters
@@ -206,14 +183,14 @@
     Matrix.prototype.computeScaleSpace = function (sigmaInit, nScale, scaleRatio) {
         var computeScale = function (image, sigma) {
             // var approx = image.gaussian(sigma).im2single();
-            var approx = image.fastBlur(sigma, sigma, 1).im2single();
-            var detail = image['-'](approx).im2single();
+            var approx = image.fastBlur(sigma, sigma, 1);
+            var detail = image['-='](approx);
             return {approx: approx, detail: detail, sigma: sigma};
         };
 
-        var nScale = nScale || 5,
+        var nScale = nScale || 18,
             sigmaInit = sigmaInit || 1.00,
-            scaleRatio = scaleRatio || 4.0;
+            scaleRatio = scaleRatio || Math.sqrt(2);
         
         var image = this.im2single(), i;
         // First scale
@@ -223,6 +200,7 @@
             var s2new = Math.pow(sigmaInit * Math.pow(scaleRatio, i), 2);
             var sigma = Math.sqrt(s2new - s2old);
             scales.push(computeScale(scales[i - 1].approx, sigma));
+            delete scales[i - 1].approx;
         }
         return scales;
     };
@@ -233,6 +211,7 @@
         }
         return approx;
     };
+    /*
     Matrix.prototype.gaussianColorEnhancement = function(gamma, w, K, alpha) {
         // Default parameters
         alpha = (alpha === undefined) ? 0.1 : alpha;
@@ -262,41 +241,42 @@
             console.log("Processing time", Tools.toc());
         }
         return out;
-    };
-    Matrix.prototype.gaussianColorEnhancementLUT = function(gamma, w, K, alpha) {
-        Tools.tic();
+    };*/
+    
+    Matrix.gaussianColorEnhancement = function(scales, gamma, w, K, alpha) {
         // Default parameters
         alpha = (alpha === undefined) ? 0.1 : alpha;
-        gamma = (gamma  === undefined) ? 0.5 : gamma;
-        w = (w === undefined) ? 15 / 255 : w;
-        K = (K === undefined) ? 20 : K;
+        gamma = (gamma  === undefined) ? 0.75 : gamma;
+        w = (w === undefined) ? 0.004 : w;
+        K = (K === undefined) ? Infinity : K;
 
-        var image = this.im2single();
-        var out = Matrix.zeros(this.size()).im2single();
         Tools.tic();
-        var lut = window.getLUT(K, w, gamma, 1024);
-        console.log("LUT time", Tools.toc());
-        for (var c = 0; c < image.size(2); c++) {
-            Tools.tic();
-            var scales = image.get([], [], c).computeScaleSpace();
-            console.log("Scalespace time", Tools.toc());
-
-            Tools.tic();
-            var A = scales[scales.length - 1].approx;
-            // A.max().display("max approx");
-            var mean = A.mean()[".*"](alpha);
-            A["*="](1 - alpha)["+="](mean).im2single();
-            // A.max().display("max approx");
-            for (var j = scales.length - 1; j >= 0; j--) { 
-                // scales[j].detail.max().display("max details");
-                processCoeffsLUT(scales[j].detail.getData(), A.getData(), lut, K, w, gamma);
-                A["+="](scales[j].detail).im2single();
-                // A.max().display("max approx");
-            }
-            out.set([], [], c, A);
-            console.log("Processing time", Tools.toc());
+        var A = scales[scales.length - 1].approx.getCopy();
+        var mean = A.mean()[".*"](alpha);
+        A["*="](1 - alpha)["+="](mean);
+        for (var j = scales.length - 1; j >= 0; j--) {
+            var details = scales[j].detail.getCopy();
+            processCoeffs(details.getData(), A.getData(), K, w, gamma);
+            A["+="](details);
         }
-        console.log("Whole Processing time", Tools.toc());
-        return out;
+        console.log("Processing time", Tools.toc());
+        
+        return A;
     };
-})();
+    Matrix.gaussianColorEnhancementLUT = function(scales, lut, alpha) {
+        // Default parameters
+        alpha = (alpha === undefined) ? 0.1 : alpha;
+        Tools.tic();
+        var A = scales[scales.length - 1].approx.getCopy();
+        var mean = A.mean()[".*"](alpha);
+        A["*="](1 - alpha)["+="](mean);
+        var details = Matrix.zeros(A.getSize());
+        for (var j = scales.length - 1; j >= 0; j--) { 
+            details.set(scales[j].detail);
+            processCoeffsLUT(details.getData(), A.getData(), lut);
+            A["+="](details);
+        }
+        console.log("Processing time", Tools.toc());
+        return A;
+    };
+}).bind((typeof module !== 'undefined' && module.exports) ? GLOBAL : window)();
