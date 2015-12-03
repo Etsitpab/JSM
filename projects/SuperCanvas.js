@@ -107,7 +107,7 @@
                 } else if (this.currentBuffer < 0) {
                     this.currentBuffer = this.images.length - 1;
                 }
-                console.log("Buffer", this.currentBuffer, "is now selected.");
+                // console.log("Buffer", this.currentBuffer, "is now selected.");
                 this.update();
             } else if (this.mouseWheel instanceof Function) {
                 this.mouseWheel.bind(this)(direction * 0.01, coord, event);
@@ -198,11 +198,23 @@
     SuperCanvas.prototype.zoom = function (x, y) {
         var z = Matrix.toMatrix([x, 0, 0, 0, y, 0, 0, 0, 1]).reshape([3, 3])
         this.matrix = z.mtimes(this.matrix);
+        return this;
     };
 
     SuperCanvas.prototype.translate = function (x, y) {
         var t = Matrix.toMatrix([1, 0, 0, 0, 1, 0, x, y, 1]).reshape([3, 3])
         this.matrix = t.mtimes(this.matrix);
+        return this;
+    };
+
+    SuperCanvas.prototype.setZoomFactor = function (fx, fy) {
+        var data = this.matrix.getData(), actualZoomFactor = data[0];
+        var width = this.canvas.width, height = this.canvas.height;
+        this.translate(-width / 2, -height / 2);
+        this.zoom(fx / data[0], fy / data[4]);
+        this.translate(width / 2, height / 2);
+        this.update();
+        return this;
     };
 
     SuperCanvas.prototype.click = function (coord) {
@@ -219,6 +231,14 @@
 
     SuperCanvas.prototype.selectArea = function () {};
 
+    SuperCanvas.prototype.clear = function () {
+        var ctx = this.canvas.getContext('2d');
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.restore();
+    };
+
     SuperCanvas.prototype.setImageBuffer = function (image, buffer) {
         // Draw Image on a canvas
         var canvas = document.createElement('canvas'),
@@ -228,7 +248,7 @@
             canvas.width = width;
             canvas.height = height;
             context.putImageData(image.getImageData(), 0, 0);
-        } else if (image instanceof Image) {
+        } else if (image instanceof Image || image instanceof HTMLCanvasElement) {
             canvas.width = image.width;
             canvas.height = image.height;
             context.drawImage(image, 0, 0);
@@ -261,17 +281,13 @@
             this.zoom(scale, scale);
             this.translate(this.canvas.width / 2, this.canvas.height / 2);
         }
-    
-        // Clear the canvas
-        var ctx = this.canvas.getContext('2d');
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        ctx.restore();
 
+        // Clear the canvas
+        this.clear();
         // Draw the image
         if (image) {
             var c = this.matrix.get([0, 1]).getData();
+            var ctx = this.canvas.getContext('2d');
             ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
             ctx.drawImage(image, 0, 0, image.width, image.height);
         }
