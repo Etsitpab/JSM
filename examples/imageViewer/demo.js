@@ -1,30 +1,30 @@
 /*global console, document, Matrix, Colorspaces, CIE, open */
 /*jshint indent: 4, unused: true, white: true */
 
-var path = "P:\\Tuning\\",
+var path = "mypath",
     imagePrefixes = [
-        "GOPR0003_LCT_ISO800",
-        "GOPR0004_LCT_ISO1600",
-        "GOPR0011_HCT_ISO800",
-        "GOPR0012_HCT_ISO1600"
+        "image1",
+        "image2",
+        "image3",
+        "image4"
     ],
-    referenceImagesPath = "P:\\GP\\Images\\Australia\\";
+    referenceImagesPath = "";
 
 var IMAGES, SC;
 
 var parameters = {
-    'hGreen':      ["0.7", "0.8", "0.9", "1.0", "1.1"],
-    'hRedBlue':    ["0.7", "0.8", "0.9", "1.0", "1.1"],
-    'alphaLuma':   ["0.2", "0.3", "0.4", "0.5", "0.6"],
-    'alphaChroma': ["0.2", "0.3", "0.4", "0.5", "0.6"],
-    'nMod':        ["0.5", "0.75", "1.0", "1.25", "1.5"]
+    'parameter1': ["0.7", "0.8", "0.9", "1.0", "1.1"],
+    'parameter2': ["0.7", "0.8", "0.9", "1.0", "1.1"],
+    'parameter3': ["0.2", "0.3", "0.4", "0.5", "0.6"],
+    'parameter4': ["0.2", "0.3", "0.4", "0.5", "0.6"],
+    'parameter5': ["0.5", "0.75", "1.0", "1.25", "1.5"]
 };
 var parameterNames = {
-    'hGreen':      "h",
-    'hRedBlue':    "h2",
-    'alphaLuma':   "al",
-    'alphaChroma': "ac",
-    'nMod':        "nmod"
+    'parameter1': "name1",
+    'parameter2': "name2",
+    'parameter3': "name3",
+    'parameter4': "name4",
+    'parameter5': "name5"
 }
 
 var currentParameterIndices = {};
@@ -33,7 +33,7 @@ function updateImage(name) {
     "use strict";
     if (typeof name !== "string") {
         name = path + $("imagePrefix").value;
-            
+
         for (var p in parameters) {
             name += "_" + parameterNames[p] + parameters[p][currentParameterIndices[p]];
         }
@@ -57,7 +57,7 @@ var initParameters = function () {
         addOption($("imagePrefix"), imagePrefixes[p], imagePrefixes[p]);
     }
     $("imagePrefix").addEventListener("change", updateImage);
-        
+
     var onChange = function () {
         currentParameterIndices[this.id] = this.value;
         console.log(parameters[this.id][this.value]);
@@ -81,7 +81,7 @@ var initParameters = function () {
         range.addEventListener("change", onChange);
         $("ui").appendChild(range);
 
-        var text = document.createElement("input");        
+        var text = document.createElement("input");
         text.id = p + "Val";
         text.value = parameters[p][range.value];
         text.className = "val2";
@@ -91,7 +91,7 @@ var initParameters = function () {
         currentParameterIndices[p] = 0;
     }
     $("currentTuning").value = JSON.stringify(currentParameterIndices);
-    
+
     $("saveTuning").addEventListener("click", function () {
         var value = JSON.stringify(currentParameterIndices);
         var name = $V("tuningName");
