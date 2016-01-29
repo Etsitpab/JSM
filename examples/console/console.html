@@ -3,10 +3,10 @@
     <!--<title>IPiJ - Image Processing in Javascript</title>-->
     <!-- <link rel="stylesheet" href="common_files/document.css" />-->
 
-    
+
     <meta http-equiv="text/javascript" content="type">
-    
-    <script type="text/javascript" src="init.js"></script>
+
+    <script src="init.js"></script>
 
     <script src="../../src/Tools/Tools.js"></script>
 
@@ -24,14 +24,14 @@
     <script src="../../src/Matrix/Matrix.operators.js"></script>
 
     <script src="../../src/Linalg/Linalg.class.js"></script>
-    
+
     <script src="../../src/Image/Image.class.js"></script>
     <script src="../../src/Image/Image.color.js"></script>
     <script src="../../src/Image/Image.fourier.js"></script>
     <script src="../../src/Image/Image.wavelets.js"></script>
     <script src="../../src/Image/Image.wavelets.filters.js"></script>
     <script src="../../src/Image/Image.miscellaneous.js"></script>
-    
+
     <script src="../../src/Matrix/Matrix.extend.elementary_math.special_functions.js"></script>
     <script src="../../src/Matrix/Matrix.elementary_math.complex_numbers.js"></script>
     <script src="../../src/Matrix/Matrix.extend.histograms.js"></script>
@@ -59,74 +59,20 @@
     <script src="../../projects/SuperCanvas.js"></script>
 
 
-    <script src="../Disk.js"></script>
     <script src="../base.js"></script>
-    <script src="ScriptArea.class.js"></script>
     <script src="scripts.js"></script>
 
-    <script src="../../third/CodeMirror/lib/codemirror.js"></script>
-    <script src="../../third/CodeMirror/mode/javascript/javascript.js"></script>
-    <link rel="stylesheet" href="../../third/CodeMirror/lib/codemirror.css" />
-    <link rel="stylesheet" href="console.css" />
+    <link rel="stylesheet" type="text/css" href="../base.css" media="screen" />
 
-    
+
   </head>
   <body onload="init();">
-    
-    <div id="panel">
-      
-      <!-- ******************************** -->
-      <!--          Left Pannel             -->
-      <!-- ******************************** -->
-      
-      <div id="leftPanel">
-        
-        <!--        ZONE BUTTONS        -->
-        
-        <div id="header">
-
-          <select 
-             id="fileList" 
-             onchange="selectBuffer();">
-          </select>
-
-          <select 
-             id="fileOperations" 
-             onclick="fileOperations();">
-            <option value="new"> New </option>
-            <option value="save"> Save </option>
-            <option value="saveAs"> Save as </option>
-            <option value="delete"> Delete </option>
-          </select>
-          <input id="runScript" type="button" value="Run Script (F10)"/>
-          <input id="runSelec" type="button" value="Run Selection (F9)"/>
-        </div>
-        
-        <!--        ZONE DE SCRIPT        -->
-        
-        <div id="jsScriptParent">
-          <div id="jsScript"></div>
-        </div>
-
-      </div>
-      
-      
-      <!-- ******************************** -->
-      <!--          Right Pannel            -->
-      <!-- ******************************** -->
-      
-      <div id="rightPanel">
-        
-        <!--        ZONE DE CANVAS        -->
-        
-        <div id="tableCanvas">
-          <div id="canvas">
-          </div>
-        </div>
-
-      </div>
-      
-    </div> 
-
+    <div id="imageSelector">
+      <input type="file" id="loadFile" multiple/>
+      <div id="images"></div>
+    </div>
+    <div id="uiLeft"></div>
+    <div id="plot1" class="plot"></div>
+    <div id="plot2" class="plot"></div>
   </body>
 </html>

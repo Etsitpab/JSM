@@ -7,7 +7,7 @@ var f1 = function () {
          sCanvas.displayImage(this, 0);
          */
         var kernel = Matrix.fspecial("gaussian", [5, 1], 1.5).display("kernel");
-        
+
         console.log(Tools.tic());
         Matrix.prototype.cornermetric = function (method) {
             method = method || "Harris";
@@ -16,11 +16,11 @@ var f1 = function () {
             var Ix2 = Matrix.times(gradient.x, gradient.x),
                 Iy2 = Matrix.times(gradient.y, gradient.y),
                 Ixy = Matrix.times(gradient.x, gradient.y);
-            
+
             var Sx2 = Ix2.separableFilter(kernel, kernel).getData(),
                 Sy2 = Iy2.separableFilter(kernel, kernel).getData(),
                 Sxy = Ixy.separableFilter(kernel, kernel).getData();
-            
+
             var R = Matrix.zeros(image.size()), rd = R.getData();
             var kappa = 0.04;
             if (method === "Harris") {
@@ -62,7 +62,7 @@ var f2 = function () {
         console.log(Tools.toc());
     });
     return;
-    
+
     var down = m.bin(2, 2).display("down");
     var up = down.expand(2, 2).get([0, m.getSize(0) - 1], [0, m.getSize(1) - 1]).display("up");
     var details = m["-"](up).display("details");
@@ -97,7 +97,7 @@ if (navigator.platform.match("Linux") === null) {
     }
 }
 /*
- TODO: 
+ TODO:
  - [ ] What about the lut, is it correctly read ?
  - [ ] diff vs. gain ?
  - [ ] box filter vs Gaussian ?
@@ -109,121 +109,24 @@ if (navigator.platform.match("Linux") === null) {
  - [ ] How to handle multi-
  */
 
-var K, gamma, w, nIter, bin;
-window.processImages = function () {
-    var i = 0, src;
-    Tools.tic();
-    console.log("gamma =", gamma, "w = ", w, "nIter", nIter, "bin", bin);
-    var lut = getLUT(K, w, gamma, [bin, bin], nIter);
-    console.log("LUT time", Tools.toc());
-
-    for (src in sources) {
-        Matrix.imread(sources[src], function () {
-            Matrix.dataType = Float32Array;
-            var df = 1;
-            var image = this.im2single().get([0, df, -1], [0, df, -1], []);
-
-            Tools.tic();
-            var scales = image.computeScaleSpace();
-            console.log("Scalespace time", Tools.toc());
-
-            var outColor = Matrix.gaussianColorEnhancementLUT(scales, lut, 0.15);
-            var diffColor = outColor['-'](image).im2single();
-            var dMax = diffColor.getCopy().abs().max()['*='](2);
-            diffColor["/="](dMax)["+="](0.5);
-            var outColor2 = outColor.getCopy();
-            outColor2["-="](outColor2.min())["/="](outColor2.max());
-            /*var mean = outColor2.mean();
-            outColor2["-="](mean);
-            var min = Matrix.cat(0, outColor2.min(), outColor2.max()).abs();
-            min.display("min");
-            outColor2["/="](min.max()["*"](2))["+="](mean);*/
-            
-            /*
-            var outGrey = Matrix.applycform(image, "RGB to Ohta");
-            var channel = 0;
-            var L = outGrey.get([], [], channel)            
-            L = L.gaussianColorEnhancementLUT(0.5, 10 / 255, Infinity, 0.1);
-            outGrey.set([], [], channel, L).applycform("Ohta to RGB");
-            var diffGrey = outGrey['-'](image).im2single();
-            dMax = diffGrey.getCopy().abs().max()['*='](2);
-            diffGrey["/="](dMax)["+="](0.5);
-            */
-            // var outGrey2 = outGrey.getCopy();
-            // outGrey2["-="](outGrey2.min())["/="](outGrey2.max());
-            canvas.displayImage(diffColor,     i, true);
-            canvas.displayImage(outColor,  i + 1, true);
-            canvas.displayImage(image,     i + 2, true);
-            canvas.displayImage(outColor2, i + 3, true);
-            // canvas.displayImage(outGrey,   i + 4, true);
-            // canvas.displayImage(diffGrey,  i + 5, true);
-            // canvas.displayImage(out2, i + 2, true);
-            i += 4;
-        });
-    }
-};
-
-var createRange = function (values, def, onChange, id) {
-    var input = document.createElement("input");
-    input.setAttribute("type", "range");
-    input.setAttribute("id", id);
-    input.setAttribute("min", 0);
-    input.setAttribute("step", 1);
-    input.setAttribute("max", values.length - 1);
-    if (def === undefined) {
-        def = Math.floor(values.length / 2);
-    }
-    input.setAttribute("value", def);
-    input.setAttribute("class", "val2");
-    input.addEventListener("change", function () {
-        console.log(this.id, this.value);
-        $(this.id + "Val").setAttribute("value", values[this.value]);
-    });
-    input.addEventListener("change", onChange);
-    $("uiLeft").appendChild(input);
-
-    var text = document.createElement("input");        
-    text.setAttribute("id", id + "Val");
-    text.setAttribute("value", values[input.value]);
-    text.setAttribute("class", "val2");
-    text.setAttribute("type", "text");
-    $("uiLeft").appendChild(text);
-
-    return input;
-};
-var createButton = function (value, onMouseDown, onMouseUp, id) {
-    var input = document.createElement("input");
-    input.setAttribute("type", "button");
-    input.setAttribute("id", id);
-    input.setAttribute("value", value);
-    input.addEventListener("mousedown", onMouseDown);
-    input.addEventListener("mouseup", onMouseUp);
-    $("uiLeft").appendChild(input);
-    return input;
-};
-
-var createLabel = function (value) {
-    var label = document.createElement("label");
-    label.innerHTML = value
-    $("uiLeft").appendChild(label);
-    return label;
-};
 
 var plotDetailsAmplification = function (plot, K, w, gamma, nIter) {
-    "use strict"
-    console.log("K", K);
-    var bin = 1024;
+    "use strict";
+
+    var bin = 2048;
     var values = [bin / 16, bin / 2, bin * 15 / 16],
         colors = ["blue", "red", "green"];
     var part = [1, bin - 1];
     var D = Matrix.ones(bin, 1).cumsum(0)["-="](1)["/="](bin * 4 - 1);
-    plotA.clear();
+    plot.clear();
+    console.log("w", w, "gamma", gamma, "nITer", nIter, "K", K);
+
     for (var v in values) {
         if (wRange[w] <= 0) {
             continue;
         }
         var Dp = D.getCopy();
-        var A = Matrix.ones(bin, 1)["/="](values[v]);
+        var A = Matrix.ones(bin, 1)["*="](values[v] / bin);
         processCoeffs(Dp.getData(), A.getData(), K, w, gamma, nIter);
         plot.addPath(
             D.get(part),
@@ -231,67 +134,24 @@ var plotDetailsAmplification = function (plot, K, w, gamma, nIter) {
             {"stroke": colors[v]}
         )
     }
+    var bBox = plot.getCurvesBBox();
+    bBox.height = 1.0;
+    bBox.y = -2;
+    plot.setAxis(bBox);
 };
 
-window.processImages2 = function () {
-    var gammaRange = [0.5, 0.75, 1.0],
-        wRange     = [0.001, 0.003, 0.005],
-        alphaRange = [0.0, 0.15, 0.3];
-
-    var onChange = function () {
-        var w     = $I("wRange"), gamma = $I("gammaRange"), alpha = $I("alphaRange");
-        var bufferIndex = 1 + (gamma * wRange.length + w) * alphaRange.length + alpha; 
-        canvas.update(bufferIndex);
-        plotDetailsAmplification(plotA, K, wRange[w], gammaRange[gamma], nIter);
-        console.log("w", wRange[w], "gamma", gammaRange[gamma], "alpha", alphaRange[alpha]);
-    };
-    var onMouseDown = function () {
-        canvas.update(0);
-    };
-    createButton("Original", onMouseDown, onChange);
-    createRange(alphaRange, undefined, onChange, "alphaRange");    
-    createRange(wRange, undefined, onChange, "wRange");
-    createRange(gammaRange, undefined, onChange, "gammaRange");
-
-    Matrix.dataType = Float32Array;
-    var image;
-    var process = function () {
-        image = this.im2single();
-        Tools.tic();
-        var scales = image.computeScaleSpace();
-        console.log("Scalespace time", Tools.toc());
-        var bin = 2048, nIter = 1, K = Infinity, i = 1;
-        USE_CST = false;
-        for (var g in gammaRange) {
-            for (var w in wRange) {
-                Tools.tic();
-                var lut = getLUT(K, wRange[w], gammaRange[g], [bin, bin], nIter);
-                console.log("LUT time", Tools.toc());
-                console.log("gamma =", gammaRange[g], "w = ", wRange[w], "alpha", alphaRange[a], "nIter", nIter, "bin", bin, "USE_CST", USE_CST);
-                for (var a in alphaRange) {
-                    var out = Matrix.gaussianColorEnhancementLUT(scales, lut, alphaRange[a]);
-                    canvas.displayImage(out, i++, true);
-                }
-            }
-        }
-        onChange();
-    };
-
-    $S("uiLeft").display = "";
-    var callback = function (evt) {
-        var im = new Image();
-        im.src = this;
-        im.onload = function () {
-            canvas.displayImage(im, 0, true);
-            im.height = 50;
-            im.style.marginRight = "3px";
-            $("images").appendChild(im);
-        }
-        im.onclick = function () {
-            Matrix.imread(im.src, process);
-        }
-    };
-    initFileUpload('loadFile', callback);
+var ploGammaFunc = function (plot, k, theta) {
+    "use strict"
+    var bin = 1024;
+    var D = Matrix.ones(bin, 1).cumsum(0)["-="](1)["/="](bin * 4 - 1);
+    plot.clear();
+    var Dp = D.getCopy().power(k - 1).times(D[".*"](theta).uminus().exp()).plus(1);
+    // Dp.times(1e10).times(Matrix.ones(bin, 1).minus(D.getCopy().uminus().times(100).exp()));
+    plot.addPath(
+        D,
+        Dp,
+        {"stroke": "blue"}
+    )
 };
 
 var computesDetailsHistogram = function () {
@@ -322,68 +182,141 @@ var computesDetailsHistogram = function () {
         console.log(src);
         Matrix.imread(sources[src], fun);
     }
-};    
+};
 
 window.processImages3 = function () {
+    "use strict";
+    $S("plot1").display = "";
+    $S("plot2").display = "";
+    $S("imageSelector").display = "";
+
+    USE_CST = false;
     var gammaRange = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
-        wRange     = [0.0, 0.0001, 0.0003, 0.0005, 0.001, 0.002, 0.003, 0.005, 0.01, 0.03, 0.05, 0.1, 0.3, 0.5, 1, 3, 5],
+        wRange     = [0.0, 0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1],
         alphaRange = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
         KRange     = [1, 3, 5, 10, 30, 50, 100, 300, 500, 1000, Infinity],
-        nIterRange = [1, 3, 5, 10, 30, 50];
-
-    var onChange = function () {
-        var w = wRange[$I("wRange")], 
-            gamma = gammaRange[$I("gammaRange")], 
-            alpha = alphaRange[$I("alphaRange")], 
-            nIter = nIterRange[$I("nIterRange")], 
-            K = KRange[$I("KRange")];
+        nIterRange = [1, 3, 5, 10, 30, 50],
+        gainLuminanceRange = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
+        gainSaturationRange = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
+        scaleRatioRange = [Math.pow(2, 3), Math.pow(2, 2), Math.pow(2, 1), Math.pow(2, 1/2), Math.pow(2, 1/3)];
+    var hasLutChanged = false;
+    var onChangeLut = function () {
+        hasLutChanged = true;
+        var w = wRange[$I("wRange")],
+            gamma = gammaRange[$I("gammaRange")],
+            alpha = alphaRange[$I("alphaRange")],
+            nIter = nIterRange[$I("nIterRange")],
+            K = KRange[$I("KRange")],
+            gainLuminance = gainLuminanceRange[$I("gainLuminanceRange")];
         plotDetailsAmplification(plotA, K, w, gamma, nIter);
-        console.log("w", w, "gamma", gamma, "alpha", alpha, "nITer", nIter, "K", K);
+        console.log("w", w, "gamma", gamma, "alpha", alpha, "nITer", nIter, "K", K, "gain", gainLuminance);
+    };
+    var onChangeAlpha = function () {
+        var alpha = alphaRange[$I("alphaRange")];
+        console.log("alpha", alpha);
     };
     var onMouseDown = function () {
         canvas.update(0);
     };
     // createButton("Original", onMouseDown, onChange);
-    createLabel("Alpha")
-    createRange(alphaRange, 1, onChange, "alphaRange");    
+    var hasScaleRatioChanged = false;
+    var onChangeScaleRatio = function () {
+        hasScaleRatioChanged = true;
+    };
+    createLabel("Scale ratio")
+    createRange(scaleRatioRange, 4, onChangeScaleRatio, "scaleRatioRange");
+
+    createLabel("alpha")
+    createRange(alphaRange, 2, onChangeAlpha, "alphaRange");
     createLabel("w")
-    createRange(wRange, 7, onChange, "wRange");
+    createRange(wRange, 6, onChangeLut, "wRange");
     createLabel("gamma")
-    createRange(gammaRange, 4, onChange, "gammaRange");
+    createRange(gammaRange, 4, onChangeLut, "gammaRange");
     createLabel("K")
-    createRange(KRange, 10, onChange, "KRange");
+    createRange(KRange, 10, onChangeLut, "KRange");
     createLabel("Iterations")
-    createRange(nIterRange, 0, onChange, "nIterRange");
-    onChange();
+    createRange(nIterRange, 1, onChangeLut, "nIterRange");
 
     Matrix.dataType = Float32Array;
-    var currentImage, scales;
+    var space = "Ohta", channel = 0;
+    var currentImageRGB, workingImage, scales, lut, gainMap;
     var process = function () {
-        var space = "Opponent", channel = 0;
-        var image = Matrix.applycform(currentImage, "RGB to " + space);
-        if (!scales) {
+        var luminance = workingImage.get([], [], channel)["*="](Math.sqrt(3) / 3);
+        window.luminance = luminance;
+        if (!scales || hasScaleRatioChanged) {
             Tools.tic();
-            scales = image.get([], [], channel).computeScaleSpace();
-            console.log("Scalespace time", Tools.toc());
+            scales = luminance.computeScaleSpace(undefined, Infinity, scaleRatioRange[$I("scaleRatioRange")]);
+            plotB.clear();
+            plotB.addHistogram(Matrix.linspace(0, 1, 128), luminance.imhist(128), {"fill": "red"});
+            plotB.addHistogram(Matrix.linspace(0, 1, 128), scales[scales.length - 1].approx.imhist(128), {"fill": "blue", "opacity": 0.5});
+            window.scales = scales;
+            hasScaleRatioChanged = false;
+            console.log("Scalespace time", Tools.toc(), "with scale ratio", scaleRatioRange[$I("scaleRatioRange")]);
         }
         var bin = 2048;
-        USE_CST = false;
-        var w     = wRange[$I("wRange")], 
-            gamma = gammaRange[$I("gammaRange")], 
+        var w     = wRange[$I("wRange")],
+            gamma = gammaRange[$I("gammaRange")],
             alpha = alphaRange[$I("alphaRange")],
             nIter = nIterRange[$I("nIterRange")],
             K     = KRange[$I("KRange")];
         Tools.tic();
-        var lut = getLUT(K, w, gamma, [bin, bin], nIter);
-        console.log("LUT time", Tools.toc());
-        console.log("gamma =", gamma, "w = ", w, "alpha", alpha, "nIter", nIter, "bin", bin, "USE_CST", USE_CST);
+        if (!lut || hasLutChanged) {
+            lut = getLUT(K, w, gamma, [bin, bin], nIter);
+            hasLutChanged = false;
+            console.log("LUT time", Tools.toc());
+            console.log("gamma =", gamma, "w = ", w, "alpha", alpha, "nIter", nIter, "bin", bin, "USE_CST", USE_CST);
+        }
         var out = Matrix.gaussianColorEnhancementLUT(scales, lut, alpha);
-        out = image.set([], [], channel, out).applycform(space + " to RGB");
-        out["-="](out.min())["/="](out.max());
-        canvas.displayImage(out, 1, true);
-        onChange();
+        // out.min().display("min");
+        // out.max().display("max");
+        //out["-="](out.min())["/="](out.max());
+        gainMap = out['./'](luminance);
+        applyGainMap();
     };
     createButton("Process", process);
+
+    var applyGainMap = function() {
+      Tools.tic();
+      //gain.set(gain.isfinite().neg(), 1);
+      var gainLuminance = gainLuminanceRange[$I("gainLuminanceRange")],
+          gainSaturation = gainSaturationRange[$I("gainSaturationRange")];
+      var gain = gainMap.getCopy()
+      // gain.set(gain[">"](100), 100).set(gain["<"](0.01), 0.01);
+      // gain.set(gain[">"](5), 5).set(gain["<"](0.2), 0.2);
+      // gain = gain.gaussian(1);
+
+      // gainLuminance = gain["-"](1)["*="](gainLuminance)["+="](1);
+      gainLuminance = gain[".*"](gainLuminance);
+
+      if (1) { // Gain applied in Opponent colorspace
+          // gainSaturation = gain["-"](1)["*="](gainSaturation)["+="](1);
+          gainSaturation = gain[".*"](gainSaturation);
+          var image = workingImage.getCopy();
+          image.set([], [], 0, image.get([], [], 0).times(gainLuminance));
+          image.set([], [], 1, image.get([], [], 1).times(gainSaturation));
+          image.set([], [], 2, image.get([], [], 2).times(gainSaturation));
+          image = image.applycform(space + " to RGB");
+
+      } else if (0) { // Gain applied in RGB colorspace
+          var image = workingImage.getCopy().applycform(space + " to RGB");
+          image.set([], [], 0, image.get([], [], 0).times(gainLuminance));
+          image.set([], [], 1, image.get([], [], 1).times(gainLuminance));
+          image.set([], [], 2, image.get([], [], 2).times(gainLuminance));
+      }
+
+      gain['-='](0.25)['/='](3);
+      console.log("Apply gain time", Tools.toc());
+      // gain['-='](gain.min())['/='](gain.max());
+      // image["-="](image.min())["/="](image.max());
+      canvas.displayImage(gain, 2);
+      canvas.displayImage(image, 1);
+    };
+    createLabel("Luminance gain")
+    createRange(gainLuminanceRange, undefined, onChangeLut, "gainLuminanceRange");
+    createLabel("Color gain")
+    createRange(gainLuminanceRange, undefined, onChangeLut, "gainSaturationRange");
+    createButton("Apply gain", applyGainMap);
+    onChangeLut();
 
     $S("uiLeft").display = "";
     var callback = function (evt) {
@@ -397,7 +330,8 @@ window.processImages3 = function () {
         im.onclick = function () {
             Matrix.imread(im.src, function () {
                 canvas.displayImage(this, 0, true);
-                currentImage = this.im2single()
+                currentImageRGB = this.im2single();
+                workingImage = Matrix.applycform(currentImageRGB, "RGB to " + space);
                 scales = undefined;
             });
         }
@@ -405,11 +339,57 @@ window.processImages3 = function () {
     initFileUpload('loadFile', callback);
 };
 
-window.init = function () {
+window.testGammaFit = function () {
+    "use strict";
+    var a = 1, b = 1.5;
+    var x = Matrix.rand(2000, 1), y = Matrix.power(x, b).times(a);
+    var X = x.getCopy().log(),  Y = y.getCopy().log();
+    var fit = Matrix.polyfit(X, Y, 1).display("fit").getData();
+    console.log("a =", a, "b =", b);
+    console.log("ah =", fit[0], "bh =", Math.exp(fit[1]));
+};
+
+window.testPatchDecomposition = function () {
+    "use strict";
     $S("plot1").display = "";
-    $S("plot2").display = "";
+    // $S("plot2").display = "";
     $S("imageSelector").display = "";
+    $S("uiLeft").display = "";
+
+    var callback = function (evt) {
+        var im = new Image();
+        im.src = this;
+        im.onload = function () {
+            im.height = 50;
+            im.style.marginRight = "3px";
+            $("images").appendChild(im);
+        }
+        im.onclick = function () {
+            Matrix.imread(im.src, function () {
+                window.image = limitImageSize(this, 256).im2double();
+                Tools.tic();
+                var patchSize = [7, 7];
+                var patches = image.im2col(patchSize, "sliding");
+                window.patches = patches;
+                console.log("Time required to compute patches:", Tools.toc());
+                var patchIndices = Matrix.colon(1, patches.getSize(1)).getData();
+                createLabel("Patches");
+                var onChangePatches = function () {
+                    var pSize = patchSize.slice()
+                    pSize.push(3);
+                    var patch = patches.get([], $I(this)).reshape(pSize);
+                    canvas.displayImage(patch, 0);
+                };
+                createRange(patchIndices, 0, onChangePatches, "scaleRatioRange");
+                console.log("test");
+                canvas.displayImage(image, 0);
+            });
+        }
+    };
+    initFileUpload('loadFile', callback);
+};
+
+window.init = function () {
     processImages3();
-    // K = Infinity, gamma = 0.75, w = 0.005, nIter = 1, bin = 2048;
-    // processImages();
+    // testPatchDecomposition();
 };
