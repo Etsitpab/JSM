@@ -695,7 +695,7 @@
                     var sum = d[x];
                     d[x] += d[x - dx];
                     for (y = x + 1, ny = x + ly; y < ny; y++) {
-                        sum += d[y];     
+                        sum += d[y];
                         d[y] = d[y - dx] + sum;
                     }
                 }
@@ -717,8 +717,8 @@
             var nx, ny, c, x, y, y_, yx;
             var cst, csty, cste;
 
-            for (c = 0; c < lc; c += dc) {            
-                
+            for (c = 0; c < lc; c += dc) {
+
                 // First rows
                 for (y_ = c, y = 0, ny = c + sy + 1; y_ < ny; y_++, y++) {
                     csty = (y + sy + 1);
@@ -738,7 +738,7 @@
                         dout[yx] /= ((sx + nx - yx) / dx) * csty;
                     }
                 }
-                
+
                 // First columns
                 for (x = c, nx = c + sx + dx; x < nx; x += dx) {
                     // Central part
@@ -765,7 +765,7 @@
                         dout[y] *= cst;
                     }
                 }
-                
+
                 // last rows
                 for (y = c + ly - sy, ny = c + ly; y < ny; y++) {
                     // First columns
@@ -787,9 +787,9 @@
                 }
             }
         };
-        
-        /** Gaussian bluring based on box filtering. 
-         * It computes a fast approximation of gaussian blur 
+
+        /** Gaussian bluring based on box filtering.
+         * It computes a fast approximation of gaussian blur
          * in constant time.
          *
          * @param {Number} sigmaX
@@ -810,7 +810,7 @@
             if (wx > this.getSize(1)) {
                 throw new Error("Matrix.fastBlur: sigma on x axis is too large.");
             }
-            var imout = Matrix.zeros(this.getSize(), this.getDataType()), 
+            var imout = Matrix.zeros(this.getSize(), this.getDataType()),
                 imcum = this.im2double();
             for (var p = 0; p < k; p++) {
                 computeImageIntegral(imcum);
@@ -822,7 +822,7 @@
             return tmp;
         };
 
-        /** Box filtering. Compute the average of square patches in constant time 
+        /** Box filtering. Compute the average of square patches in constant time
          * using integral image.
          * @param {Number} wx
          *  x size of the box filter
@@ -841,7 +841,7 @@
             return imout;
         };
     })()
-    
+
     //////////////////////////////////////////////////////////////////
     //                          KERNEL TOOLS                        //
     //////////////////////////////////////////////////////////////////
@@ -906,6 +906,9 @@
         }
 
         var size = 1 + 2 * Math.ceil(sigma * Math.sqrt(precision * 2 * Math.log(10)));
+        if (size === 1) {
+            return new Matrix([1, 1], [1]);
+        }
         var kerOut = new Matrix.dataType(size);
         var shift = (size - 1) / 2;
         var sum = 0, abs = Math.abs;
@@ -1144,13 +1147,13 @@
                 hd[0]++;
             } else if(indice >= bins) {
                 hd[bins - 1]++;
-            } else { 
+            } else {
                 hd[indice]++;
             }
         }
         return hist;
     };
-    
+
     (function () {
         var computeCDF = function (src, n) {
             var srcLength = src.length;
@@ -1186,7 +1189,7 @@
             var src = im;
             if (this.getSize(2) > 1) {
                 src = im.applycform("RGB to HSL").get([], [], 2);
-            } 
+            }
             src = src.getData();
             var hist = computeCDF(src, n);
 
@@ -1277,7 +1280,7 @@
         if (x - 1 >= 0) {
 	    this.right = new Node(x - 1, y, this);
         }
-    }; 
+    };
     Node.prototype.remove = function (n) {
         if (this.bottom === n) {
             this.bottom = undefined;
@@ -1308,26 +1311,26 @@
         }
         return undefined;
     };
-    
+
     /** From an image and a pixel request select neighbour pixels with a similar values
      * (RGB or grey level).
-     * @param{Number} xRef 
+     * @param{Number} xRef
      *  x coordinate of the pixel.
-     * @param{Number} yRef 
+     * @param{Number} yRef
      *  x coordinate of the pixel.
-     * @param{Number} t 
+     * @param{Number} t
      *  threshold on the distance
      * @return{Matrix}
      *  Return a Matrix with boolean values.
      */
     Matrix.prototype.getConnectedComponent = function (xRef, yRef, t) {
-        
+
         // Get image height, width and depth
         var h = this.getSize(0), w = this.getSize(1), d = this.getSize(2);
-        
+
         // Squared threshold
         var t2 = t * t;
-        
+
         // Connected component and visited pixels
         var cc = new Matrix([h, w], 'logical'), isVisited = new Matrix([h, w], 'logical');
         var ccd = cc.getData(), imd = this.getData(), ivd = isVisited.getData();
@@ -1340,7 +1343,7 @@
         var compare_pixels;
         if (d === 1) {
             if (this.type() === "logical") {
-                
+
             } else  {
 	        // Grey value of pixel request
 	        var v = imd[cRef];
@@ -1364,10 +1367,10 @@
         }
 
         var root = new Node(xRef, yRef), current = root;
-        
+
         while (current !== undefined) {
             var x = current.x, y = current.y, c = y + h * x;
-            
+
 	    if (ivd[c] === 1) {
 	        current = current.parent.remove(current).getNext();
                 continue;
@@ -1384,7 +1387,7 @@
     };
 
     Matrix.prototype.bwconncomp = function () {};
-    
+
 })();
 
 
@@ -1403,24 +1406,24 @@
 	    xE: new Int32Array([HFX, HFX, HFX, w - HFX, w - HFX, w - HFX, w, w, w]),
             yS: new Int32Array([0, HFY, h - HFY, 0, HFY, h - HFY, 0, HFY, h - HFY]),
 	    yE: new Int32Array([HFY, h - HFY, h, HFY, h - HFY, h, HFY, h - HFY, h]),
-        
+
 	    jS: new Int32Array([0, 0, 0, -HFX, -HFX, -HFX, -HFX, -HFX, -HFX]),
 	    jE: new Int32Array([HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, HFX + 1, w, w, w]),
 	    iS: new Int32Array([0, -HFY, -HFY, 0, -HFY, -HFY, 0, -HFY, -HFY]),
 	    iE: new Int32Array([HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h, HFY + 1, HFY + 1, h]),
-        
+
 	    lS: new Int32Array([HFX, HFX, HFX,  0,  0,  0 ,      0,       0,       0]),
 	    lE: new Int32Array([ FX,  FX,  FX, FX, FX, FX, HFX + w, HFX + w, HFX + w]),
 	    kS: new Int32Array([HFY,  0,       0, HFY,  0,       0, HFY,  0,       0]),
 	    kE: new Int32Array([ FY, FY, HFY + h,  FY, FY, HFY + h,  FY, FY, HFY + h]),
-            
+
             jxS: new Int32Array([0, 0, 0, 1, 1, 1, 1, 1, 1]),
 	    jxE: new Int32Array([1, 1, 1, 1, 1, 1, 0, 0, 0]),
 	    iyS: new Int32Array([0, 1, 1, 0, 1, 1, 0, 1, 1]),
 	    iyE: new Int32Array([1, 1, 0, 1, 1, 0, 1, 1, 0])
         };
     };
-    
+
     var f_dilate = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
         var max = -Infinity;
         for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
@@ -1459,7 +1462,7 @@
 
         // Filter size and data
         var FY = mask.getSize(0), FX = mask.getSize(1), md = mask.getData();
-        
+
         // Loop indices
         var li = getLoopIndices(FX, FY, w, h);
         // Loop start (S) and end (E) indices
@@ -1562,8 +1565,8 @@
      *
      * @param{Matrix} mask
      *  Boolean mask.
-     * @return {Matrix} 
-     */ 
+     * @return {Matrix}
+     */
     Matrix_prototype.median = function (mask) {
         var arg = (mask.length * 0.5) | 0;
         var f_med = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
@@ -1602,19 +1605,19 @@
         var f_bilat = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
             var sum = 0, val = 0, v = d[yx];
             for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
-	        for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+    	        for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
     	            var tmp = v - d[ij];
                     var weight = m[kl] * Math.exp(cst * tmp * tmp);
                     sum += weight;
                     val += d[ij] * weight;
-		    //sum += d[ij] * m[kl];
-	        }
+    		        //sum += d[ij] * m[kl];
+    	        }
             }
             return val / sum;
         };
         return applyFilter(this, mask, f_bilat);
     }
-    
+
     /** Compute the PSNR of two signal of the same size.
      * __See also :__
      * {@link Matrix#norm}.
@@ -1644,5 +1647,5 @@
         }
         return Matrix.toMatrix(10 * Math.log10(peakval * peakval * ie / ssd));
     };
-    
+
 })(Matrix, Matrix.prototype);
