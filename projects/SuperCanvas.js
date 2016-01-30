@@ -18,7 +18,7 @@
 
 (function () {
     "use strict";
-    
+
     window.SuperCanvas = function (parent) {
         if (typeof parent === 'string' && document.getElementById(parent)) {
             parent = document.getElementById(parent);
@@ -45,7 +45,7 @@
         this.canvas.height = this.canvas.parentNode.offsetHeight;
         this.canvas.getContext('2d').imageSmoothingEnabled = this.imageSmoothing;
     };
-    
+
     var getPosition = function (e, event) {
         var left = 0, top = 0;
         while (e.offsetParent !== undefined && e.offsetParent !== null) {
@@ -81,8 +81,17 @@
             coord = Matrix.toMatrix([coord[0], coord[1], 1]);
             coord = this.matrix.inv().mtimes(coord).getData();
             var im = this.images[this.currentBuffer];
-            var x = Math.floor(coord[0]), y = Math.floor(coord[1])
-            if (typeof this.click === 'function') {
+            var x = Math.floor(coord[0]), y = Math.floor(coord[1]);
+            if (event.which == 2) {
+                var w = window.open(undefined, '_blank');
+                var newCanvas = document.createElement('canvas');
+                var context = newCanvas.getContext('2d');
+                newCanvas.width = im.width;
+                newCanvas.height = im.height;
+                context.drawImage(im, 0, 0);
+                w.document.body.appendChild(newCanvas);
+                window.focus();
+            } else if (typeof this.click === 'function') {
                 if (x >= 0 && y >= 0 && x < im.width && y < im.height) {
                     this.click([x, y], event);
                 }
@@ -260,9 +269,8 @@
         this.currentBuffer = buffer;
         return this;
     };
-    
+
     SuperCanvas.prototype.update = function (buffer, init) {
-        var init = init === true ? true : false;
         // Draw Image on a canvas
         if (buffer === undefined) {
             buffer = this.currentBuffer;
@@ -271,7 +279,7 @@
         }
         var image = this.images[buffer];
 
-        if (init) {
+        if (init === true || (init === undefined && this.matrix === undefined)) {
             // Initialize drawing matrix at good scale and place
             var hScale = this.canvas.width / image.width;
             var vScale = this.canvas.height / image.height;

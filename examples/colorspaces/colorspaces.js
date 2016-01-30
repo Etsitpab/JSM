@@ -8,7 +8,7 @@ function exportImage() {
     var output = stack[stackIt].image;
 
     if ($V("stretchGlobal") === "YES") {
-        var min = output.min(); 
+        var min = output.min();
         var max = output.max();
         output = output["-"](min)["./"](max - min);
     }
@@ -23,10 +23,10 @@ function updateOutput(image, init) {
     if (!stack) {
         return;
     }
-    
+
     if (!(image instanceof Matrix)) {
         image = stack[stackIt].image;
-    } 
+    }
     if (mask instanceof Matrix) {
         var m = mask.double().set(mask["<"](1), 0.25).repmat([1, 1, 3]);
         image = image[".*"](m);
@@ -40,7 +40,7 @@ function initProcess () {
     if (!window.Disk) {
         return;
     }
-    
+
     var updateProcessList = function () {
         $("filters").innerHTML = "";
         var process = Disk.getItemList(".ps");
@@ -70,7 +70,7 @@ function initProcess () {
         Disk.remove(name + ".ps");
         updateProcessList();
     };
-    
+
     $("filters").addEventListener("click", onChange);
     $("saveProcess").addEventListener("click", saveProcess);
     $("removeProcess").addEventListener("click", removeProcess);
@@ -82,7 +82,7 @@ function getProcess () {
     var i, process = [];
     for (i = 0; i < stackIt; i++) {
         var step = {
-            module: stack[i].module, 
+            module: stack[i].module,
             parameters: stack[i].parameters
         };
         process.push(step);
@@ -210,8 +210,8 @@ var contrast = function () {
 
     var getParameters = function () {
         return {
-            gamma: $F("gamma"), 
-            histeq: $V("histeq_contrast"), 
+            gamma: $F("gamma"),
+            histeq: $V("histeq_contrast"),
             brightness: $F("brightness"),
             contrast: $F("contrast"),
             channel: JSON.parse($("channels_contrast").value)
@@ -257,7 +257,7 @@ var contrast = function () {
         }
         return im;
     };
-    
+
     var onChange = function () {
         updateParameters();
         change("contrast", getParameters());
@@ -278,7 +278,7 @@ var contrast = function () {
 
 var colEn = function () {
     'use strict';
-    
+
     var stretchLuminance = function (im) {
         var l = im.mean(2), lm = l.min(), lM = l.max();
         var ls = l["-"](lm)["./"](lM["-"](lm));
@@ -299,7 +299,7 @@ var colEn = function () {
             im.set([], [], c, channel);
         }
     };
-    
+
     var getParameters = function () {
         return {
             K: $F("K"),
@@ -309,7 +309,7 @@ var colEn = function () {
             wav: $V("wavelet")
         };
     };
-    
+
     colEn.reset = function () {
         Tools.tic();
         $F("K", 20);
@@ -376,7 +376,7 @@ var thresholding = function () {
         apply("thresholding", getParameters());
         thresholding.reset();
     };
-  
+
     $("resetThreshold").addEventListener("click", thresholding.reset);
     $("applyThreshold").addEventListener("click", onApply);
     $("min").addEventListener("change", onChange);
@@ -410,7 +410,7 @@ var selection = function () {
         selection.reset();
     };
     var coord;
-    
+
     selection.reset = function () {
         $F("select_threshold", 0.25);
         mask = undefined;
@@ -423,18 +423,18 @@ var selection = function () {
             coord: coord
         };
     };
-    
+
     selection.fun = function (img, p) {
         if (p.threshold > 0) {
 	    mask = img.getConnectedComponent(p.coord[0], p.coord[1], p.threshold * 2);
         }
         return img;
     };
-    
+
     var onChange = function () {
         change("selection", getParameters());
     };
-    
+
 
     var invert = function () {
         mask = mask.neg();
@@ -528,7 +528,7 @@ var hueSaturation = function () {
                 H -= 1;
             } else if (H < 0) {
                 H += 1;
-            }  
+            }
             S *= p.saturation;
             return [H, S, L];
         };
@@ -536,7 +536,7 @@ var hueSaturation = function () {
         var f2 = function (H, S, L) {
             if (H < m || H > M) {
                 S = 0;
-            }  
+            }
             return [H, S, L];
         };
         if (p.hue !== 0.5 || p.saturation !== 1) {
@@ -660,7 +660,7 @@ var filter = function () {
 
     var getParameters = function () {
        return {
-           filter: $V("filter"), 
+           filter: $V("filter"),
            filter2: $V("filter2"),
            bilateral_sigmaS: $F("bilateral_sigmaS"),
            bilateral_sigmaR: $F("bilateral_sigmaR")
@@ -875,7 +875,7 @@ var colorspace = function () {
         if (p.channels.length !== 0) {
             img = img.get([], [], p.channels);
             if (p.stretch === "YES") {
-                min = img.min().getDataScalar(); 
+                min = img.min().getDataScalar();
                 max = img.max().getDataScalar();
                 img = img["-"](min)["./"](max - min);
             }
@@ -921,10 +921,10 @@ var morphology = function () {
        return {
            operation: $V("morphOp"),
            strElem: $V("strElem"),
-           strElemSize: $F("strElemSize") 
+           strElemSize: $F("strElemSize")
        };
     };
-    
+
     morphology.fun = function (img, p) {
         var s = Math.round(p.strElemSize * 12.5) * 2 + 1;
         if (s > 0) {
@@ -934,7 +934,7 @@ var morphology = function () {
             } else if (p.strElem === "circle") {
                 var Y = Matrix.ones(s).cumsum(0)["-"]((s >> 1) + 1);
   	        strElem = Y[".^"](2)["+"](Y.transpose()[".^"](2))[".^"](0.5)["<="](s >> 1);
-            } 
+            }
             img = img[p.operation](strElem);
         }
         return img;
@@ -992,7 +992,7 @@ window.onload = function () {
         var onread = function () {
             stack = [];
             stackIt = 0;
-            image = this.im2double()
+            image = limitImageSize(this, $I("workImage")).im2double();
             stack[0] = {image: image};
             mask = undefined;
             updateOutput(image, true);
@@ -1015,4 +1015,3 @@ window.onload = function () {
 
     initFileUpload('loadFile', callback);
 };
-

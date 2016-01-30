@@ -1168,11 +1168,11 @@
         var y = t11 - mu;
         var z = t12;
         for (var k = 0, ek = n - 1; k < ek; k++) {
-            
+
         }
     };
      */
-    
+
     var getR = function (QR) {
         var R = QR[0].getCopy();
 
@@ -2085,6 +2085,78 @@
 
 })(Matrix, Matrix.prototype);
 
+(function () {
+    "use strict";
+    /** This function returns a Vandermonde Matrix corresponding to
+    * to the provided vector.
+    * @param {Matrix} x
+    * Vector used as basis to compute Vandermonde Matrix
+    * @param {Integer} degree
+    * used to limit the size of the output.
+    */
+    Matrix.vander = function (x, degree) {
+        if (!x.isvector()) {
+            throw new Error("Matrix.vander: Input must be a vector.");
+        }
+        // Test if vector is provided
+        var id = x.getData(), N = id.length;
+        degree = degree === undefined ? N - 1 : degree;
+        var out = Matrix.zeros(N, degree + 1), od = out.getData();
+        for (var y = 0; y < N; y++) {
+            var tmp = 1;
+            for (var oxy = y + N * degree; oxy >= y; oxy -= N) {
+                od[oxy] = tmp;
+                tmp *= id[y];
+            }
+        }
+        return out;
+    };
+
+    Matrix.prototype.vander = function (degree) {
+        return Matrix.vander(this, degree);
+    };
+
+    /** This function computes the coefficients of a polynomial
+    * of a given degree fitting the provided data.
+    * @param {Matrix} x
+    * @param {Matrix} y
+    * @param {Integer} degree
+    */
+    Matrix.polyfit = function (x, y, degree) {
+        return x.vander(degree).mldivide(y);
+    };
+
+    /** This function computes the value of a polynomial
+    * function for the provided values.
+    * @param {Matrix} coeffs
+    *  Coefficients of the polynomial
+    * @param {Matrix} x
+    *  value used to estimate the function
+    */
+    Matrix.polyval = function (p, x) {
+        x = Matrix.toMatrix(x);
+        p = Matrix.toMatrix(p);
+        if (!p.isvector()) {
+            throw new Error("Matrix.polyval: Parameter \"p\" must be a vector.");
+        }
+        if (!x.isvector()) {
+            throw new Error("Matrix.polyval: Parameter \"x\" must be a vector.");
+        }
+        return x.vander(p.numel() - 1).mtimes(p);
+    };
+
+    /*
+    for (var np = 1; np < 10; np++) {
+        for (var i = 0; i < 10; i++) {
+            var N = 10000 + Math.floor(Math.random() * 50)
+            var p = Matrix.randi([-100, 100], np, 1);
+            var x = Matrix.colon(1, N), y = Matrix.polyval(p, x);
+            var pp = Matrix.polyfit(x, y, p.numel() - 1);
+            console.log(N, np, p['-'](pp).abs().mean().getDataScalar());
+        }
+    }*/
+})();
+
 /*
 (function () {
     "use strict";
@@ -2338,4 +2410,3 @@
 
 })();
 */
-

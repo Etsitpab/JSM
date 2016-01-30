@@ -3,42 +3,45 @@
 
 var $ = function (id) {
     'use strict';
+    if (id instanceof HTMLElement) {
+        return id;
+    }
     return document.getElementById(id);
 };
 
 var $S = function (id, f, v) {
     'use strict';
     if (!f && !v) {
-        return document.getElementById(id).style;
+        return $(id).style;
     }
     if (v === undefined) {
-        return document.getElementById(id).style[f];
+        return $(id).style[f];
     }
-    document.getElementById(id).style[f] = v;
+    $(id).style[f] = v;
 };
 
 var $V = function (id, v) {
     'use strict';
     if (v === undefined) {
-        return document.getElementById(id).value;
+        return $(id).value;
     }
-    document.getElementById(id).setAttribute("value", v);
+    $(id).setAttribute("value", v);
 };
 
 var $I = function (id, v) {
     'use strict';
     if (v === undefined) {
-        return parseInt(document.getElementById(id).value, 10);
+        return parseInt($(id).value, 10);
     }
-    document.getElementById(id).value = v;
+    $(id).value = v;
 };
 
 var $F = function (id, v) {
     'use strict';
     if (v === undefined) {
-        return parseFloat(document.getElementById(id).value);
+        return parseFloat($(id).value);
     }
-    document.getElementById(id).value = v;
+    $(id).value = v;
 };
 
 function initFieldset() {
@@ -87,15 +90,16 @@ function initFieldset() {
     }
 
     for (i = 0, ei = fieldset.length; i < ei; i++) {
-        if (legends[i]) 
-        legends[i].addEventListener("click", f);
+        if (legends[i]) {
+        	legends[i].addEventListener("click", f);
+        }
     }
     return {
         hide: hide,
         show: show,
         hideAll: hideAll
     };
-}
+};
 
 var setElementOpacity = function (id, min, max) {
     'use strict';
@@ -106,7 +110,7 @@ var setElementOpacity = function (id, min, max) {
     $(id).addEventListener("mouseout", function () {
         this.style.opacity = min;
     });
-    
+
 };
 
 var initInputs = function () {
@@ -148,6 +152,8 @@ var initInputs = function () {
             reader.readAsText(file);
             break;
         case 'application/x-director':
+        case 'image/x-adobe-dng':
+        case 'image/tiff':
         case 'arraybuffer':
         case 'binary':
         case 'bin':
@@ -184,7 +190,53 @@ var limitImageSize = function (image, MAX_SIZE) {
         image = Matrix.imread(canvas).im2double();
     }
     return image;
-}
+};
+
+var createRange = function (values, def, onChange, id) {
+    var input = document.createElement("input");
+    input.setAttribute("type", "range");
+    input.setAttribute("id", id);
+    input.setAttribute("min", 0);
+    input.setAttribute("step", 1);
+    input.setAttribute("max", values.length - 1);
+    if (def === undefined) {
+        def = Math.floor(values.length / 2);
+    }
+    input.setAttribute("value", def);
+    input.setAttribute("class", "val2");
+    input.addEventListener("change", function () {
+        $(this.id + "Val").setAttribute("value", values[this.value]);
+    });
+    input.addEventListener("change", onChange);
+    $("uiLeft").appendChild(input);
+
+    var text = document.createElement("input");
+    text.setAttribute("id", id + "Val");
+    text.setAttribute("value", values[input.value]);
+    text.setAttribute("class", "val2");
+    text.setAttribute("type", "text");
+    $("uiLeft").appendChild(text);
+
+    return input;
+};
+
+var createButton = function (value, onMouseDown, onMouseUp, id) {
+    var input = document.createElement("input");
+    input.setAttribute("type", "button");
+    input.setAttribute("id", id);
+    input.setAttribute("value", value);
+    input.addEventListener("mousedown", onMouseDown);
+    input.addEventListener("mouseup", onMouseUp);
+    $("uiLeft").appendChild(input);
+    return input;
+};
+
+var createLabel = function (value) {
+    var label = document.createElement("label");
+    label.innerHTML = value
+    $("uiLeft").appendChild(label);
+    return label;
+};
 
 
 
@@ -205,7 +257,7 @@ navigator.sayswho = (function(){
     M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
     if ((tem = ua.match(/version\/(\d+)/i)) !== null) {
         M.splice(1, 1, tem[1]);
-    } 
+    }
     return M.join(' ').toLowerCase();
 })();
 
@@ -240,7 +292,7 @@ var drawImageHistogram = function (id, image, bins) {
             histG = Matrix.zeros(bins, 1), hgd = histG.getData(),
             histB = Matrix.zeros(bins, 1), hbd = histB.getData(),
             hist = Matrix.zeros(bins, 1), hd = hist.getData();
-        
+
         var i, ie, cst = bins, cst2 = bins / 3;
         for (i = 0, ie = nPixels; i < ie; i++) {
             var iR = R[i], iG = G[i], iB = B[i],
@@ -249,28 +301,28 @@ var drawImageHistogram = function (id, image, bins) {
                 hrd[0]++;
             } else if(iR >= 1) {
                 hrd[bins - 1]++;
-            } else { 
+            } else {
                 hrd[iR * cst | 0]++;
             }
             if (iG < 0) {
                 hgd[0]++;
             } else if(iG >= 1) {
                 hgd[bins - 1]++;
-            } else { 
+            } else {
                 hgd[iG * cst | 0]++;
             }
             if (iB < 0) {
                 hbd[0]++;
             } else if(iB >= 1) {
                 hbd[bins - 1]++;
-            } else { 
+            } else {
                 hbd[iB * cst | 0]++;
             }
             if (iGray < 0) {
                 hd[0]++;
             } else if(iGray >= 3) {
                 hd[bins - 1]++;
-            } else { 
+            } else {
                 hd[(iGray * cst2) | 0]++;
             }
         }
@@ -353,4 +405,3 @@ var createFieldset = function (title, properties) {
         {id: "resetContrast", button: "Reset"},
     ];
 };
-
