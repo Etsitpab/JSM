@@ -864,7 +864,7 @@
     };
 
     Matrix.plus = function (A, B) {
-        return A['+'](B);
+        return Matrix.toMatrix(A)['+'](B);
     };
 
 
@@ -972,7 +972,7 @@
     };
 
     Matrix.minus = function (A, B) {
-        return A['-'](B);
+        return Matrix.toMatrix(A)['-'](B);
     };
 
 
@@ -1111,7 +1111,7 @@
     };
 
     Matrix.times = function (A, B) {
-        return A['.*'](B);
+        return Matrix.toMatrix(A)['.*'](B);
     };
 
 
@@ -1232,7 +1232,7 @@
     };
 
     Matrix.rdivide = function (A, B) {
-        return A['./'](B);
+        return Matrix.toMatrix(A)['./'](B);
     };
 
 
@@ -1347,7 +1347,7 @@
     };
 
     Matrix.ldivide = function (A, B) {
-        return A['.\\'](B);
+        return Matrix.toMatrix(A)['.\\'](B);
     };
 
 
@@ -1453,7 +1453,7 @@
     };
 
     Matrix.power = function (A, B) {
-        return A['.^'](B);
+        return Matrix.toMatrix(A)['.^'](B);
     };
 
 

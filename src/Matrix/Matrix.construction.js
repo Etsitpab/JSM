@@ -158,7 +158,7 @@
         if (bins === undefined) {
             bins = 100;
         } else if (!Tools.isInteger(bins, 1)) {
-            throw new Error("Matrix.linspace: Bins shoulb be an integer > 1.");
+            throw new Error("Matrix.linspace: Bins should be an integer > 1.");
         }
 
         var binsm1 = bins - 1;

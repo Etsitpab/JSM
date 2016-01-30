@@ -18,7 +18,7 @@
 
 (function () {
     "use strict";
-    
+
     window.SuperCanvas = function (parent) {
         if (typeof parent === 'string' && document.getElementById(parent)) {
             parent = document.getElementById(parent);
@@ -45,7 +45,7 @@
         this.canvas.height = this.canvas.parentNode.offsetHeight;
         this.canvas.getContext('2d').imageSmoothingEnabled = this.imageSmoothing;
     };
-    
+
     var getPosition = function (e, event) {
         var left = 0, top = 0;
         while (e.offsetParent !== undefined && e.offsetParent !== null) {
@@ -81,8 +81,17 @@
             coord = Matrix.toMatrix([coord[0], coord[1], 1]);
             coord = this.matrix.inv().mtimes(coord).getData();
             var im = this.images[this.currentBuffer];
-            var x = Math.floor(coord[0]), y = Math.floor(coord[1])
-            if (typeof this.click === 'function') {
+            var x = Math.floor(coord[0]), y = Math.floor(coord[1]);
+            if (event.which == 2) {
+                var w = window.open(undefined, '_blank');
+                var newCanvas = document.createElement('canvas');
+                var context = newCanvas.getContext('2d');
+                newCanvas.width = im.width;
+                newCanvas.height = im.height;
+                context.drawImage(im, 0, 0);
+                w.document.body.appendChild(newCanvas);
+                window.focus();
+            } else if (typeof this.click === 'function') {
                 if (x >= 0 && y >= 0 && x < im.width && y < im.height) {
                     this.click([x, y], event);
                 }
@@ -100,7 +109,16 @@
             } else {
                 throw new Error('Mouse wheel error: What your browser is ?');
             }
-            if (this.mouseWheel instanceof Function) {
+            if (event.ctrlKey) {
+                this.currentBuffer += direction > 0 ? 1 : -1
+                if (this.currentBuffer >= this.images.length) {
+                    this.currentBuffer = 0;
+                } else if (this.currentBuffer < 0) {
+                    this.currentBuffer = this.images.length - 1;
+                }
+                // console.log("Buffer", this.currentBuffer, "is now selected.");
+                this.update();
+            } else if (this.mouseWheel instanceof Function) {
                 this.mouseWheel.bind(this)(direction * 0.01, coord, event);
             }
         }.bind(this);
@@ -189,11 +207,23 @@
     SuperCanvas.prototype.zoom = function (x, y) {
         var z = Matrix.toMatrix([x, 0, 0, 0, y, 0, 0, 0, 1]).reshape([3, 3])
         this.matrix = z.mtimes(this.matrix);
+        return this;
     };
 
     SuperCanvas.prototype.translate = function (x, y) {
         var t = Matrix.toMatrix([1, 0, 0, 0, 1, 0, x, y, 1]).reshape([3, 3])
         this.matrix = t.mtimes(this.matrix);
+        return this;
+    };
+
+    SuperCanvas.prototype.setZoomFactor = function (fx, fy) {
+        var data = this.matrix.getData(), actualZoomFactor = data[0];
+        var width = this.canvas.width, height = this.canvas.height;
+        this.translate(-width / 2, -height / 2);
+        this.zoom(fx / data[0], fy / data[4]);
+        this.translate(width / 2, height / 2);
+        this.update();
+        return this;
     };
 
     SuperCanvas.prototype.click = function (coord) {
@@ -210,6 +240,14 @@
 
     SuperCanvas.prototype.selectArea = function () {};
 
+    SuperCanvas.prototype.clear = function () {
+        var ctx = this.canvas.getContext('2d');
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.restore();
+    };
+
     SuperCanvas.prototype.setImageBuffer = function (image, buffer) {
         // Draw Image on a canvas
         var canvas = document.createElement('canvas'),
@@ -219,7 +257,7 @@
             canvas.width = width;
             canvas.height = height;
             context.putImageData(image.getImageData(), 0, 0);
-        } else if (image instanceof Image) {
+        } else if (image instanceof Image || image instanceof HTMLCanvasElement) {
             canvas.width = image.width;
             canvas.height = image.height;
             context.drawImage(image, 0, 0);
@@ -231,9 +269,8 @@
         this.currentBuffer = buffer;
         return this;
     };
-    
+
     SuperCanvas.prototype.update = function (buffer, init) {
-        var init = init === true ? true : false;
         // Draw Image on a canvas
         if (buffer === undefined) {
             buffer = this.currentBuffer;
@@ -242,7 +279,7 @@
         }
         var image = this.images[buffer];
 
-        if (init) {
+        if (init === true || (init === undefined && this.matrix === undefined)) {
             // Initialize drawing matrix at good scale and place
             var hScale = this.canvas.width / image.width;
             var vScale = this.canvas.height / image.height;
@@ -252,17 +289,13 @@
             this.zoom(scale, scale);
             this.translate(this.canvas.width / 2, this.canvas.height / 2);
         }
-    
-        // Clear the canvas
-        var ctx = this.canvas.getContext('2d');
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        ctx.restore();
 
+        // Clear the canvas
+        this.clear();
         // Draw the image
         if (image) {
             var c = this.matrix.get([0, 1]).getData();
+            var ctx = this.canvas.getContext('2d');
             ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
             ctx.drawImage(image, 0, 0, image.width, image.height);
         }
