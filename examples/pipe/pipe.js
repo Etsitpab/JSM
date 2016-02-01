@@ -708,7 +708,7 @@
 
         /*
         Tools.tic();
-        ImagePipe.hardThreshold(IMAGE, 0, 1)
+        ImagePipe.hardThreshold(IMAGE, 0, 1);
         console.log("Image threshold applied in", Tools.toc(), "ms");
         Tools.tic();
         ImagePipe.greyWorld(IMAGE);
@@ -746,7 +746,10 @@
         IMAGE = IMAGE.wdenoise(0.5, "coif2");
         console.log("Wavelet denoising applied in", Tools.toc(), "ms");
         */
+
         /*
+        Tools.tic();
+        ImagePipe.hardThreshold(IMAGE, 0, 1)
         IMAGE = IMAGE.histeq(4096);
         console.log("image equalization applied in", Tools.toc(), "ms");
         */
