@@ -19,11 +19,11 @@
 (function () {
     'use strict';
 
-    var processCoeffs = function (D, t) {
+    var processCoeffsHard = function (D, t) {
         for (var i = 0, ei = D.length; i < ei; i++) {
             var sign = D[i] > 0 ? 1 : -1, d = sign === 1 ? D[i] : -D[i];
             if (d < t) {
-                D[i] = 0;// d * sign;
+                D[i] = 0;
             }
         }
         return D;

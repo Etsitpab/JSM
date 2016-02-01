@@ -137,7 +137,7 @@ var readDNG = function (RAW) {
                 value.push(v.getFloat64(offset + 8 * i, byteOrder));
             }
         } else {
-
+            throw new Error("DNG reader: Unknown type " + type + ".");
         }
         return {
             "tag": tag,
@@ -507,11 +507,12 @@ var readDNG = function (RAW) {
     if (checkNumber !== 42) {
         throw new Error("DNG reader: Header check number must be 42 not " + checkNumber + ".");
     }
+    /*
     console.log(
         "Byte order:", byteOrder ? "little-endian" : "big-endian",
         "\ncheck number:", checkNumber,
         "\noffset", offset
-    );
+    );*/
 
     var readImageData = function (infos) {
         var ImageLength = infos.ImageLength.value,
@@ -693,6 +694,5 @@ var readDNG = function (RAW) {
     window.infos = infos;
     // console.log(offset);
     readIFD(offset, infos, IFDEntries);
-    console.log(infos);
     return infos;
 };

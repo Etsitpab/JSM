@@ -92,6 +92,23 @@
     'use strict';
     var ImagePipe = {};
 
+    var readField = function (field) {
+        var value = field.value,
+            type = field.type,
+            count = field.count;
+        if (type === "RATIONAL"  && count === 1) {
+            return value.numerator / value.denominator;
+        }
+        if (type === "RATIONAL" && count >= 1) {
+            var v, out = [];
+            for (v = 0; v < value.numerator.length; v++) {
+                out[v] = value.numerator[v] / value.denominator[v];
+            }
+            return out
+        }
+        return value;
+    };
+
     ImagePipe.reshapeCFA = function (parameters) {
         var CFAView = new MatrixView([parameters.ImageWidth.value, parameters.ImageLength.value]);
         // parameters.ActiveArea = {"value": [2750, 3750, 3250, 5500]};
@@ -106,7 +123,7 @@
         if (Orientation === 3){
             CFAView.fliplr().flipud();
         } else if (Orientation !== 1) {
-            console.warn("DNG reader: Orientation " + Orientation + " is not yet supported");
+            console.warn("DNG Processor: Orientation " + Orientation + " is not yet supported");
         }
 
         // CFA view transpose and data extraction
@@ -131,27 +148,41 @@
         return image;
     };
 
-    ImagePipe.blackPoint = function (image, parameters) {
-        var bl, wl;
+    ImagePipe.blackAndWhitePoints = function (image, parameters) {
+        var BlackLevel = [0, 0, 0, 0], WhiteLevel = Math.pow(2, readField(parameters.BitsPerSample)) - 1;
         if (parameters.BlackLevel) {
-            if (parameters.BlackLevel.type === "RATIONAL") {
-                bl = parameters.BlackLevel.value.numerator[0] / parameters.BlackLevel.value.denominator[0];
-            } else {
-                bl = Tools.isArrayLike(parameters.BlackLevel.value) ? parameters.BlackLevel.value[0] : parameters.BlackLevel.value;
+            var BlackLevelRepeatDim = [1, 1];
+            if (parameters.BlackLevelRepeatDim) {
+                BlackLevelRepeatDim = readField(parameters.BlackLevelRepeatDim);
+            }
+            var BlackLevel = readField(parameters.BlackLevel),
+                SamplesPerPixel = readField(parameters.SamplesPerPixel);
+            if (BlackLevelRepeatDim[0] !== BlackLevelRepeatDim[1] || (BlackLevelRepeatDim[0] !== 1 && BlackLevelRepeatDim[0] !== 2))     {
+                throw new Error("DNG Processor: Unsupported value " + BlackLevelRepeatDim + " for BlackLevelRepeatDim.");
+            } else if (SamplesPerPixel !== 1) {
+                throw new Error("DNG Processor: Unsupported value " + SamplesPerPixel + " for SamplesPerPixel.");
+            }
+
+            if (Tools.isNumber(BlackLevel)) {
+                BlackLevel = new Array(4).fill(BlackLevel);
             }
         }
         if (parameters.WhiteLevel) {
-            if (parameters.WhiteLevel.type === "RATIONAL") {
-                wl = parameters.WhiteLevel.value.numerator[0] / parameters.WhiteLevel.value.denominator[0];
-            } else {
-                wl = Tools.isArrayLike(parameters.WhiteLevel.value) ? parameters.WhiteLevel.value[0] : parameters.WhiteLevel.value;
+            WhiteLevel = readField(parameters.WhiteLevel);
+            if (!Tools.isNumber(WhiteLevel)) {
+                throw new Error("DNG Processor: WhiteLevel must be a number.");
             }
         }
-        var size = image.size(), ni = size[0], nx = size[1];
-        var id = image.getData();
-        var iwl = 1 / wl;
-        for (var i = 0, ei = id.length; i < ei; i++) {
-            id[i] = id[i] < bl ? 0 : (id[i] - bl) * iwl;
+        var iWhiteLevel = 1 / WhiteLevel;
+        var size = image.size(), ny = size[0], nx = size[1], id = image.getData();
+        var _x, yx, _xe, yxe, ny2 = 2 * ny;
+        for (_x = 0, _xe = nx * ny; _x < _xe; _x += ny2) {
+            for (yx = _x, yxe = _x + ny; yx < yxe; yx += 2) {
+                id[yx]          = id[yx]          < BlackLevel[0] ? 0 : (id[yx]          - BlackLevel[0]) * iWhiteLevel;
+                id[yx + ny]     = id[yx + ny]     < BlackLevel[1] ? 0 : (id[yx + ny]     - BlackLevel[1]) * iWhiteLevel;
+                id[yx + 1]      = id[yx + 1]      < BlackLevel[2] ? 0 : (id[yx + 1]      - BlackLevel[2]) * iWhiteLevel;
+                id[yx + ny + 1] = id[yx + ny + 1] < BlackLevel[3] ? 0 : (id[yx + ny + 1] - BlackLevel[3]) * iWhiteLevel;
+            }
         }
         return image;
     };
@@ -163,13 +194,82 @@
         if (Orientation === 3){
             CFAPattern = CFAPattern.fliplr().flipud();
         } else if (Orientation !== 1) {
-            console.warn("DNG reader: Orientation " + Orientation + " is not yet supported");
+            console.warn("DNG Processor: Orientation " + Orientation + " is not yet supported");
         }
         var CFAPatternOut = "", values = ["R", "G", "B"];
         for (var v of CFAPattern.getData()) {
             CFAPatternOut += values[v];
         }
         return CFAPatternOut;
+    };
+
+    ImagePipe.processMap = function (dng, image, map) {
+        var mapOut = {};
+        var Orientation = readField(dng.Orientation);
+        if (Orientation === 3){
+            var Top = map.Top, Bottom = map.Bottom, Left = map.Left, Right = map.Right;
+            var RowPitch = map.RowPitch, ColPitch = map.ColPitch;
+
+            // -1 because Bottom and Right are not included
+            var lastV = Math.floor((Bottom - 1 - Top) / RowPitch) * RowPitch + Top;
+            mapOut.Top = image.size(0) - 1 - lastV;
+            mapOut.Bottom =  image.size(0) - Top;
+            var lastH = Math.floor((Right - 1 - Left) / ColPitch) * ColPitch + Left;
+            mapOut.Left = image.size(1) - 1 - lastH;
+            mapOut.Right = image.size(1) - Left;
+            mapOut.mapValues = map.mapValues.fliplr().flipud();
+            map.Top = mapOut.Top;
+            map.Bottom = mapOut.Bottom;
+            map.Left = mapOut.Left;
+            map.Right = mapOut.Right;
+            map.mapValues = mapOut.mapValues;
+        } else if (Orientation !== 1) {
+            console.warn("DNG Processor: Orientation " + Orientation + " is not yet supported");
+        }
+        return map;
+    };
+
+    ImagePipe.applyGainMap = function (dng, image, map) {
+        map = ImagePipe.processMap(dng, image, map);
+        var size = image.size(), ny = size[0], nx = size[1], id = image.getData();
+        var MapSizeH = map.MapSpacingH * (map.MapPointsH - 1),
+            MapSizeV = map.MapSpacingV * (map.MapPointsV - 1);
+        var x0 = map.Left, y0 = map.Top, dx = map.ColPitch , dy = map.RowPitch;
+        var _x, yx, _xe, yxe, x, y;
+
+        // Replicate last values for interpolation purpose
+        var mapValues = map.mapValues.permute([2, 1, 0]).padarray("sym", [0, 1], [0, 1]);
+        // Apply only a given percentage of the map.
+        var perc = 1.0;
+        mapValues["-="](1)["*="](perc)["+="](1);
+
+        var values = mapValues.getData();
+        var nxm = mapValues.size(1), nym = mapValues.size(0);
+
+        var xIndFloat = new Float32Array(nx), yIndFloat = new Float32Array(ny);
+        var xIndInt = new Uint16Array(nx), yIndInt = new Uint16Array(ny);
+        for (x = x0; x < nx; x += dx) {
+            xIndFloat[x] = (x / nx - map.MapOriginH) / MapSizeH * (map.MapPointsH - 1);
+            xIndInt[x] = Math.floor(xIndFloat[x]);
+            xIndFloat[x] -= xIndInt[x];
+        }
+        for (y = y0; y < ny; y += dy) {
+            yIndFloat[y] = (y / ny - map.MapOriginV) / MapSizeV * (map.MapPointsV - 1);
+            yIndInt[y] = Math.floor(yIndFloat[y]);
+            yIndFloat[y] -= yIndInt[y];
+        }
+        for (_x = x0 * ny, x = x0, _xe = nx * ny; _x < _xe; _x += dx * ny, x += dx) {
+            var xpf = xIndFloat[x], xp = xIndInt[x];
+            var xInd = xp * nym;
+            for (yx = _x + y0, y = y0, yxe = _x + ny; yx < yxe; yx += dy, y += dy) {
+                var ind = xInd + yIndInt[y];
+                var a = values[ind],     c = values[ind + nym],
+                    b = values[ind + 1], d = values[ind + nym + 1];
+                // var val = (a * (1 - xpf) + c * xpf) * (1 - ypf) + (b * (1 - xpf) + d * xpf) * ypf;
+                id[yx] *= (a + (c - a) * xpf) + (b - a + (a - c + d - b) * xpf) * yIndFloat[y];
+            }
+        }
+        return image;
     };
 
     ImagePipe.demosaic = function (image, parameters) {
@@ -260,6 +360,7 @@
         }
         return out;
     };
+
     ImagePipe.apply5x5Filter = function (image, filter) {
         var size = image.size(), ny = size[0], nx = size[1];
         var out = Matrix.zeros(ny, nx, 3, 'single');
@@ -287,6 +388,7 @@
         }
         return out;
     };
+
     ImagePipe.applyBayerNLM = function (image) {
         var size = image.size(), ny = size[0], nx = size[1];
         var out = Matrix.zeros(size, 'single');
@@ -420,6 +522,7 @@
         }
         return out;
     };
+
     ImagePipe.saturateColorMatrix = function (M, saturation) {
         var O = Matrix.toMatrix([
             0.33, 0.34,  0.33,
@@ -497,6 +600,29 @@
         return image;
     };
 
+    ImagePipe.greyWorld = function (image) {
+        var size = image.size();
+        var ill = image.reshape(size[0] * size[1], 3).mean(0);
+        console.log(image.min(0).getData(), ill.getData());
+        image.reshape(size);
+        var sum = ill['.*'](ill).sum().sqrt();
+        ill = ill['/='](sum)["*="](Math.sqrt(3));
+        console.log(ill.getData());
+        ill = ill.ldivide(1).getData();
+        console.log(ill);
+        var nxy = image.getSize(1) * image.getSize(0);
+        var id = image.getData(),
+            R = id.subarray(      0,     nxy),
+            G = id.subarray(    nxy, 2 * nxy),
+            B = id.subarray(2 * nxy, 3 * nxy);
+        for (var n = 0, ne = R.length; n < ne; n++) {
+            R[n] *= ill[0];
+            G[n] *= ill[1];
+            B[n] *= ill[2];
+        }
+        return image;
+    };
+
     ImagePipe.applySRGBGamma = function (image, resolution) {
         var lut = new Float64Array(resolution);
         var a = 0.055, I2D4 = 1 / 2.4, v, ires = 1 / resolution;
@@ -531,17 +657,37 @@
         }
 
         Tools.tic();
-        ImagePipe.blackPoint(CFA, dngImage);
+        // ImagePipe.blackPoint(CFA, dngImage);
+        ImagePipe.blackAndWhitePoints(CFA, dngImage);
         console.log("Black point removed in", Tools.toc(), "ms");
+
         /*
         Tools.tic();
         CFA = ImagePipe.applyBayerNLM(CFA);
         console.log("RAW denoised in", Tools.toc(), "ms");
         */
+
+        if (dngRoot.OpcodeList2) {
+            window.maps = DNG.OpcodeList2.value;
+            Tools.tic();
+            ImagePipe.applyGainMap(dngRoot, CFA, dngRoot.OpcodeList2.value[0]);
+            ImagePipe.applyGainMap(dngRoot, CFA, dngRoot.OpcodeList2.value[1]);
+            ImagePipe.applyGainMap(dngRoot, CFA, dngRoot.OpcodeList2.value[2]);
+            ImagePipe.applyGainMap(dngRoot, CFA, dngRoot.OpcodeList2.value[3]);
+            console.log("Gain Map applied in", Tools.toc(), "ms");
+        }
+
         Tools.tic();
         var RAW = ImagePipe.demosaic(CFA, dngImage);
         console.log("RAW demosaiced in", Tools.toc(), "ms");
 
+        /*
+        Tools.tic();
+        RAW.set([], [], 0, RAW.get([], [], 0).boxFilter(7));
+        RAW.set([], [], 1, RAW.get([], [], 1).boxFilter(5));
+        RAW.set([], [], 2, RAW.get([], [], 2).boxFilter(11));
+        console.log("BoxFilter applied in", Tools.toc(), "ms");
+        */
         /*
         Tools.tic();
         RAW = RAW.sqrt().imbilateral(5, 0.01, 5).power(2);
@@ -553,16 +699,20 @@
         console.log("Wavelet denoising applied in", Tools.toc(), "ms");
         */
 
+
         Tools.tic();
         var CM = ImagePipe.computeColorMatrix(dngRoot, dngImage);
         // CM = saturateColorMatrix(CM, 1.3);
-        var IMAGE = Matrix.applycform(RAW, CM);
+        var IMAGE = RAW.applycform(CM);
         console.log("Color Matrix applied in", Tools.toc(), "ms");
 
         /*
         Tools.tic();
-        RAW.hardThreshold(0, 1)
+        ImagePipe.hardThreshold(IMAGE, 0, 1)
         console.log("Image threshold applied in", Tools.toc(), "ms");
+        Tools.tic();
+        ImagePipe.greyWorld(IMAGE);
+        console.log("White balance applied in", Tools.toc(), "ms");
         */
         /*
         Tools.tic();
@@ -575,20 +725,21 @@
         console.log("sRGB tone curve applied in", Tools.toc(), "ms");
         //RAW = RAW.imfilter(Matrix.fspecial("unsharp"));
 
-        Tools.tic();
-        var filter = Matrix.toMatrix([
-            -30, -30, -50, -30,	-30,
-            -30,  30, 120,  30,	-30,
-            -50, 120, 472, 120,	-50,
-            -30,  30, 120,  30,	-30,
-            -30, -30, -50, -30,	-30
-        ]).rdivide(512).reshape(5, 5).transpose();
+        /*
         if (window.NOFILTER !== true) {
+            Tools.tic();
             IMAGE = ImagePipe.apply5x5SymFilter(IMAGE, [-0.05859375, -0.05859375, -0.09765625, 0.05859375, 0.234375])
+            var filter = Matrix.toMatrix([
+                -30, -30, -50, -30,	-30,
+                -30,  30, 120,  30,	-30,
+                -50, 120, 472, 120,	-50,
+                -30,  30, 120,  30,	-30,
+                -30, -30, -50, -30,	-30
+            ]).rdivide(512).reshape(5, 5).transpose();
             // IMAGE = ImagePipe.apply5x5Filter(IMAGE, filter);
             // IMAGE = IMAGE.imfilter(filter);
-        }
-        console.log("5x5 filter applied in", Tools.toc(), "ms");
+            console.log("5x5 filter applied in", Tools.toc(), "ms");
+        }*/
 
         /*
         Tools.tic();
@@ -606,7 +757,6 @@
         */
         return {
             "CFA": CFA,
-            "RAW": RAW,
             "image": IMAGE
         }
     };
