@@ -1156,26 +1156,35 @@
 
     (function () {
         var computeCDF = function (src, n) {
-            var srcLength = src.length;
-
+            var i, nPixels = src.length;
+            var cst = n * Math.sqrt(3) / 3;
             // Compute histogram and histogram sum:
-            var hist = new Float32Array(n);
-            var i, floor = Math.floor;
-            for (i = 0; i < srcLength; ++i) {
-                var bin = floor(src[i] * n);
-                bin = bin >= n ? n - 1 : bin;
-                ++hist[bin];
+            var hist = new Float32Array(n), indices = new Uint16Array(nPixels);
+            for (var i = 0; i < nPixels; ++i) {
+                var bin = (src[i] * cst) | 0;
+                bin = bin >= n ? n - 1 : (bin < 0 ? 0 : bin);
+                indices[i] = bin;
+                hist[bin]++;
             }
-            var norm = 1 / srcLength;
+            var norm = 1 / nPixels;
             // Compute integral histogram:
             for (i = 1; i < n; ++i) {
                 hist[i] += hist[i - 1];
                 hist[i - 1] *= norm;
             }
-            hist[i - 1] *= norm;
-            return hist;
+            hist[n - 1] *= norm;
+            return [hist, indices];
         };
 
+        var applyCDF = function (src, CDF) {
+            // Equalize image:
+            var indices = CDF[1];
+            CDF = CDF[0];
+            var n = CDF.length, cst = 3 / Math.sqrt(3);
+            for (var i = 0, ie = src.length; i < ie; ++i) {
+                src[i] = CDF[indices[i]] * cst;
+            }
+        };
         /** Perform an histogram equalisation.
          * __Until now it only works with Uint8 images.__
          *
@@ -1185,25 +1194,21 @@
          * @return {Matrix}
          */
         Matrix_prototype.histeq = function (n) {
-            var im = this.im2double();
-            var src = im;
-            if (this.getSize(2) > 1) {
-                src = im.applycform("RGB to HSL").get([], [], 2);
+            var src = this.getData();
+            // If the input is a RGB image then convert to an opponent colorspace
+            // to  work on the luminance channel
+            if (this.getSize(2) === 3) {
+                src = this.applycform("RGB to Ohta").getData().subarray(0 * src.length / 3, 1 * src.length / 3);
+            } else if (this.getSize(2) !== 1) {
+                throw new Error("Matrix.histeq: Image must be grey level or HSV.");
             }
-            src = src.getData();
-            var hist = computeCDF(src, n);
+            var CDF = computeCDF(src, n);
+            applyCDF(src, CDF)
 
-            // Equalize image:
-            var floor = Math.floor;
-            for (var i = 0; i < src.length; ++i) {
-                src[i] = hist[floor(src[i] * (n - 1))];
-            }
-            var lumOut = new Matrix([im.size(0), im.size(1)], src);
-            im.set([], [], 2, lumOut);
             if (this.getSize(2) > 1) {
-                im.applycform("HSL to RGB");
+                this.applycform("Ohta to RGB");
             }
-            return im;
+            return this;
         };
     })();
 
