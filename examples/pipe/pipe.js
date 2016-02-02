@@ -204,29 +204,37 @@
     };
 
     ImagePipe.processMap = function (dng, image, map) {
-        var mapOut = {};
-        var Orientation = readField(dng.Orientation);
+        var mapOut, Orientation = readField(dng.Orientation);
         if (Orientation === 3){
             var Top = map.Top, Bottom = map.Bottom, Left = map.Left, Right = map.Right;
             var RowPitch = map.RowPitch, ColPitch = map.ColPitch;
 
             // -1 because Bottom and Right are not included
             var lastV = Math.floor((Bottom - 1 - Top) / RowPitch) * RowPitch + Top;
-            mapOut.Top = image.size(0) - 1 - lastV;
-            mapOut.Bottom =  image.size(0) - Top;
             var lastH = Math.floor((Right - 1 - Left) / ColPitch) * ColPitch + Left;
-            mapOut.Left = image.size(1) - 1 - lastH;
-            mapOut.Right = image.size(1) - Left;
-            mapOut.mapValues = map.mapValues.fliplr().flipud();
-            map.Top = mapOut.Top;
-            map.Bottom = mapOut.Bottom;
-            map.Left = mapOut.Left;
-            map.Right = mapOut.Right;
-            map.mapValues = mapOut.mapValues;
+
+            mapOut = {
+                "Top":         image.size(0) - 1 - lastV,
+                "Left":        image.size(1) - 1 - lastH,
+                "Bottom":      image.size(0) - Top,
+                "Right":       image.size(1) - Left,
+                "Plane":       map.Plane,
+                "Planes":      map.Planes,
+                "RowPitch":    map.RowPitch,
+                "ColPitch":    map.ColPitch,
+                "MapPointsV":  map.MapPointsV,
+                "MapPointsH":  map.MapPointsH,
+                "MapSpacingV": map.MapSpacingV,
+                "MapSpacingH": map.MapSpacingH,
+                "MapOriginV":  map.MapOriginV,
+                "MapOriginH":  map.MapOriginH,
+                "MapPlanes":   map.MapPlanes,
+                "mapValues":   map.mapValues.fliplr().flipud()
+            }
         } else if (Orientation !== 1) {
             console.warn("DNG Processor: Orientation " + Orientation + " is not yet supported");
         }
-        return map;
+        return mapOut;
     };
 
     ImagePipe.applyGainMap = function (dng, image, map) {
@@ -258,10 +266,11 @@
             yIndInt[y] = Math.floor(yIndFloat[y]);
             yIndFloat[y] -= yIndInt[y];
         }
-        for (_x = x0 * ny, x = x0, _xe = nx * ny; _x < _xe; _x += dx * ny, x += dx) {
+        var bottom = map.Bottom, right = map.Right
+        for (_x = x0 * ny, x = x0, _xe = right * ny; _x < _xe; _x += dx * ny, x += dx) {
             var xpf = xIndFloat[x], xp = xIndInt[x];
             var xInd = xp * nym;
-            for (yx = _x + y0, y = y0, yxe = _x + ny; yx < yxe; yx += dy, y += dy) {
+            for (yx = _x + y0, y = y0, yxe = _x + bottom; yx < yxe; yx += dy, y += dy) {
                 var ind = xInd + yIndInt[y];
                 var a = values[ind],     c = values[ind + nym],
                     b = values[ind + 1], d = values[ind + nym + 1];
@@ -747,12 +756,12 @@
         console.log("Wavelet denoising applied in", Tools.toc(), "ms");
         */
 
-        /*
+
         Tools.tic();
-        ImagePipe.hardThreshold(IMAGE, 0, 1)
-        IMAGE = IMAGE.histeq(4096);
+        ImagePipe.hardThreshold(IMAGE, 0, 1);
+        IMAGE = IMAGE.histeq(2048);
         console.log("image equalization applied in", Tools.toc(), "ms");
-        */
+
         /*
         Tools.tic();
         RAW = RAW.colorEnhancement(0.6, 5, 10, "coif2", 0.15)
