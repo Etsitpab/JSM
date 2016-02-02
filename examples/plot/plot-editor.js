@@ -184,7 +184,8 @@ var DATA = [];
 
 window.onload = function () {
     'use strict';
-    hideFieldset();
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
 
     plot = new Plot('default-plot', [512, 512], 'image');
 

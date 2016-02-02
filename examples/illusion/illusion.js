@@ -81,7 +81,8 @@ window.onload = function () {
     };
     $("loadFile").addEventListener("change", read, false);
 
-    window.hideFieldset();
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
     //Matrix.imread("castle.jpg", onread);
 
 };

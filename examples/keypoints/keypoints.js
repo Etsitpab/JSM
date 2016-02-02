@@ -223,6 +223,7 @@ window.onload = function () {
 
     initFileUpload("loadFile", callback);
     initInputs();
-    hideFieldset();
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
     sCanvas = new SuperCanvas(document.body);
 };
