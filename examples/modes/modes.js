@@ -362,7 +362,8 @@ window.onload = function () {
     );
     // pH.getDrawing().setAttribute("display", "none");
     $("outputImage").addEventListener("click", exportImage);
-    window.hideFieldset();
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
     fieldset.show("addPoints");
     reset();
 };

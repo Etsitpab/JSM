@@ -201,6 +201,7 @@ window.onload = function () {
     };
     $("loadFile").addEventListener("change", read, false);
 
-    hideFieldset();
+    var fieldsets = initFieldset();
+    fieldsets.hideAll();
 };
 
