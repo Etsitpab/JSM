@@ -25,7 +25,7 @@
 
 (function (Matrix, Matrix_prototype) {
     'use strict';
-    
+
     // Prime numbers from 2 to 3257
     var primes = Tools.arrayFromBase64(
         "AgADAAUABwALAA0AEQATABcAHQAfACUAKQArAC8ANQA7AD0AQwBHAEkATwBTAFkAYQBlAGcAawBt\
@@ -294,18 +294,18 @@
                 if (!Tools.isInteger(dim, 0)) {
                     throw new Error("Matrix.fftshift: Dimension must be a positive integer");
                 }
-                return this.circshift(fun(size[dim] / 2), dim);
+                return fft.circshift(fun(size[dim] / 2), dim);
             }
             for (var i = 0, ie = size.length; i < ie ; i++) {
                 size[i] = fun(size[i] / 2)
             }
             return fft.circshift(size);
         };
-        /** This function moves the zero-frequency of the fft of a 
+        /** This function moves the zero-frequency of the fft of a
          * signal to the center of the array.
          *
-         * @param {Integer} [dimension] It defines the dimension 
-         *  along which the signal is rearranged. Otherwise, the 
+         * @param {Integer} [dimension] It defines the dimension
+         *  along which the signal is rearranged. Otherwise, the
          *  operation is done along all dimension.
          *
          * __See also :__
@@ -321,8 +321,8 @@
 
         /** This function inverts the action of fftshift.
          *
-         * @param {Integer} [dimension] It defines the dimension 
-         *  along which the signal is rearranged. Otherwise, the 
+         * @param {Integer} [dimension] It defines the dimension
+         *  along which the signal is rearranged. Otherwise, the
          *  operation is done along all dimension.
          *
          * __See also :__
@@ -336,7 +336,7 @@
             return shift(this, dim, Math.ceil);
         };
     })();
-    
+
     /** Compute the inverse FFT of a vector.
      *
      * __See also :__

@@ -217,3 +217,37 @@ Matrix.prototype.nlfilter = function (psize, fun) {
     }
     return output;
 };
+
+Matrix.prototype.imadjust = function (th) {
+    "use strict";
+    var nBins = 65535;
+    var size = this.getSize();
+    var hist = this.reshape().imhist(nBins).cumsum()
+    this.reshape(size);
+    var hd = hist["/="](hist.get(-1)).getData();
+    //console.log(hd);
+    var iMin = 0, iMax = hd.length - 1;
+    for (var i = 0, ie = hd.length; i < ie; i++) {
+        // console.log(hd[i], th);
+        if (hd[i] > th) {
+            iMin = i;
+            break;
+        }
+    }
+    for (var i = hd.length - 1, ie = -1; i > ie; i--) {
+        // console.log(hd[i], 1 - th);
+        if (hd[i] < 1 - th) {
+            iMax = i;
+            break;
+        }
+    }
+    console.log(iMin, hd[iMin], iMax, hd[iMax]);
+    var id = this.getData();
+    iMax = nBins / (iMax - iMin);
+    iMin = iMin / nBins;
+    for (var i = 0, ie = id.length; i < ie; i++) {
+        var v = (id[i] - iMin) * iMax;
+        id[i] = v < 0 ? 0 : (v > 1 ? 1 : v);
+    }
+    return this;
+};

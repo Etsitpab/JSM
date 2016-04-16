@@ -20,7 +20,7 @@
 
 (function (Matrix, Matrix_prototype) {
     "use strict";
-    var $M = Matrix.toMatrix;
+
 
     //////////////////////////////////////////////////////////////////
     //          Primitives Extraction/Insertion Functions           //
@@ -187,7 +187,7 @@
      */
     Matrix_prototype.set = function () {
         var sel = Array.prototype.slice.apply(arguments);
-        var val = $M(sel.pop());
+        var val = Matrix.toMatrix(sel.pop());
         var view = this.selectView(sel);
         if (sel.length === 1 && sel[0] instanceof Matrix) {
             var valSize = val.getSize(), selSize = sel[0].getSize();
@@ -355,7 +355,7 @@
      *
      * @param {Integer[]} shift Defines the shift on each dimension.
      *
-     * @param {Integer[]}  [dimension] To be specified if shift argument 
+     * @param {Integer[]}  [dimension] To be specified if shift argument
      *  is a scalar. Corresponds to which dimension must be shifted.
      *
      * @method circshift
@@ -366,7 +366,7 @@
         var v = this.getView().circshift(K, dim);
         return this.extractViewFrom(v);
     };
-    
+
     /** Rotates Matrix counter-clockwise by a multiple of 90 degrees.
      *
      * @param {Integer} k
@@ -452,7 +452,7 @@
 
         var i;
         for (i = 1; i < arguments.length; i++) {
-            args[i] = $M(arguments[i]);
+            args[i] = Matrix.toMatrix(arguments[i]);
             outputSize[dim] += args[i].getSize(dim);
         }
 
@@ -473,10 +473,10 @@
         }
         return O;
     };
-    
+
     Matrix.cat = function () {
         var newArgs = Array.prototype.slice.apply(arguments)
-        var mat = $M(newArgs.splice(1, 1)[0]);
+        var mat = Matrix.toMatrix(newArgs.splice(1, 1)[0]);
         return Matrix.prototype.cat.apply(mat, newArgs);
     };
 })(Matrix, Matrix.prototype);

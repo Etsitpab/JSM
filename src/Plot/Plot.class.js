@@ -488,7 +488,11 @@ var global = typeof window === 'undefined' ? module.exports : window;
 
         x = x instanceof Matrix ? x.getData() : x; 
         y = y instanceof Matrix ? y.getData() : y;
-        
+
+        if (x.includes(NaN) || y.includes(NaN)) {
+            throw new Error("Plot.addPath: Data must not contain NaN values.")
+        }
+
         // Add (or replace) user arguments
         var defaultArgs = this.getProperties('path');
         var i;
@@ -586,7 +590,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
      *  document.body.appendChild (myPlot.getDrawing ());
      */
     Plot.prototype.addHistogram = function (x, y, args) {
-        x = x instanceof Matrix ? x.getData() : x; 
+        x = x instanceof Matrix ? x.getData() : x;
         y = y instanceof Matrix ? y.getData() : y;
 
         x = x || new Vector(1, y.length);
@@ -1975,7 +1979,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
             dABBox.width -= 80;
             dABBox.height -= 50;
             dABBox.y += 20;
-        } 
+        }
 
         var xLabelSpace, yLabelSpace;
         if (this.getOwnProperty('yLabel-display')) {
@@ -3722,4 +3726,3 @@ var global = typeof window === 'undefined' ? module.exports : window;
     global.Plot = Plot;
 
 })(global);
-

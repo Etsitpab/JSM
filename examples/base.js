@@ -157,25 +157,38 @@ var initInputs = function () {
         case 'arraybuffer':
         case 'binary':
         case 'bin':
-            type = 'bin';
-            reader.readAsArrayBuffer(file);
-            break;
+          type = 'bin';
+          reader.readAsArrayBuffer(file);
+          break;
         default:
-            throw new Error("readFile: unknown type " + type + ".");
+          type = 'bin';
+          reader.readAsArrayBuffer(file);
+          console.warn("readFile: unknown type " + type + ". Will be read as binary.");
+            //throw new Error("readFile: unknown type " + type + ".");
         }
     };
-    window.initFileUpload = function (id, callback, callbackInit) {
+    window.initFileUpload = function (id, callback, callbackInit, callbackEnd) {
         var read = function (evt) {
             if (callbackInit) {
                 callbackInit(evt);
             }
             // Only call the handler if 1 or more files was dropped.
-            if (this.files.length) {
-                var i;
-                for (i = 0; i < this.files.length; i++) {
-                    readFile(this.files[i], callback);
-                }
+            if (!this.files.length) {
+                return;
             }
+            var i = 0, files = this.files;
+            var readNextFile = function () {
+                readFile(files[i], function(evt, type, file) {
+                    callback.bind(this)(evt, type, file);
+                    i++;
+                    if (i < files.length) {
+                        readNextFile();
+                    } else if (callbackEnd) {
+                        callbackEnd(evt, type, file);
+                    }
+                });
+            };
+            readNextFile();
         };
         $(id).addEventListener("change", read, false);
     };
@@ -340,10 +353,43 @@ var drawImageHistogram = function (id, image, bins) {
             max: M
         };
     };
+    var computeHistogramFromCanvas = function (image) {
+        var data = image.getContext('2d').getImageData(0, 0, image.width, image.height).data;
+        var histR = Matrix.zeros(256, 1), hrd = histR.getData(),
+            histG = Matrix.zeros(256, 1), hgd = histG.getData(),
+            histB = Matrix.zeros(256, 1), hbd = histB.getData(),
+            hist  = Matrix.zeros(256, 1), hd  = hist.getData();
+        Tools.tic();
+        var cst = 1 / 3;
+        for (var i = 0, ie = data.length; i < ie; i += 4) {
+            var iR = data[i], iG = data[i + 1], iB = data[i + 2],
+                iGray = ((iR + iG + iB) * cst) | 0;
+            hrd[iR]++;
+            hgd[iG]++;
+            hbd[iB]++;
+            hd[iGray]++;
+        }
+        Tools.tic();
+        var M = hist.max().getDataScalar() / 4;
+        return {
+            R: histR.getData(),
+            G: histG.getData(),
+            B: histB.getData(),
+            gray: hist.getData(),
+            max: M
+        };
+    };
     var cnv = $(id);
     Tools.tic();
     // Histograms
-    if (image.size(2) === 3) {
+    if (image instanceof HTMLCanvasElement) {
+        var histograms = computeHistogramFromCanvas(image);
+        var max = histograms.max;
+        cnv.drawHistogram(histograms.R, max, "", undefined, 'red');
+        cnv.drawHistogram(histograms.G, max, "", undefined, 'green', false);
+        cnv.drawHistogram(histograms.B, max, "", undefined, 'blue', false);
+        cnv.drawHistogram(histograms.gray, max, "", undefined, 'grey', false);
+    } else if (image.size(2) === 3) {
         var histograms = computeHistograms(image);
         var max = histograms.max;
         cnv.drawHistogram(histograms.R, max, "", undefined, 'red');
