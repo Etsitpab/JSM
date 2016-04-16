@@ -2,16 +2,57 @@
 <meta charset="UTF-8">
 <html>
   <head>
-    <script type="text/javascript" src="../../modules/JSM.js"></script>
-    <script type="text/javascript" src="../../modules/Image.js"></script>
-    <script type="text/javascript" src="../../modules/Linalg.js"></script>
-    <script type="text/javascript" src="../../src/Plot/Plot.class.js"></script>
-    <script type="text/javascript" src="../../projects/SuperCanvas.js"></script>
-    <script type="text/javascript" src="../../projects/wDenoising.js"></script>
-    <script type="text/javascript" src="../../projects/colorEnhancement.js"></script>
-    <script type="text/javascript" src="../../projects/CIE.js"></script>
-    <script type="text/javascript" src="../../projects/CIE.data.js"></script>
-    <script type="text/javascript" src="../../projects/DNGReader.js"></script>
+      <script src="../../src/Tools/Tools.js"></script>
+
+      <script src="../../src/MatrixView/MatrixView.class.js"></script>
+      <script src="../../src/MatrixView/MatrixView.manipulation.js"></script>
+      <script src="../../src/MatrixView/MatrixView.informations.js"></script>
+
+      <script src="../../src/Matrix/Matrix.class.js"></script>
+      <script src="../../src/Matrix/Matrix.Tools.js"></script>
+      <script src="../../src/Matrix/Matrix.numeric_types.js"></script>
+      <script src="../../src/Matrix/Matrix.informations.js"></script>
+      <script src="../../src/Matrix/Matrix.manipulation.js"></script>
+      <script src="../../src/Matrix/Matrix.construction.js"></script>
+      <script src="../../src/Matrix/Matrix.statistics.base.js"></script>
+      <script src="../../src/Matrix/Matrix.operators.js"></script>
+
+      <script src="../../src/Linalg/Linalg.class.js"></script>
+
+      <script src="../../src/Image/Image.class.js"></script>
+      <script src="../../src/Image/Image.color.js"></script>
+      <script src="../../src/Image/Image.fourier.js"></script>
+      <script src="../../src/Image/Image.wavelets.js"></script>
+      <script src="../../src/Image/Image.wavelets.filters.js"></script>
+      <script src="../../src/Image/Image.miscellaneous.js"></script>
+
+      <script src="../../src/Matrix/Matrix.extend.elementary_math.special_functions.js"></script>
+      <script src="../../src/Matrix/Matrix.elementary_math.complex_numbers.js"></script>
+      <script src="../../src/Matrix/Matrix.extend.histograms.js"></script>
+
+      <script src="../../src/Matching/Matching.class.js"></script>
+      <script src="../../src/Matching/Matching.Match.js"></script>
+      <script src="../../src/Matching/Matching.DescriptorData.js"></script>
+      <script src="../../src/Matching/Matching.Descriptor.js"></script>
+      <script src="../../src/Matching/Matching.Keypoint.js"></script>
+      <script src="../../src/Matching/Matching.Scalespace.js"></script>
+      <script src="../../src/Matching/Matching.Sift.js"></script>
+      <script src="../../src/Matching/Matching.extend.benchmark.js"></script>
+      <script src="../../src/Plot/Plot.class.js"></script>
+
+      <script src="../../tests/MatrixView.test_functions.js"></script>
+      <script src="../../tests/Matrix.test_functions.js"></script>
+
+      <script src="../../projects/CIE.js"></script>
+      <script src="../../projects/CIE.data.js"></script>
+      <script src="../../projects/drawHistogram.js"></script>
+      <script src="../../projects/colorConstancy.js"></script>
+      <script src="../../projects/colorInvariants.js"></script>
+      <script src="../../projects/colorEnhancement.js"></script>
+      <script src="../../projects/Math.object.js"></script>
+      <script src="../../projects/SuperCanvas.js"></script>
+      <script src="../../projects/DNGReader.js"></script>
+      
     <script type="text/javascript" src="../base.js"></script>
     <script type="text/javascript" src="demo.js"></script>
     <script type="text/javascript" src="pipe.js"></script>
@@ -30,23 +71,26 @@
 
       <label class="val" style="width:100%;">Zoom factor</label>
       <select id="zoomFactor">
+        <option value="fit"> Fit to window </option>
         <option value="1"> 100% </option>
         <option value="2"> 200% </option>
         <option value="3"> 300% </option>
         <option value="4"> 400% </option>
       </select>
-      <input type="button" id="resetView" value="Reset View"/>
 
       <label class="val" style="width:100%;"> Buffers</label>
       <select id="buffers"></select>
+      <!--
       <label class="val" style="width:100%;"> View</label>
       <select id="buffersView">
         <option value="CFA"> CFA </option>
         <option value="PLANS"> 4 PLANS </option>
         <option value="RGB"> RGB </option>
       </select>
+-->
       <input type="button" id="resetBuffers" value="Reset buffers"/>
 
+        <!--
       <fieldset id="mouseActions">
         <legend> Mouse actions </legend>
         <label class="val" style="width:100%;"> Shift+selection</label>
@@ -76,8 +120,25 @@
         <hr></hr>
         <input type="button" id="develop" value="Develop"/>
       </fieldset>
+-->
+      <hr></hr>
+        <labal> Image functions </label>
+        <select id="imfuncs">
+        </select>
+        <label><input type="checkbox" id="applyFunction"/> Apply to all buffers</label>
+      <hr></hr>
 
-      <fieldset id="pipeParameters">
+      <fieldset id="ExifView">
+        <legend> Exif </legend>
+        <div id="ExifData" style="font-family: mono;" >
+        </div>
+      </fieldset>
+
+      <canvas id="histogram" style="width:100%"></canvas>
+      <input type="button" id="computeHistogram" value="Compute histogram"/>
+
+
+      <fieldset id="rawMeasures">
         <legend> RAW statistics </legend>
         <select id="measures"></select>
         <input type="button" id="resetMeasures" value="Reset measures"/>
@@ -103,14 +164,13 @@
         <input type="text" style="width:65%;" id="maxVal" class="val" value="">
         <br>
       </fieldset>
-      <hr></hr>
-      <canvas id="histogram" style="width:100%"></canvas>
+
     </div>
 
-    <div id="plot1" class="plot">
+    <div id="plot1Container" class="plot">
     </div>
 
-    <div id="plot2" class="plot">
+    <div id="plot2Container" class="plot">
     </div>
 
   </body>

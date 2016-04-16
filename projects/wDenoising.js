@@ -21,8 +21,7 @@
 
     var processCoeffsHard = function (D, t) {
         for (var i = 0, ei = D.length; i < ei; i++) {
-            var sign = D[i] > 0 ? 1 : -1, d = sign === 1 ? D[i] : -D[i];
-            if (d < t) {
+            if ((D[i] > 0 ? D[i] : -D[i]) < t) {
                 D[i] = 0;
             }
         }
@@ -31,21 +30,33 @@
 
     Matrix.prototype.wdenoise = function (t, name) {
         // Default parameters
-        var im = this;
-        var out = Matrix.zeros(im.size());
+        var out = Matrix.zeros(this.size());
         var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
-        for (var c = 0; c < im.size(2); c++) {
-            var channel = im.get([], [], c);
+        for (var c = 0; c < this.size(2); c++) {
+            var channel = this.get([], [], c);
             var wt = Matrix.wavedec2(channel, J, name);
             for (var j = J - 1; j >= 0; j--) {
                 var d = wt[0].getData();
                 var sb = wt[1].value([0, 0]) * wt[1].value([0, 1]);
-                processCoeffs(d.subarray(sb, 4 * sb), t);
+                processCoeffsHard(d.subarray(sb, 4 * sb), t);
                 wt = Matrix.upwlev2(wt, name);
             }
             channel = wt[0].reshape(wt[1].get(0).getData());
             out.set([], [], c, channel);
         }
         return out;
+    };
+
+    Matrix.prototype.wdenoiseRAW = function (t, name) {
+        // Default parameters
+        var J = Matrix.dwtmaxlev([this.size(0), this.size(1)], name);
+        var wt = Matrix.wavedec2(this, J, name);
+        for (var j = J - 1; j >= 0; j--) {
+            var d = wt[0].getData();
+            var sb = wt[1].value([0, 0]) * wt[1].value([0, 1]);
+            processCoeffsHard(d.subarray(sb, 4 * sb), t);
+            wt = Matrix.upwlev2(wt, name);
+        }
+        return wt[0].reshape(wt[1].get(0).getData());
     };
 })();

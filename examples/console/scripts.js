@@ -6,7 +6,7 @@ var f1 = function () {
          sCanvas.displayImage(this, 0);
          */
         var kernel = Matrix.fspecial("gaussian", [5, 1], 1.5).display("kernel");
-        
+
         console.log(Tools.tic());
         Matrix.prototype.cornermetric = function (method) {
             method = method || "Harris";
@@ -15,11 +15,11 @@ var f1 = function () {
             var Ix2 = Matrix.times(gradient.x, gradient.x),
                 Iy2 = Matrix.times(gradient.y, gradient.y),
                 Ixy = Matrix.times(gradient.x, gradient.y);
-            
+
             var Sx2 = Ix2.separableFilter(kernel, kernel).getData(),
                 Sy2 = Iy2.separableFilter(kernel, kernel).getData(),
                 Sxy = Ixy.separableFilter(kernel, kernel).getData();
-            
+
             var R = Matrix.zeros(image.size()), rd = R.getData();
             var kappa = 0.04;
             if (method === "Harris") {
@@ -2907,4 +2907,10 @@ window.init = function () {
     // testContrastEnhancement();
     // testFuncGen();
     // testPatchDecomposition();
+    // testGeneralizedLeastSquares();
+    // testACRtoneCurve();
+    // fitNoiseModels();
+    testStats();
+    // testColorMatrix();
+    // plotHUESATProf();
 };
