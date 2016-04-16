@@ -26,12 +26,12 @@
         CAT02:    [0.7328, -0.7036, 0.003, 0.4296, 1.6975, 0.0136, -0.1624, 0.0061, 0.9834]
     };
 
-    /**     
+    /**
      * @class Matrix.CIE
      * @singleton
      * This object proposes some methods to deal with colorimetry problems.
      */
-    
+
     var CIE = {
         /** Return list of standards illuminant available with
          *  function 'CIE.getIlluminant'.
@@ -39,10 +39,12 @@
          *  return an string Array of standards illuminant name.
          */
         getIlluminantList: function () {
-            return ['A',   'B',   'C',
+            return [
+                'A',   'B',   'C',
 	            'D50', 'D55', 'D65', 'D75', 'E',
 	            'F1',  'F2',  'F3',  'F4',  'F5',  'F6',
-	            'F7',  'F8',  'F9',  'F10', 'F11', 'F12'];
+	            'F7',  'F8',  'F9',  'F10', 'F11', 'F12'
+            ];
         },
         /** Set the current illuminant used for RGB to XYZ transformations
          * @param {string} [illuminant='D65']
@@ -164,6 +166,8 @@
                 out = [0.64, 0.33, 1, 0.30, 0.60, 1, 0.15, 0.06, 1];
             } else if (primaries === 'Adobe RGB 1998') {
                 out = [0.64, 0.33, 1, 0.21, 0.71, 1, 0.15, 0.06, 1];
+            } else if (primaries === 'Pro Photo') {
+                out = [0.7347, 0.2653, 1, 0.1596, 0.8404, 1, 0.0366, 0.0001, 1];
             } else if (primaries === 'NTSC') {
                 out = [0.67, 0.33, 1, 0.21, 0.71, 1, 0.14, 0.08, 1];
             } else {
@@ -336,7 +340,7 @@
                 chr1 = data.subarray(0, (lambda.length + 1)),
                 chr2 = data.subarray((lambda.length + 1), (lambda.length + 1) * 2),
                 chr3 = data.subarray((lambda.length + 1) * 2, (lambda.length + 1) * 3);
-            
+
             for (i = lambda.length; i--; i) {
                 var sum = 1 / (x[i] + y[i] + z[i]);
                 if (sum) {

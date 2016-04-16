@@ -16,6 +16,14 @@
  * @author Guillaume Tartavel <guillaume.tartavel@telecom-paristech.fr>
  */
 
+/*
+* TODO Add documentation
+* TODO Add one Matrix per buffer option
+* TODO Add export selection possibility
+* TODO Add arrow navigation and something like double click center the clicked point
+* TODO Option to zoom yhike keeping the same center
+* TODO Add grid or some king of guide
+*/
 (function () {
     "use strict";
 
@@ -23,7 +31,9 @@
         if (typeof parent === 'string' && document.getElementById(parent)) {
             parent = document.getElementById(parent);
         }
-        this.images = [];
+
+        this.buffers = [];
+
         this.currentBuffer = 0;
         this.coordinates = {
             current: undefined,
@@ -58,6 +68,20 @@
         return [left, top];
     };
 
+    var getCurrentMatrix = function (obj) {
+        if (obj.matrix === undefined) {
+            return;
+        }
+        return obj.buffers[obj.currentBuffer].matrix.mtimes(obj.matrix);
+    }
+    var setCurrentMatrix = function (obj, matrix, relative) {
+        if (relative === true) {
+            obj.buffers[obj.currentBuffer].matrix = matrix;
+        } else {
+            obj.matrix = matrix;
+        }
+    }
+
     var drawRectangle = function (canvas, start, current) {
         var ctx = canvas.getContext("2d");
         ctx.save();
@@ -79,10 +103,16 @@
         var onClick = function (event) {
             var coord = getPosition(this.canvas, event);
             coord = Matrix.toMatrix([coord[0], coord[1], 1]);
-            coord = this.matrix.inv().mtimes(coord).getData();
-            var im = this.images[this.currentBuffer];
+            coord = getCurrentMatrix(this).inv().mtimes(coord).getData();
+            var im = this.buffers[this.currentBuffer].canvas;
             var x = Math.floor(coord[0]), y = Math.floor(coord[1]);
-            if (event.which == 2) {
+            // Left click
+            if (event.which === 1 && typeof this.click === 'function') {
+                if (x >= 0 && y >= 0 && x < im.width && y < im.height) {
+                    this.click([x, y], event);
+                }
+            // Middle click open current buffer in a new tab
+            } else if (event.which === 2) {
                 var w = window.open(undefined, '_blank');
                 var newCanvas = document.createElement('canvas');
                 var context = newCanvas.getContext('2d');
@@ -91,10 +121,8 @@
                 context.drawImage(im, 0, 0);
                 w.document.body.appendChild(newCanvas);
                 window.focus();
-            } else if (typeof this.click === 'function') {
-                if (x >= 0 && y >= 0 && x < im.width && y < im.height) {
-                    this.click([x, y], event);
-                }
+            // Right click
+            } else if (event.which === 3 && typeof this.click === 'function') {
             }
         }.bind(this);
         var onMouseWheel = function (event) {
@@ -109,15 +137,20 @@
             } else {
                 throw new Error('Mouse wheel error: What your browser is ?');
             }
-            if (event.ctrlKey) {
+            // Ctrl+Wheel: Change buffer
+            if (event.ctrlKey && !event.shiftKey && !event.metaKey && !event.altKey) {
                 this.currentBuffer += direction > 0 ? 1 : -1
-                if (this.currentBuffer >= this.images.length) {
+                if (this.currentBuffer >= this.buffers.length) {
                     this.currentBuffer = 0;
                 } else if (this.currentBuffer < 0) {
-                    this.currentBuffer = this.images.length - 1;
+                    this.currentBuffer = this.buffers.length - 1;
                 }
                 // console.log("Buffer", this.currentBuffer, "is now selected.");
                 this.update();
+                if (this.bufferChange instanceof Function) {
+                    this.bufferChange(this.currentBuffer);
+                }
+            // Wheel: Zoom
             } else if (this.mouseWheel instanceof Function) {
                 this.mouseWheel.bind(this)(direction * 0.01, coord, event);
             }
@@ -130,7 +163,7 @@
             coords.startSelection.clientX = event.clientX;
             coords.startSelection.clientY = event.clientY;
             coords.previous = coords.startSelection.slice();
-            if (event.shiftKey) {
+            if (event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) {
                 this.selectionOccurs = true;
             }
         }.bind(this);
@@ -147,7 +180,7 @@
                 this.update();
                 drawRectangle(this.canvas, start, current);
             } else {
-                this.translate(current[0] - previous[0], current[1] - previous[1]);
+                this.translate(current[0] - previous[0], current[1] - previous[1], event.shiftKey && event.ctrlKey && !event.altKey && !event.metaKey);
                 this.update();
                 this.coordinates.previous = current;
             }
@@ -166,18 +199,18 @@
             } else {
                 var current = getPosition(this.canvas, event);
                 if (this.selectionOccurs) {
-                    var matrix = this.matrix.inv();
+                    var matrix = getCurrentMatrix(this).inv();
                     var start = this.coordinates.startSelection;
                     start = Matrix.toMatrix([start[0], start[1], 1]);
                     start = matrix.mtimes(start).get([0, 1]).floor().getData();
                     var end = Matrix.toMatrix([current[0], current[1], 1]);
                     end = matrix.mtimes(end).get([0, 1]).floor().getData();
                     if (this.selectArea) {
-                        this.selectArea(start, end);
+                        this.selectArea(start, end, event);
                     }
                 } else  {
                     var previous = this.coordinates.previous;
-                    this.translate(current[0] - previous[0], current[1] - previous[1]);
+                    this.translate(current[0] - previous[0], current[1] - previous[1], event.shiftKey && event.ctrlKey && !event.altKey && !event.metaKey);
                 }
             }
             this.update();
@@ -204,37 +237,52 @@
         window.addEventListener("resize", onResize);
     };
 
-    SuperCanvas.prototype.zoom = function (x, y) {
-        var z = Matrix.toMatrix([x, 0, 0, 0, y, 0, 0, 0, 1]).reshape([3, 3])
-        this.matrix = z.mtimes(this.matrix);
+    SuperCanvas.prototype.zoom = function (x, y, relative) {
+        var m = relative === true ? this.buffers[this.currentBuffer].matrix : this.matrix;
+        var z = Matrix.toMatrix([x, 0, 0, 0, y, 0, 0, 0, 1]).reshape([3, 3]);
+        var matrix = z.mtimes(m);
+        setCurrentMatrix(this, matrix, relative);
         return this;
     };
 
-    SuperCanvas.prototype.translate = function (x, y) {
-        var t = Matrix.toMatrix([1, 0, 0, 0, 1, 0, x, y, 1]).reshape([3, 3])
-        this.matrix = t.mtimes(this.matrix);
+    SuperCanvas.prototype.translate = function (x, y, relative) {
+        var mainMatrix = this.matrix;
+        var m = relative === true ? this.buffers[this.currentBuffer].matrix : mainMatrix;
+        var t = Matrix.toMatrix([1, 0, 0, 0, 1, 0, x, y, 1]).reshape([3, 3]);
+        setCurrentMatrix(this, t.mtimes(m), relative);
         return this;
     };
 
-    SuperCanvas.prototype.setZoomFactor = function (fx, fy) {
-        var data = this.matrix.getData(), actualZoomFactor = data[0];
+    SuperCanvas.prototype.setZoomFactor = function (fx, fy, relative) {
+        var data = getCurrentMatrix(this).getData(), actualZoomFactor = data[0];
         var width = this.canvas.width, height = this.canvas.height;
-        this.translate(-width / 2, -height / 2);
-        this.zoom(fx / data[0], fy / data[4]);
-        this.translate(width / 2, height / 2);
+        var relative = event.shiftKey && event.ctrlKey && !event.altKey && !event.metaKey;
+        this.translate(-width / 2, -height / 2, relative);
+        this.zoom(fx / data[0], fy / data[4], relative);
+        this.translate(width / 2, height / 2, relative);
         this.update();
         return this;
     };
 
-    SuperCanvas.prototype.click = function (coord) {
-        console.log(coord);
+    SuperCanvas.prototype.click = function (coord, event) {
+        // Center on click
+        var canvasCoord = getPosition(this.canvas, event);
+        var center = [this.canvas.width, this.canvas.height];
+        var relative = event.shiftKey && event.ctrlKey && !event.altKey && !event.metaKey;
+        this.translate(-canvasCoord[0], -canvasCoord[1], relative);
+        this.translate(center[0] / 2, center[1] / 2, relative);
+        this.update();
+        // console.log(event, canvasCoord);
     };
 
-    SuperCanvas.prototype.mouseWheel = function (direction, coord) {
+    SuperCanvas.prototype.mouseWheel = function (direction, coord, event) {
         var scale = 1 - 10 * direction;
-        this.translate(-coord[0], -coord[1]);
-        this.zoom(scale, scale);
-        this.translate(coord[0], coord[1]);
+        var relative = event.shiftKey && event.ctrlKey && !(event.altKey || event.metaKey);
+        // console.log("relative", relative);
+        // console.log(event.shiftKey, event.ctrlKey, event.ctrlKey, event.metaKey);
+        this.translate(-coord[0], -coord[1], relative);
+        this.zoom(scale, scale, relative);
+        this.translate(coord[0], coord[1], relative);
         this.update();
     };
 
@@ -248,7 +296,24 @@
         ctx.restore();
     };
 
-    SuperCanvas.prototype.setImageBuffer = function (image, buffer) {
+    SuperCanvas.prototype.autoView = function (buffer) {
+        var mainMatrix = getCurrentMatrix(this);
+        // Initialize drawing matrix at good scale and place
+        if (buffer === undefined) {
+            buffer = this.currentBuffer;
+        }
+        var canvas = this.buffers[buffer].canvas;
+        var hScale = this.canvas.width / canvas.width;
+        var vScale = this.canvas.height / canvas.height;
+        var scale = Math.min(hScale, vScale);
+        setCurrentMatrix(this, Matrix.eye(3));
+        this.translate(-canvas.width / 2, -canvas.height / 2);
+        this.zoom(scale, scale);
+        this.translate(this.canvas.width / 2, this.canvas.height / 2);
+        return this;
+    };
+
+    SuperCanvas.prototype.setImageBuffer = function (image, buffer, init) {
         // Draw Image on a canvas
         var canvas = document.createElement('canvas'),
             context = canvas.getContext('2d');
@@ -264,37 +329,42 @@
         }
 
         // Set image buffer
-        buffer = buffer === undefined ? this.images.length : buffer;
-        this.images[buffer] = canvas;
-        this.currentBuffer = buffer;
-        return this;
+        buffer = buffer === undefined ? this.buffers.length : buffer;
+        this.buffers[buffer] = {
+            "canvas": canvas,
+            "matrix": Matrix.eye(3)
+        };
+
+        if (init === true || (init === undefined && this.matrix === undefined)) {
+            this.autoView(buffer);
+        }
+        return buffer;
     };
 
-    SuperCanvas.prototype.update = function (buffer, init) {
-        // Draw Image on a canvas
+    SuperCanvas.prototype.getCanvas = function (buffer) {
+        if (buffer === undefined) {
+            buffer = this.currentBuffer;
+        }
+        return this.buffers[buffer].canvas;
+    };
+
+    SuperCanvas.prototype.update = function (buffer) {
+        // Clear the canvas
+        this.clear();
+        if (this.buffers.length === 0) {
+            return;
+        }
+        // Define working buffer
         if (buffer === undefined) {
             buffer = this.currentBuffer;
         } else {
             this.currentBuffer = buffer;
         }
-        var image = this.images[buffer];
 
-        if (init === true || (init === undefined && this.matrix === undefined)) {
-            // Initialize drawing matrix at good scale and place
-            var hScale = this.canvas.width / image.width;
-            var vScale = this.canvas.height / image.height;
-            var scale = Math.min(hScale, vScale);
-            this.matrix = Matrix.eye(3);
-            this.translate(-image.width / 2, -image.height / 2);
-            this.zoom(scale, scale);
-            this.translate(this.canvas.width / 2, this.canvas.height / 2);
-        }
-
-        // Clear the canvas
-        this.clear();
+        var image = this.buffers[buffer].canvas;
         // Draw the image
         if (image) {
-            var c = this.matrix.get([0, 1]).getData();
+            var c = getCurrentMatrix(this).get([0, 1]).getData();
             var ctx = this.canvas.getContext('2d');
             ctx.setTransform(c[0], c[1], c[2], c[3], c[4], c[5]);
             ctx.drawImage(image, 0, 0, image.width, image.height);
@@ -303,8 +373,7 @@
     };
 
     SuperCanvas.prototype.displayImage = function (image, buffer, init) {
-        return this
-            .setImageBuffer(image, buffer)
-            .update(buffer, init);
+        buffer = this.setImageBuffer(image, buffer, init);
+        this.update(buffer);
     };
 })();

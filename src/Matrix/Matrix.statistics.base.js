@@ -28,7 +28,7 @@
             }
         }
         return m;
-    };    
+    };
 
     var amin = function (data, s, d, N) {
         for (var i = s + d, e = s + N, m = data[s], im = s; i < e; i += d) {
@@ -38,7 +38,7 @@
             }
         }
         return im;
-    };    
+    };
 
     var max = function (data, s, d, N) {
         for (var i = s + d, e = s + N, m = data[s]; i < e; i += d) {
@@ -47,7 +47,7 @@
             }
         }
         return m;
-    };    
+    };
 
     var amax = function (data, s, d, N) {
         for (var i = s + d, e = s + N, m = data[s], im = s; i < e; i += d) {
@@ -64,21 +64,21 @@
             m += data[i];
         }
         return m;
-    };    
+    };
 
     var mean = function (data, s, d, N) {
         for (var i = s, e = s + N, m = 0; i < e; i += d) {
             m += data[i];
         }
         return m * d / N;
-    };    
-    
+    };
+
     var prod = function (data, s, d, N) {
         for (var i = s, e = s + N, m = 1; i < e; i += d) {
             m *= data[i];
         }
         return m;
-    };    
+    };
 
     var variance = function (data, s, d, N) {
         var mu = mean(data, s, d, N);
@@ -87,7 +87,7 @@
             m += tmp * tmp;
         }
         return m * d / (N - 1);
-    };    
+    };
 
     var varianceBiased = function (data, s, d, N) {
          return variance(data, s, d, N) * (N - 1) / N;
@@ -97,13 +97,13 @@
         for (var i = s + d, e = s + N; i < e; i += d) {
             data[i] += data[i - d];
         }
-    };    
+    };
 
     var cumprod = function (data, s, d, N) {
         for (var i = s + d, e = s + N; i < e; i += d) {
             data[i] *= data[i - d];
         }
-    };    
+    };
 
     var getPermutation = function (view, dim) {
         var ndims = view.ndims(), order = [dim];
@@ -121,14 +121,14 @@
         inplace = inplace || false;
 
         // Check parameter dim
-        if (!Tools.isSet(dim)) { 
+        if (!Tools.isSet(dim)) {
             if (inplace) {
                 fun(mat.getData(), 0, 1, mat.numel());
                 return mat;
             }
             var v = fun(mat.getCopy().getData(), 0, 1, mat.numel());
             return Matrix.toMatrix(v);
-        } 
+        }
 
         if (!Tools.isInteger(dim, 0)) {
             throw new Error('Matrix.applyDim: Invalid dimension.');
@@ -151,7 +151,7 @@
                 od[io] = fun(id, i, d, l);
             }
             return om;
-        } 
+        }
         if (output !== undefined) {
             mat = output;
             output = output.getData();
@@ -255,7 +255,7 @@
      *  Dimension on which the computation must be performed. If undefined,
      *  return the variance of all the elements.
      * @param {Number} [norm=false]
-     *  If false, use the non biased variance estimator (N - 1), and the 
+     *  If false, use the non biased variance estimator (N - 1), and the
      *  biased one otherwise.
      * @return {Matrix}
      */
@@ -285,7 +285,7 @@
 
         if (norm === -1) {
             return applyDim(this, variance, dim);
-        } 
+        }
         return applyDim(this, varianceBiased, dim);
     };
     /** Return the standard deviation of the matrix elements.
@@ -293,7 +293,7 @@
      *  Dimension on which the computation must be performed. If undefined,
      *  return the standard deviation of all the elements.
      * @param {Number} [norm=false]
-     *  If false, use the non biased standard deviation estimator (N - 1), 
+     *  If false, use the non biased standard deviation estimator (N - 1),
      * and the biased one otherwise.
      * @return {Matrix}
      */
@@ -332,7 +332,7 @@
      */
     Matrix_prototype.cumprod = function (dim) {
         if (!this.isreal()) {
-            throw new Error("Matrix.cumprod: Is not yet implement for complex values.");
+            throw new Error("Matrix.cumprod: Is not yet implemented for complex values.");
         }
         return applyDim(this, cumprod, dim, true);
     };
@@ -370,14 +370,14 @@
             }
         };
 
-        /** Generate Poisson random numbers. 
-         * 
+        /** Generate Poisson random numbers.
+         *
          * The `lambda` parameter can a number as well as a Matrix.
-         * - If it is a number then the function returns an array of 
+         * - If it is a number then the function returns an array of
          * dimension `size`.
-         * - If `lambda` is a Matrix then the function will return 
+         * - If `lambda` is a Matrix then the function will return
          * a Matrix of the same size.
-         * 
+         *
          * Note that to avoid copy, you can use the syntax `mat.poissrnd()`.
          *
          * @param {Number} lambda
@@ -386,7 +386,7 @@
          */
         Matrix.poissrnd = function () {
             var lambda = Array.prototype.shift.apply(arguments);
-            if (typeof(lambda) === "number") { 
+            if (typeof(lambda) === "number") {
                 var size = Tools.checkSize(arguments, 'square');
                 var mat = new Matrix(size), data = mat.getData();
                 poissrnd_lambda(data, lambda);
@@ -408,7 +408,7 @@
         Matrix.exprnd = function () {
             var mu = Array.prototype.shift.apply(arguments);
             var size = Tools.checkSize(arguments, 'square');
-            
+
             var mat = new Matrix(size), data = mat.getData();
             exprnd(data, mu);
             return mat;
@@ -433,6 +433,10 @@
 
         var sort = function (data, s, d, N) {
             var i, io, e;
+            if (d === 1) {
+                Array.prototype.sort.call(data.subarray(s, s + N), fun);
+                return;
+            }
             for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
                 tab[io] = data[i];
             }
@@ -453,11 +457,16 @@
             }
         };
         var median = function (data, s, d, N) {
-            var i, io, e;
-            for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
-                tab[io] = data[i];
+            var i, io, e, tab2;
+            if (d === 1) {
+                tab2 = data.subarray(s, s + N);
+            } else {
+                for (i = s, io = 0, e = s + N; i < e; i += d, io++) {
+                    tab[io] = data[i];
+                }
+                tab2 = tab;
             }
-            Array.prototype.sort.call(tab, fun);
+            Array.prototype.sort.call(tab2, fun);
             var indice = Math.floor(tab.length / 2);
             return tab.length % 2 === 0 ? 0.5 * (tab[indice] + tab[indice - 1]) : tab[indice];
         };
@@ -473,7 +482,7 @@
         Matrix_prototype.sort = function (dim, mode) {
             var size = typeof dim === "number" ? this.getSize(dim) : this.numel();
             tab = new Float64Array(size);
-            if (mode === "ascend") { 
+            if (mode === "ascend") {
                 fun = sortAscend;
             } else if (mode === "descend") {
                 fun = sortDescend;
@@ -482,7 +491,7 @@
             }
             return applyDim(this, sort, dim, true);
         };
-        
+
         Matrix.sort = function (m, dim, mode) {
             return m.getCopy().sort(dim, mode);
         };
@@ -499,12 +508,12 @@
             var size = typeof dim === "number" ? this.getSize(dim) : this.numel();
             tab = new Float64Array(size);
             itab = new Uint32Array(size);
-            if (mode === "ascend") { 
+            if (mode === "ascend") {
                 fun = asortAscend;
             } else if (mode === "descend") {
                 fun = asortDescend;
             } else {
-                throw new Error("Matrix.sort: Wrong mode selection"); 
+                throw new Error("Matrix.sort: Wrong mode selection");
             }
             var out = new Matrix(this.getSize(), "uint32");
             return applyDim(this, asort, dim, true, out);
@@ -526,7 +535,7 @@
             fun = sortAscend;
             return applyDim(this, median, dim);
         };
-        
+
         Matrix.med = function (m, dim, mode) {
             return m.getCopy().med(dim);
         };
@@ -573,7 +582,7 @@
         if (subs.ndims() > 2) {
             throw new Error("Matrix.accumarray: Subs must be a 2D Array.");
         }
-        
+
         // Scaning the from the second dimension (dim = 1)
         var sd = subs.getData(), N = subs.numel(), ni = subs.getSize(0);
         var i, j, _j, ij, s;
@@ -585,9 +594,9 @@
             }
         }
 
-        if (val instanceof Matrix) { 
+        if (val instanceof Matrix) {
             val = val.getData();
-        } 
+        }
         var out = new Matrix(size), od = out.getData();
         if (Tools.isArrayLike(val) && val.length === ind.length) {
             for (k = 0, ek = ind.length; k < ek; k++) {

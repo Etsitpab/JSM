@@ -257,7 +257,9 @@ var contrast = function () {
         }
         return im;
     };
-
+    contrast.activate = function () {};
+    contrast.quit = function () {};
+    
     var onChange = function () {
         updateParameters();
         change("contrast", getParameters());

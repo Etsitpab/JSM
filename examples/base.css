@@ -187,12 +187,12 @@ hr {
     position: fixed;
 }
 
-#plot1 {
+#plot1Container {
     top:10px;
     right:10px;
 }
 
-#plot2 {
+#plot2Container {
     top:310px;
     right:10px;
 }

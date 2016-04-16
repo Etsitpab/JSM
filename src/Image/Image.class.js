@@ -215,24 +215,30 @@
          *  Function to call when the conversion is done.
          * @matlike
          */
-        Matrix.prototype.imwrite = function (name, callback) {
-            var canvas = createCanvas(this.getSize(1), this.getSize(0));
-            canvas.getContext('2d').putImageData(this.getImageData(), 0, 0);
+        Matrix.prototype.imwrite = function (name, callback, quality) {
+            (function (image, name, callback, quality){
+                quality = quality === undefined ? 95 : quality;
+                var canvas = createCanvas(image.getSize(1), image.getSize(0));
+                canvas.getContext('2d').putImageData(image.getImageData(), 0, 0);
 
-            var out = fs.createWriteStream(name), stream;
-            if ((/\.(png)$/i).test(name.toLowerCase())) {
-                stream = canvas.pngStream();
-            } else if ((/\.(jpeg|jpg)$/i).test(name.toLowerCase())) {
-                stream = canvas.jpegStream();
-            } else {
-                throw new Error("Matrix.imwrite: invalid file extension.");
-            }
-            stream.on('data', function (chunk) {
-                out.write(chunk);
-            });
-            if (callback) {
-                stream.on('end', callback.bind(this));
-            }
+                var out = fs.createWriteStream(name), stream;
+                if ((/\.(png)$/i).test(name.toLowerCase())) {
+                    stream = canvas.pngStream();
+                } else if ((/\.(jpeg|jpg)$/i).test(name.toLowerCase())) {
+                    stream = canvas.syncJPEGStream({"quality": quality});
+                } else {
+                    throw new Error("Matrix.imwrite: invalid file extension.");
+                }
+                stream.on('data', function (chunk) {
+                    out.write(chunk);
+                });
+                if (callback === undefined) {
+                    callback = function () {};
+                }
+                stream.on('end', function () {
+                    callback.bind(image);
+                });
+            })(this, name, callback, quality);
         };
     }
 
@@ -1083,7 +1089,7 @@
         return this['-'](min)['./'](max - min).imshow(canvas, scale);
     };
     /** Apply an affine transformation to an Image.
-     * __Only works with `Uint8` images.__
+     * __Only works with `uint8` images.__
      *
      * @param {Matrix} transform
      *  3x3 Matrix.
@@ -1155,72 +1161,191 @@
     };
 
     (function () {
-        var computeCDF = function (src, n) {
-            var i, nPixels = src.length;
-            var cst = n * Math.sqrt(3) / 3;
-            // Compute histogram and histogram sum:
-            var hist = new Float32Array(n), indices = new Uint16Array(nPixels);
+        var computeCDF = function (src, n, norm) {
+            norm = norm === undefined ? 1 : norm;
+            var i, nPixels = src.length, cst = n / norm;
+            // Compute histogram and histogram sum
+            var hist = new Float32Array(n);//, indices = new Uint16Array(nPixels);
             for (var i = 0; i < nPixels; ++i) {
-                var bin = (src[i] * cst) | 0;
+                var bin = Math.floor(src[i] * cst);
                 bin = bin >= n ? n - 1 : (bin < 0 ? 0 : bin);
-                indices[i] = bin;
+                // indices[i] = bin;
                 hist[bin]++;
             }
-            var norm = 1 / nPixels;
-            // Compute integral histogram:
-            for (i = 1; i < n; ++i) {
+            // Compute bias
+            var bias = 0 * hist[0], inPixels = 1 / (nPixels - bias);
+            // Compute integral histogram
+            for (i = 1, hist[0] -= bias; i < n; ++i) {
                 hist[i] += hist[i - 1];
-                hist[i - 1] *= norm;
+                hist[i - 1] *= inPixels;
             }
-            hist[n - 1] *= norm;
-            return [hist, indices];
+            hist[n - 1] *= inPixels;
+            return hist;//[hist, indices];
         };
 
-        var applyCDF = function (src, CDF) {
+        var computeContrastChangeLUT = function (H1, H2, f) {
+            f = f === undefined ? 1 : f;
+            // We use a lookup table to compute all the contrast changes values at once
+            var lut = new Float32Array(H2.length);
+            // For each position on the 1st histogram we find the position in the 2nd histogram
+            // with the same cumulative value
+            for (var pos1 = 0, pos2; pos1 < H1.length; pos1++) {
+                var currentSum = H1[pos1];
+                for (pos2 = 0; pos2 < H2.length - 1; pos2++) {
+                    if (H2[pos2] < currentSum && H2[pos2 + 1] >= currentSum) {
+                        var d1 = currentSum - H2[pos2], d2 = H2[pos2 + 1] - currentSum;
+                        var pos =  pos2 + d1 / (d2 + d1) + 0.5;
+                        lut[pos1] = pos1 * (1 - f) / (H1.length - 1) + pos * f / (H2.length - 1);
+                        break;
+                    }
+                }
+            }
+            return lut;
+        };
+
+        var computeContrastChangeLUT = function (H1, H2, f) {
+            console.log(H1);
+            f = f === undefined ? 1 : f;
+            // We use a lookup table to compute all the contrast changes values at once
+            var lut = new Float32Array(H2.length);
+            for (var pos1 = 0, pos2; pos1 < H1.length; pos1++) {
+                var currentSum = H1[pos1];
+                var dmin = 1, posmin = 0;
+                for (pos2 = 0; pos2 < H2.length - 1; pos2++) {
+                    var dist = Math.abs(currentSum - H2[pos2]);
+                    if (dist < dmin && currentSum > H2[pos2]) {
+                        dmin = dist;
+                        posmin = pos2;
+                    }
+                }
+                // console.log(posmin, currentSum, H2[posmin]);
+                var dist2 = Math.abs(H2[posmin + 1] - currentSum);
+                var pos =  posmin + dmin / (dist2 + dmin);
+                lut[pos1] = pos1 * (1 - f) / (H1.length - 1) + pos * f / (H2.length - 1);
+            }
+            return lut;
+        };
+        var computeContrastChangeLUT = function (H1, H2, f) {
+            f = f === undefined ? 1 : f;
+            // We use a lookup table to compute all the contrast changes values at once
+            var lut = new Float32Array(H2.length);
+            for (var pos1 = 0, pos2; pos1 < H1.length; pos1++) {
+                var currentSum = H1[pos1];
+                var dmin = Math.abs(currentSum - H2[0]), posmin = 0;
+                for (pos2 = 1; pos2 < H2.length; pos2++) {
+                    var dist = Math.abs(currentSum - H2[pos2]);
+                    if (dist < dmin && currentSum > H2[pos2]) {
+                    // if (currentSum >= H2[pos2] && currentSum <= H2[pos2 + 1]) {
+                        dmin = dist;
+                        posmin = pos2;
+                    }
+                }
+                console.log(pos1, posmin, dmin, currentSum.toFixed(8));
+                lut[pos1] = posmin / H1.length;
+
+                /*
+                if (posmin == -1)  {
+                    console.log(pos1, posmin, currentSum.toFixed(8));
+                    lut[pos1] = 1;
+                } else {
+                    console.log(pos1, posmin, H2[posmin].toFixed(8), currentSum.toFixed(8), H2[posmin + 1].toFixed(8));
+                    var dist2 = Math.abs(H2[posmin + 1] - currentSum);
+                    var pos =  posmin + (dist2 + dmin === 0 ? 0 : dmin / (dist2 + dmin));
+                    lut[pos1] = pos1 * (1 - f) / (H1.length - 1) + pos * f / (H2.length - 1);
+                }*/
+            }
+            console.log(lut);
+            return lut;
+        };
+
+        var applyCDF = function (src, CDF, norm) {
             // Equalize image:
-            var indices = CDF[1];
-            CDF = CDF[0];
-            var n = CDF.length, cst = 3 / Math.sqrt(3);
+            // var indices = CDF[1];
+            // CDF = CDF[0];
+            var n = CDF.length, cst = (n - 1) / norm;
+            // var lastVal = CDF[n - 1] + (CDF[n - 1] - CDF[n - 2]) / 2;
+            var lastVal = CDF[n - 1];
             for (var i = 0, ie = src.length; i < ie; ++i) {
-                src[i] = CDF[indices[i]] * cst;
+                var ind = src[i] * cst;
+                var p1 = Math.floor(ind), diff = (ind - p1), p2 = p1 + 1;
+                var v1 = ind >= n ? lastVal : CDF[p1], v2 = ind >= n ? lastVal : CDF[p2];
+                var newVal = v1 + (v2 - v1) * diff;
+                src[i] = newVal * norm;
+                //src[i] = CDF[indices[i]] * norm;
             }
         };
-        /** Perform an histogram equalisation.
-         * __Until now it only works with Uint8 images.__
+
+        /** Perform an histogram specification.
          *
-         * @param {Matrix} bins
-         * number of bins used for the histogram.
+         * @param {Matrix} arg1
+         * If it's a scalar then it is the number of bin used to perform full
+         * histogram equalization.
+         * If it's avVector then it provides the target histogram to be matched.
+         *
+         * @param {Number} perc
+         * limit the specification to a given percentage
+         * perc = 1   : histogram specification
+         * perc = 0.5 : midway specification
+         * perc = 0   : Identity
          *
          * @return {Matrix}
          */
-        Matrix_prototype.histeq = function (n) {
-            var src = this.getData();
+        Matrix_prototype.histeq = function (arg1, f) {
+            arg1 = Matrix.toMatrix(arg1);
+            var HTarget;
+            if (arg1.isscalar()) {
+                HTarget = Matrix.ones(arg1.getDataScalar(), 1).cumsum();
+            } else if (arg1.isvector()) {
+                HTarget = arg1.getCopy().cumsum();
+            } else {
+                throw new Error("Matrix.histeq: argument 1 must be a bin number or an histogram.");
+            }
+            HTarget["/="](HTarget.get(-1));
+
+            var src = this.getData(), norm = 1, channel, space;
             // If the input is a RGB image then convert to an opponent colorspace
             // to  work on the luminance channel
             if (this.getSize(2) === 3) {
-                src = this.applycform("RGB to Ohta").getData().subarray(0 * src.length / 3, 1 * src.length / 3);
-            } else if (this.getSize(2) !== 1) {
-                throw new Error("Matrix.histeq: Image must be grey level or HSV.");
-            }
-            var CDF = computeCDF(src, n);
-            applyCDF(src, CDF)
+                // Colorspace parameters;
+                // channel = 0;
+                // space = "Ohta";
+                // norm = 3 / Math.sqrt(3);
 
+                channel = 2;
+                space = "HSV";
+                norm = 1;
+                src = this.applycform("RGB to " + space)
+                          .getData()
+                          .subarray(channel * src.length / 3, (channel + 1) * src.length / 3);
+            } else if (this.getSize(2) !== 1) {
+                throw new Error("Matrix.histeq: Input must be grey level image.");
+            }
+
+            var CDF = computeCDF(src, HTarget.numel(), norm);
+            // CDF[0] = computeContrastChangeLUT(CDF[0], HTarget.getData(), f);
+            CDF = computeContrastChangeLUT(CDF, HTarget.getData(), f);
+            // window.CDFT = CDF;
+            applyCDF(src, CDF, norm);
             if (this.getSize(2) > 1) {
-                this.applycform("Ohta to RGB");
+                this.applycform(space + " to RGB");
             }
             return this;
+        };
+
+        Matrix.histeq = function (im, n, f) {
+            return im.getCopy().histeq(n, f);
         };
     })();
 
     /** Transform a RGB image to a gray level image.
+     *  Grey level is computed as 0.3 * R + 0.59 * G + 0.11 * B.
      *
      * @chainable
      * @matlike
      */
     Matrix_prototype.rgb2gray = function () {
         if (this.ndims() !== 3 || this.getSize(2) < 3) {
-            throw new Error('Matrix.rgb2gray: Matrix must be an ' +
-                            'image with RGB components.');
+            throw new Error('Matrix.rgb2gray: Matrix must be an RGB image.');
         }
 
         // Scaning the from the second dimension (dim = 1)
@@ -1572,16 +1697,16 @@
      *  Boolean mask.
      * @return {Matrix}
      */
-    Matrix_prototype.median = function (mask) {
+    Matrix_prototype.immedian = function (mask) {
         var arg = (mask.length * 0.5) | 0;
         var f_med = function (d, m, h, fh, yx, is, js, ks, ie, ls, _je) {
             var values = [];
             for (var _j = js, _l = ls; _j < _je; _j += h, _l += fh) {
-	        for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
+	            for (var ij = is + _j, kl = ks + _l, ije = ie + _j; ij < ije; ij++, kl++) {
                     if (m[kl]) {
-		        values.push(d[ij]);
+		                values.push(d[ij]);
                     }
-	        }
+	            }
             }
             return values.sort()[arg];
         };
