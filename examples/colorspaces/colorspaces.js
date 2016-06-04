@@ -235,7 +235,7 @@ var contrast = function () {
         updateOutput();
     };
     contrast.fun = function (img, p) {
-        var im = img.getCopy();;
+        var im = img.getCopy();
         if (p.channel.length !== 0) {
             im = im.get([], [], p.channel);
         }
@@ -253,7 +253,7 @@ var contrast = function () {
             im = Matrix.set(img, [], [], p.channel, im);
         }
         if (p.histeq === "uniform") {
-            im = im.histeq(1023);
+            [im, ] = im.histeq(1023);
         }
         return im;
     };
