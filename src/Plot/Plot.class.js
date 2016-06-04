@@ -486,11 +486,14 @@ var global = typeof window === 'undefined' ? module.exports : window;
      */
     Plot.prototype.addPath = function (x, y, args) {
 
-        x = x instanceof Matrix ? x.getData() : x; 
+        x = x instanceof Matrix ? x.getData() : x;
         y = y instanceof Matrix ? y.getData() : y;
 
         if (x.includes(NaN) || y.includes(NaN)) {
             throw new Error("Plot.addPath: Data must not contain NaN values.")
+        }
+        if (x.includes(Infinity) || y.includes(Infinity) || x.includes(-Infinity) || y.includes(-Infinity)) {
+            throw new Error("Plot.addPath: Data must not contain Infinity values.")
         }
 
         // Add (or replace) user arguments
