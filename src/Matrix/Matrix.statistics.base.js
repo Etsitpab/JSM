@@ -468,7 +468,7 @@
             }
             Array.prototype.sort.call(tab2, fun);
             var indice = Math.floor(tab.length / 2);
-            return tab.length % 2 === 0 ? 0.5 * (tab[indice] + tab[indice - 1]) : tab[indice];
+            return tab2.length % 2 === 0 ? 0.5 * (tab2[indice] + tab2[indice - 1]) : tab2[indice];
         };
 
         /** Sort the elements of the matrix.
