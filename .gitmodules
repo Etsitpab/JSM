@@ -1,3 +1,6 @@
 [submodule "third/CodeMirror"]
 	path = third/CodeMirror
 	url = https://github.com/codemirror/CodeMirror.git
+[submodule "submodules/SuperCanvas"]
+	path = submodules/SuperCanvas
+	url = https://github.com/Etsitpab/SuperCanvas
