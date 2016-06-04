@@ -1,4 +1,4 @@
-/*global console, document, Matrix, Colorspaces, CIE, open, ScaleSpace, extractModes, Blob, URL, window, FileReader */
+    /*global console, document, Matrix, Colorspaces, CIE, open, ScaleSpace, extractModes, Blob, URL, window, FileReader */
 /*jshint indent: 4, unused: true, white: true */
 
 var $ = function (id) {
@@ -134,7 +134,7 @@ var initInputs = function () {
     }
 };
 
-(function () {
+var initFileUpload = (function () {
     'use strict';
     var readFile = function (file, callback) {
         // Deal with arguments
@@ -169,13 +169,13 @@ var initInputs = function () {
           reader.readAsArrayBuffer(file);
           break;
         default:
+            console.warn("readFile: unknown type " + type + ". Will be read as binary.");
           type = 'bin';
           reader.readAsArrayBuffer(file);
-          console.warn("readFile: unknown type " + type + ". Will be read as binary.");
             //throw new Error("readFile: unknown type " + type + ".");
         }
     };
-    window.initFileUpload = function (id, callback, callbackInit, callbackEnd) {
+    return function (id, callback, callbackInit, callbackEnd) {
         var read = function (evt) {
             if (callbackInit) {
                 callbackInit(evt);
@@ -202,6 +202,105 @@ var initInputs = function () {
     };
 })();
 
+var UI = class UI {
+
+    contructor(parent) {
+        this.parent = $(parent) || parent;
+    };
+
+    createRange(values, def, onChange, id) {
+        var input = document.createElement("input");
+        input.setAttribute("type", "range");
+        input.setAttribute("id", id);
+        input.setAttribute("min", 0);
+        input.setAttribute("step", 1);
+        input.setAttribute("max", values.length - 1);
+        input.setAttribute("class", "val2");
+
+        var text = document.createElement("input");
+        text.setAttribute("id", id + "Val");
+        text.setAttribute("class", "val2");
+        text.setAttribute("type", "text");
+
+        var updateText = function () {
+            text.value = values[input.value].toFixed(4);
+        };
+        input.setValue = function (def) {
+            if (def === undefined) {
+                input.value = Math.floor(values.length / 2);
+            } else {
+                input.value = $M(values)["-"](def).abs().amin().getDataScalar();
+            }
+            updateText()
+        };
+        input.setValue(def);
+
+        input.addEventListener("change", function () {
+            updateText();
+            onChange.bind(input)(input);
+        });
+        $(this.parent).appendChild(input);
+        $(this.parent).appendChild(text);
+        return input;
+    };
+
+    createButton(value, onMouseDown, onMouseUp, id) {
+        var input = document.createElement("input");
+        input.setAttribute("type", "button");
+        input.setAttribute("id", id);
+        input.setAttribute("value", value);
+        input.addEventListener("mousedown", onMouseDown);
+        input.addEventListener("mouseup", onMouseUp);
+        $(this.parent).appendChild(input);
+        return input;
+    };
+
+    createLabel(value) {
+        var label = document.createElement("label");
+        label.innerHTML = value
+        $(this.parent).appendChild(label);
+        return label;
+    };
+
+    addOption(select, value, text) {
+        var option = document.createElement('option');
+        option.setAttribute('value', value);
+        option.innerHTML = text;
+        select = ($(select) || select).appendChild(option);
+        return option;
+    };
+
+    createSelect(options, onChange, id) {
+        var select = document.createElement("select");
+        select.addOption = function (value, text) {
+            var option = document.createElement('option');
+            option.setAttribute('value', value);
+            option.innerHTML = text;
+            select.appendChild(option);
+            return option;
+        };
+        select.setOption = function (value) {
+            var options = select.options;
+            for (var o = 0; o < options.length; o++) {
+                if (options[o].value === value || options[o].text === value) {
+                    options[o].selected = "selected";
+                }
+            }
+        };
+        select.id = id;
+        for (var o in options) {
+            select.addOption(o, options[o]);
+        }
+        if (onChange instanceof Function) {
+            select.addEventListener("change", function () {
+                onChange.bind(select)(select);
+            });
+        }
+        $(parent).appendChild(select);
+        return select;
+    };
+};
+
 var limitImageSize = function (image, MAX_SIZE) {
     var maxSize = Math.max(image.size(0), image.size(1));
     if (maxSize > MAX_SIZE) {
@@ -220,24 +319,32 @@ var createRange = function (values, def, onChange, id) {
     input.setAttribute("min", 0);
     input.setAttribute("step", 1);
     input.setAttribute("max", values.length - 1);
-    if (def === undefined) {
-        def = Math.floor(values.length / 2);
-    }
-    input.setAttribute("value", def);
     input.setAttribute("class", "val2");
-    input.addEventListener("change", function () {
-        $(this.id + "Val").setAttribute("value", values[this.value]);
-    });
-    input.addEventListener("change", onChange);
-    $("uiLeft").appendChild(input);
 
     var text = document.createElement("input");
     text.setAttribute("id", id + "Val");
-    text.setAttribute("value", values[input.value]);
     text.setAttribute("class", "val2");
     text.setAttribute("type", "text");
-    $("uiLeft").appendChild(text);
 
+    var updateText = function () {
+        text.value = values[input.value].toFixed(4);
+    };
+    input.setValue = function (def) {
+        if (def === undefined) {
+            input.value = Math.floor(values.length / 2);
+        } else {
+            input.value = $M(values)["-"](def).abs().amin().getDataScalar();
+        }
+        updateText()
+    };
+    input.setValue(def);
+
+    input.addEventListener("change", function () {
+        updateText();
+        onChange.bind(input)(input);
+    });
+    $("uiLeft").appendChild(input);
+    $("uiLeft").appendChild(text);
     return input;
 };
 
@@ -259,9 +366,46 @@ var createLabel = function (value) {
     return label;
 };
 
+var addOption = function (select, value, text) {
+    var option = document.createElement('option');
+    option.setAttribute('value', value);
+    option.innerHTML = text;
+    select = ($(select) || select).appendChild(option);
+    return option;
+};
 
+var createSelect = function (options, onChange, id) {
+    'use strict';
+    var select = document.createElement("select");
+    select.addOption = function (value, text) {
+        var option = document.createElement('option');
+        option.setAttribute('value', value);
+        option.innerHTML = text;
+        select.appendChild(option);
+        return option;
+    };
+    select.setOption = function (value) {
+        var options = select.options;
+        for (var o = 0; o < options.length; o++) {
+            if (options[o].value === value || options[o].text === value) {
+                options[o].selected = "selected";
+            }
+        }
+    };
+    select.id = id;
+    for (var o in options) {
+        select.addOption(o, options[o]);
+    }
+    if (onChange instanceof Function) {
+        select.addEventListener("change", function () {
+            onChange.bind(select)(select);
+        });
+    }
+    $("uiLeft").appendChild(select);
+    return select;
+};
 
-navigator.sayswho = (function(){
+navigator.sayswho = (function() {
     "use strict";
     var ua = navigator.userAgent, tem,
         M = ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
@@ -409,15 +553,6 @@ var drawImageHistogram = function (id, image, bins) {
         cnv.drawHistogram(hist.getData(), hist.max().getData(), "", undefined, 'grey');
     }
     console.log("Histogram plotted in", Tools.toc(), "ms");
-};
-
-var addOption = function (select, value, text) {
-    'use strict';
-    var option = document.createElement('option');
-    option.setAttribute('value', value);
-    option.innerHTML = text;
-    select = ($(select) || select).appendChild(option);
-    return option;
 };
 
 var createFieldset = function (title, properties) {
