@@ -74,6 +74,7 @@
         }
         return obj.buffers[obj.currentBuffer].matrix.mtimes(obj.matrix);
     }
+
     var setCurrentMatrix = function (obj, matrix, relative) {
         if (relative === true) {
             obj.buffers[obj.currentBuffer].matrix = matrix;
@@ -294,6 +295,7 @@
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         ctx.restore();
+        return this;
     };
 
     SuperCanvas.prototype.autoView = function (buffer) {
@@ -352,7 +354,7 @@
         // Clear the canvas
         this.clear();
         if (this.buffers.length === 0) {
-            return;
+            return this;
         }
         // Define working buffer
         if (buffer === undefined) {
