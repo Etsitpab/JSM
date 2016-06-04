@@ -44,6 +44,14 @@ var $F = function (id, v) {
     $(id).value = v;
 };
 
+var $M = function (a, shape) {
+    var mat = Matrix.toMatrix(a);
+    if (shape) {
+        return mat.reshape(shape);
+    }
+    return mat;
+};
+
 function initFieldset() {
     "use strict";
     var i, ei;
