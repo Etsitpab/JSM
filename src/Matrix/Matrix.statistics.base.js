@@ -338,6 +338,149 @@
     };
 
     (function () {
+        // Tempplate function
+        var template = function (dataIn1, sI1, dI1, NI1, dataIn2, sI2, dI2, NI2, dataOut, sO, dO, NO) {
+            for (var i1 = sI1 + dI1, e = sI1 + NI1, i2 = sI2 + dI2, o = sO; i1 < e; i1 += dI1, i2 += dI2, o += dO) {
+                dataOut[o] = dataIn1[i1] - dataIn2[i2];
+            }
+        };
+        var cov = function (dataIn1, sI1, dI1, NI1, mu1, dataIn2, sI2, dI2, NI2, mu2) {
+            for (var i1 = sI1, e = sI1 + NI1, i2 = sI2, m = 0; i1 < e; i1 += dI1, i2 += dI2) {
+                m += (dataIn1[i1] - mu1) * (dataIn2[i2] - mu2);
+            }
+            return m * dI1 / (NI1 - 1);
+        };
+        var corrcoef = function (dataIn1, sI1, dI1, NI1, mu1, sig1, dataIn2, sI2, dI2, NI2, mu2, sig2) {
+            for (var i1 = sI1, e = sI1 + NI1, i2 = sI2, m = 0; i1 < e; i1 += dI1, i2 += dI2) {
+                m += (dataIn1[i1] - mu1) * (dataIn2[i2] - mu2);
+            }
+            return m * dI1 / ((NI1 - 1) * sig1 * sig2);
+        };
+        /** Compute the covariance matrix.
+         *
+         * @param {Matrix} B
+         *  Compute covariance between this matrix and B.
+         *
+         * @todo This function should be able to deal with complex
+         * @matlike
+         * @method cov
+         */
+        Matrix_prototype.cov = function (B) {
+            if (!this.isreal()) {
+                throw new Error("Matrix.cov: Is not yet implement for complex values.");
+            }
+            var d1 = this.getData(),
+                mu1 = this.mean(0).getData(),
+                d2, mu2;
+            if (B === undefined) {
+                d2 = d1;
+                mu2 = mu1;
+            } else if (B instanceof Matrix) {
+                if (!Tools.checkSizeEquals(this.size(), B.size())) {
+                    throw new Error("Matrix.cov: Input sizes must match.");
+                }
+                d2 = B.getData();
+                mu2 = B.mean(0).getData();
+            } else {
+                throw new Error("Matrix.cov: Inputs must be instance of Matrix.");
+            }
+            if (!this.ismatrix()) {
+                throw new Error("Matrix.cov: Inputs must be a 2D matrices.");
+            }
+
+            var ny = this.size(0),
+                nx = this.size(1);
+            var om = Matrix.zeros(nx),
+                od = om.getData();
+            if (B === undefined) {
+                for (var x1 = 0, j = 0, jj = 0; j < nx; x1 += ny, j++, jj += nx + 1) {
+                    od[jj] = cov(d1, x1, 1, ny, mu1[j], d2, x1, 1, ny, mu2[j]);
+                    for (var x2 = x1 + ny, j2 = j + 1, ij = j + j2 * nx, ji = j2 + j * nx; j2 < nx; x2 += ny, ij += nx, j2++, ji++) {
+                        od[ij] = cov(d1, x1, 1, ny, mu1[j], d2, x2, 1, ny, mu2[j2]);
+                        od[ji] = od[ij];
+                    }
+                }
+            } else if (B instanceof Matrix) {
+                for (var x1 = 0, j = 0; j < nx; x1 += ny, j++) {
+                    for (var x2 = 0, j2 = 0, ij = j + j2 * nx; j2 < nx; x2 += ny, ij += nx, j2++) {
+                        od[ij] = cov(d1, x1, 1, ny, mu1[j], d2, x2, 1, ny, mu2[j2]);
+                    }
+                }
+            }
+            return om;
+        };
+        Matrix.cov = function (A, B) {
+            return Matrix.toMatrix(A).cov(B);
+        };
+        /** Compute the correlation coefficients.
+         *
+         * @param {Matrix} B
+         *  Compute correlation coefficients between this matrix and B.
+         *
+         * @todo This function should be able to deal with complex
+         * @matlike
+         * @method cov
+         */
+        Matrix_prototype.corrcoef = function (B) {
+            var d1 = this.getData(),
+                mu1 = this.mean(0).getData(),
+                sig1 = this.std(0).getData(),
+                d2, mu2, sig2;
+            if (B === undefined) {
+                d2 = d1;
+                mu2 = mu1;
+                sig2 = sig1;
+            } else if (B instanceof Matrix) {
+                if (!Tools.checkSizeEquals(this.size(), B.size())) {
+                    throw new Error("Matrix.corrcoef: Input sizes must match.");
+                }
+                d2 = B.getData();
+                mu2 = B.mean(0).getData();
+                sig2 = B.std(0).getData();
+            } else {
+                throw new Error("Matrix.corrcoef: Inputs must be instance of Matrix.");
+            }
+            if (!this.ismatrix()) {
+                throw new Error("Matrix.corrcoef: Inputs must be a 2D matrices.");
+            }
+
+            var ny = this.size(0),
+                nx = this.size(1);
+            var om = Matrix.zeros(nx),
+                od = om.getData();
+            if (B === undefined) {
+                for (var x1 = 0, j = 0, jj = 0; j < nx; x1 += ny, j++, jj += nx + 1) {
+                    od[jj] = corrcoef(d1, x1, 1, ny, mu1[j], sig1[j], d2, x1, 1, ny, mu2[j], sig2[j]);
+                    for (var x2 = x1 + ny, j2 = j + 1, ij = j + j2 * nx, ji = j2 + j * nx; j2 < nx; x2 += ny, ij += nx, j2++, ji++) {
+                        od[ij] = corrcoef(d1, x1, 1, ny, mu1[j], sig1[j], d2, x2, 1, ny, mu2[j2], sig2[j2]);
+                        od[ji] = od[ij];
+                    }
+                }
+            } else if (B instanceof Matrix) {
+                for (var x1 = 0, j = 0; j < nx; x1 += ny, j++) {
+                    for (var x2 = 0, j2 = 0, ij = j + j2 * nx; j2 < nx; x2 += ny, ij += nx, j2++) {
+                        od[ij] = corrcoef(d1, x1, 1, ny, mu1[j], sig1[j], d2, x2, 1, ny, mu2[j2], sig2[j2]);
+                    }
+                }
+            }
+            return om;
+        };
+        Matrix.corrcoef = function (A, B) {
+            return Matrix.toMatrix(A).corrcoef(B);
+        };
+
+        var diff = function (dataIn, sI, dI, NI, dataOut, sO, dO) {
+            for (var i = sI + dI, e = sI + NI, m = 0, o = sO; i < e; i += dI, o += dO) {
+                dataOut[o] = dataIn[i] - dataIn[i - 1];
+            }
+        };
+        // Matrix_prototype.diff = function (n) {
+        // };
+        // Matrix.diff = function (A, n) {
+        //    return A.diff(n);
+        // };
+    })();
+    (function () {
         var poissrnd_lambda = function (data, lambda) {
             var L = Math.exp(-lambda), random = Math.random;
             for (var i = 0, ie = data.length; i < ie; i++) {
