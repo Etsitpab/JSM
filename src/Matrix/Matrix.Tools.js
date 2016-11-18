@@ -20,6 +20,12 @@
 (function (Matrix, Matrix_prototype) {
     "use strict";
 
+    // Check if nodejs or browser
+    var isNode = (typeof module !== 'undefined' && module.exports) ? true : false;
+    var fs;
+    if (isNode) {
+        fs = require("fs");
+    }
 
     //////////////////////////////////////////////////////////////////
     //                   Matrix import/export functions             //
@@ -411,6 +417,107 @@
         }
         var matOut = new Matrix(size, d, false, isBoolean);
         return shape ? matOut.reshape(shape) : matOut;
+    };
+
+    /** Write a matrix on the disk using node. Be cautious, data are not
+     * compressed.
+     *
+     * @param {String} name
+     *  file name
+     *
+     * @param {Boolean}[littleEndian=false]
+     *  Endianness
+     *
+     * @return {Matrix}
+     */
+    Matrix.prototype.write = function (name, le = false) {
+        var data = this.getData();
+        var buffer = data.buffer;
+        var sEl = data.BYTES_PER_ELEMENT;
+        var ndims = this.ndims(), size = this.getSize(), type;
+
+        if (data.constructor.name === "Uint8Array") {
+            type = 0;
+        } else if (data.constructor.name === "Int8Array") {
+            type = 1;
+        } else if (data.constructor.name === "Uint8ClampedArray") {
+            type = 2
+        } else if (data.constructor.name === "Uint16Array") {
+            type = 3;
+        } else if (data.constructor.name === "Int16Array") {
+            type = 4;
+        } else if (data.constructor.name === "Uint32Array") {
+            type = 5;
+        } else if (data.constructor.name === "Int32Array") {
+            type = 6;
+        } else if (data.constructor.name === "Float32Array") {
+            type = 7;
+        } else if (data.constructor.name === "Float64Array") {
+            type = 8;
+        };
+        var bufferOut = new ArrayBuffer(7 + ndims * 4 + sEl * data.length), dataView = new DataView(bufferOut);
+        var pos = 0;
+        dataView.setUint8(pos, type, le); pos += 1;
+        dataView.setUint32(pos, data.length, le); pos += 4;
+        dataView.setUint16(pos, ndims, le); pos += 2;
+        for (var i = 0; i < ndims; i++) {
+            dataView.setUint32(pos, size[i], le); pos += 4;
+        }
+        new Uint8Array(bufferOut).subarray(pos, pos + buffer.byteLength).set(new Uint8Array(buffer));
+        if (isNode) {
+            // chunk is the Uint8Array object
+            fs.writeFileSync(name, new Buffer(new Uint8Array(bufferOut)));
+            return this;
+        }
+        return bufferOut;
+    };
+
+    /** Read a matrix from disk using node.
+     *
+     * @param {String} name
+     *  File name
+     *
+     * @param {Boolean}[littleEndian=false]
+     *  Endianness
+     *
+     * @return {Matrix}
+     */
+    Matrix.read = function (name, le = false) {
+        var buffer;
+        if (typeof name === "string") {
+            buffer = fs.readFileSync(name);
+            var b2 = new Uint8Array(buffer.byteLength);
+            for (var i = 0; i < b2.length; i++) {
+                b2[i] = buffer[i];
+            }
+            buffer = b2.buffer;
+        } else if (name instanceof ArrayBuffer) {
+            buffer = name;
+        }
+
+        var dataView = new DataView(buffer);
+        var types = [
+            "Uint8Array",
+            "Int8Array",
+            "Uint8ClampedArray",
+            "Uint16Array",
+            "Int16Array",
+            "Uint32Array",
+            "Int32Array",
+            "Float32Array",
+            "Float64Array"
+        ];
+        var pos   = 0;
+        var Type  = Tools.checkType(types[dataView.getUint8(pos)]); pos += 1;
+        var numel = dataView.getUint32(pos); pos += 4;
+        var ndims = dataView.getUint16(pos); pos += 2;
+        var size  = [];
+        for (var i = 0; i < ndims; i++) {
+            size[i] = dataView.getUint32(pos); pos += 4;
+        }
+        var d = new Type(numel);
+        new Uint8Array(d.buffer).set(new Uint8Array(buffer).subarray(pos));
+        return new Matrix(size, d);
     };
 
 
