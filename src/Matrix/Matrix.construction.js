@@ -136,13 +136,16 @@
      * the number of values.
      *
      * __Also see:__
-     *  {@link Matrix#colon}.
+     *  {@link Matrix#colon}, {@link Matrix#logspace}.
      *
-     * @param {Integer[]} size
-     * A sequence of integers indicating the size of the output matrix.
+     * @param {Number} min
+     * Minimum value
      *
-     * @param {String} [type=Matrix.dataType]
-     * Defined the numerical class of data.
+     * @param {Number} max
+     * Maximum value
+     *
+     * @param {Integer} n
+     * Number of elements
      *
      * @return {Matrix}
      *
@@ -161,8 +164,15 @@
             throw new Error("Matrix.linspace: Bins should be an integer > 1.");
         }
 
-        var binsm1 = bins - 1;
-        return Matrix.colon(min, (max - min) / binsm1, max);
+        var om = Matrix.zeros(bins, 1), od = om.getData(), n = od.length - 1;
+        for (var i = 0, ie = Math.floor(n / 2) + 1, v1 = min, v2 = max, step = (max - min) / (bins - 1); i < ie; i++, v1 += step, v2 -= step) {
+            od[i] = v1;
+            od[n - i] = v2;
+        }
+        if (n % 2 === 0) {
+            od[n / 2] = (v1 + v2) / 2;
+        }
+        return om;
     };
 
     /** Creates a Matrix filled with zeros.
