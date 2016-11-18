@@ -155,7 +155,7 @@
         var data = this.getData(), i, ie;
         var log10 = Math.log(10);
         for (i = 0, ie = data.length; i < ie; i++) {
-            data[i] = Math.log(data[i]) * log10;
+            data[i] = Math.log10(data[i]);
         }
         return this;
     };
@@ -170,7 +170,7 @@
         var data = this.getData(), i, ie;
         var log2 = Math.log(2);
         for (i = 0, ie = data.length; i < ie; i++) {
-            data[i] = Math.log(data[i]) * log2;
+            data[i] = Math.log2(data[i]);
         }
         return this;
     };
