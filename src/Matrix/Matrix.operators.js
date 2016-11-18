@@ -545,8 +545,8 @@
     //                     Arithmetic Operators                     //
     //////////////////////////////////////////////////////////////////
 
-    /* Function generating automatically the arithmetic operators 
-       functions 
+    /* Function generating automatically the arithmetic operators
+       functions
     */
     var generateArithmeticOperators = function () {
         var operators = {
@@ -1773,12 +1773,12 @@
         return D;
     };
 
-    /** Apply a function on two Matrix by extending the non-singleton 
+    /** Apply a function on two Matrix by extending the non-singleton
      * dimensions.
      *
      * @param {Function|String} fun
      *  Function to be applied. If string, it should be either:
-     *  - "plus", "minus", "times", "rdivide", "ldivide", 
+     *  - "plus", "minus", "times", "rdivide", "ldivide",
      *  - "min", "max"
      *  - "atan2", "hypot"
      *  - "eq", "ne", "lt", "le", "gt", "ge", "and", "or"
@@ -1897,7 +1897,7 @@
         return out;
     };
 
-    /** Return a Matrix containg of the same where values are 
+    /** Return a Matrix containg of the same where values are
      * either -1, 0, 1 depending on the sign of the elements.
      *
      * @matlike
