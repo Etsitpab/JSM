@@ -42,7 +42,7 @@ Matrix.prototype.guidedFilter = function (p, r, eps) {
 };
 
 
-Matrix.prototype.bin = function (wx, wy) {
+Matrix.prototype.bin = function (wy, wx) {
     "use strict";
     var is = this.getSize();
     var os = [Math.ceil(is[0] / wy), Math.ceil(is[1] / wx), this.getSize(2)];
