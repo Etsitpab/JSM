@@ -444,7 +444,7 @@ var initHelp = function () {
     return displayHelp;
 };
 
-var drawImageHistogram = function (id, image, bins) {
+var drawImageHistogram = function (id, image, bins, title = "") {
     var computeHistograms = function (image, bins) {
         bins = bins || 256;
         var data = image.getData();
@@ -537,17 +537,17 @@ var drawImageHistogram = function (id, image, bins) {
     if (image instanceof HTMLCanvasElement) {
         var histograms = computeHistogramFromCanvas(image);
         var max = histograms.max;
-        cnv.drawHistogram(histograms.R, max, "", undefined, 'red');
-        cnv.drawHistogram(histograms.G, max, "", undefined, 'green', false);
-        cnv.drawHistogram(histograms.B, max, "", undefined, 'blue', false);
-        cnv.drawHistogram(histograms.gray, max, "", undefined, 'grey', false);
+        cnv.drawHistogram(histograms.R, max, title, undefined, 'red');
+        cnv.drawHistogram(histograms.G, max, title, undefined, 'green', false);
+        cnv.drawHistogram(histograms.B, max, title, undefined, 'blue', false);
+        cnv.drawHistogram(histograms.gray, max, title, undefined, 'grey', false);
     } else if (image.size(2) === 3) {
         var histograms = computeHistograms(image);
         var max = histograms.max;
-        cnv.drawHistogram(histograms.R, max, "", undefined, 'red');
-        cnv.drawHistogram(histograms.G, max, "", undefined, 'green', false);
-        cnv.drawHistogram(histograms.B, max, "", undefined, 'blue', false);
-        cnv.drawHistogram(histograms.gray, max, "", undefined, 'grey', false);
+        cnv.drawHistogram(histograms.R, max, title, undefined, 'red');
+        cnv.drawHistogram(histograms.G, max, title, undefined, 'green', false);
+        cnv.drawHistogram(histograms.B, max, title, undefined, 'blue', false);
+        cnv.drawHistogram(histograms.gray, max, title, undefined, 'grey', false);
     } else {
         var hist = image.imhist();
         cnv.drawHistogram(hist.getData(), hist.max().getData(), "", undefined, 'grey');
