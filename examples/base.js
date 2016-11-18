@@ -1,5 +1,5 @@
-    /*global console, document, Matrix, Colorspaces, CIE, open, ScaleSpace, extractModes, Blob, URL, window, FileReader */
 /*jshint indent: 4, unused: true, white: true */
+/*global console, document, Matrix, Colorspaces, CIE, open, ScaleSpace, extractModes, Blob, URL, window, FileReader */
 
 var $ = function (id) {
     'use strict';
@@ -136,13 +136,16 @@ var initInputs = function () {
 
 var initFileUpload = (function () {
     'use strict';
-    var readFile = function (file, callback) {
+    var readFile = function (file, callback, callbackEnd) {
         // Deal with arguments
         var type = (file.type || "bin").toLowerCase();
         // File handling functions
         var reader = new FileReader();
         reader.onload = function (evt) {
             callback.bind(evt.target.result)(evt, type, file);
+            if (callbackEnd instanceof Function) {
+                callbackEnd();
+            }
         };
         switch (type) {
         case 'image/jpeg':
@@ -159,6 +162,7 @@ var initFileUpload = (function () {
             type = 'txt';
             reader.readAsText(file);
             break;
+        case 'image/adoberawdng':
         case 'application/x-director':
         case 'image/x-adobe-dng':
         case 'image/tiff':
@@ -186,15 +190,22 @@ var initFileUpload = (function () {
             }
             var i = 0, files = this.files;
             var readNextFile = function () {
-                readFile(files[i], function(evt, type, file) {
-                    callback.bind(this)(evt, type, file);
-                    i++;
-                    if (i < files.length) {
+                var endfun;
+                if (i < files.length - 1) {
+                    endfun = function () {
+                        i++;
                         readNextFile();
-                    } else if (callbackEnd) {
-                        callbackEnd(evt, type, file);
-                    }
-                });
+                    };
+                } else if (i === files.length - 1) {
+                    endfun = callbackEnd;
+                }
+                readFile(
+                    files[i],
+                    function(evt, type, file) {
+                        callback.bind(this)(evt, type, file);
+                    },
+                    endfun
+                );
             };
             readNextFile();
         };
