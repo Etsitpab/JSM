@@ -436,6 +436,18 @@
         }
     };
 
+    Matrix._benchmarkStats = function () {
+        var A = Matrix.toMatrix([2, 0, -9, 3, 4, 1], [3, 2]).transpose();// .display("A");
+        var B = Matrix.toMatrix([5, 2, 6, -4, 4, 9], [3, 2]).transpose();// .display("B");
+        var covAB = A.cov(B);// .display("cov(A, B)");
+        var covA = A.cov();// .display("cov(A)");
+
+        var covAhat = Matrix.toMatrix([0.5, 2, 5, 2, 8, 20, 5, 20, 50], [3, 3]).transpose();// .display("cov(A, B)");
+        log("Cov test 1", Tools.checkArrayEquals(covA.getData(), covAhat.getData()) ? Infinity : 0, 0);
+        var covABhat = Matrix.toMatrix([-4.5, 1, 1.5, -18, 4, 6, -45, 10, 15], [3, 3]).transpose();// .display("cov(A, B)");
+        log("Cov test 1", Tools.checkArrayEquals(covAB.getData(), covABhat.getData()) ? Infinity : 0, 0);
+    };
+
     Matrix._benchmark = function () {
         var i;
         for (i in Matrix) {
