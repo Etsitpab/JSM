@@ -919,7 +919,8 @@
     };
 
     Matrix.plus = function (A, B) {
-        return Matrix.toMatrix(A)['+'](B);
+        A = Matrix.toMatrix(A);
+        return A.isscalar() ? Matrix.toMatrix(B)['+'](A) : Matrix.toMatrix(A)['+'](B);
     };
 
 
@@ -1027,7 +1028,8 @@
     };
 
     Matrix.minus = function (A, B) {
-        return Matrix.toMatrix(A)['-'](B);
+        A = Matrix.toMatrix(A);
+        return A.isscalar() ? Matrix.toMatrix(B)['-'](A) : Matrix.toMatrix(A)['-'](B);
     };
 
 
@@ -1057,7 +1059,7 @@
     };
 
     Matrix.uminus = function (A) {
-        return A.getCopy().uminus();
+        return Matrix.toMatrix(A).getCopy().uminus();
     };
 
     /** Times operator make an element wise multiplication.
@@ -1166,7 +1168,8 @@
     };
 
     Matrix.times = function (A, B) {
-        return Matrix.toMatrix(A)['.*'](B);
+        A = Matrix.toMatrix(A);
+        return A.isscalar() ? Matrix.toMatrix(B)['.*'](A) : Matrix.toMatrix(A)['.*'](B);
     };
 
 
@@ -1287,7 +1290,8 @@
     };
 
     Matrix.rdivide = function (A, B) {
-        return Matrix.toMatrix(A)['./'](B);
+        A = Matrix.toMatrix(A);
+        return A.isscalar() ? Matrix.toMatrix(B)['./'](A) : Matrix.toMatrix(A)['./'](B);
     };
 
 
@@ -1402,7 +1406,8 @@
     };
 
     Matrix.ldivide = function (A, B) {
-        return Matrix.toMatrix(A)['.\\'](B);
+        A = Matrix.toMatrix(A);
+        return A.isscalar() ? Matrix.toMatrix(B)['.\\'](A) : Matrix.toMatrix(A)['.\\'](B);
     };
 
 
@@ -1508,7 +1513,8 @@
     };
 
     Matrix.power = function (A, B) {
-        return Matrix.toMatrix(A)['.^'](B);
+        A = Matrix.toMatrix(A);
+        return A.isscalar() ? Matrix.toMatrix(B)['.^'](A) : Matrix.toMatrix(A)['.^'](B);
     };
 
 
