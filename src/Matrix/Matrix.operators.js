@@ -73,6 +73,10 @@
         return this;
     };
 
+    Matrix.cos = function (A) {
+        return Matrix.toMatrix(A).getCopy().cos();
+    };
+
     /** Apply the sine function to values of Matrix.
      *
      * @chainable
@@ -87,6 +91,10 @@
         return this;
     };
 
+    Matrix.sin = function (A) {
+        return Matrix.toMatrix(A).getCopy().sin();
+    };
+
     /** Apply the tangent function to values of Matrix.
      *
      * @chainable
@@ -99,6 +107,10 @@
             data[i] = Math.tan(data[i]);
         }
         return this;
+    };
+
+    Matrix.tan = function (A) {
+        return Matrix.toMatrix(A).getCopy().tan();
     };
 
     /** Apply the exponential function to values of Matrix.
@@ -129,6 +141,9 @@
             }
             return this;
         };
+        Matrix.exp = function (A) {
+            return Matrix.toMatrix(A).getCopy().exp();
+        };
     })(Matrix_prototype);
 
     /** Apply the natural logarithm function to the values of the Matrix.
@@ -143,6 +158,10 @@
             data[i] = Math.log(data[i]);
         }
         return this;
+    };
+
+    Matrix.log = function (A) {
+        return Matrix.toMatrix(A).getCopy().log();
     };
 
     /** Apply the base 10 logarithm to the values of the Matrix.
@@ -160,6 +179,10 @@
         return this;
     };
 
+    Matrix.log10 = function (A) {
+        return Matrix.toMatrix(A).getCopy().log10();
+    };
+
     /** Apply the base 2 logarithm to the values of the Matrix.
      *
      * @chainable
@@ -173,6 +196,10 @@
             data[i] = Math.log2(data[i]);
         }
         return this;
+    };
+
+    Matrix.log2 = function (A) {
+        return Matrix.toMatrix(A).getCopy().log2();
     };
 
     /** Apply the floor function to values of Matrix.
@@ -189,6 +216,10 @@
         return this;
     };
 
+    Matrix.floor = function (A) {
+        return Matrix.toMatrix(A).getCopy().floor();
+    };
+
     /** Apply the ceil function to values of Matrix.
      *
      * @chainable
@@ -201,6 +232,10 @@
             data[i] = Math.ceil(data[i]);
         }
         return this;
+    };
+
+    Matrix.ceil = function (A) {
+        return Matrix.toMatrix(A).getCopy().ceil();
     };
 
     /** Apply the round function to values of Matrix.
@@ -217,6 +252,10 @@
         return this;
     };
 
+    Matrix.round = function (A) {
+        return Matrix.toMatrix(A).getCopy().round();
+    };
+
     /** Apply the arccosine function to values of Matrix.
      *
      * @chainable
@@ -229,6 +268,10 @@
             data[i] = Math.acos(data[i]);
         }
         return this;
+    };
+
+    Matrix.acos = function (A) {
+        return Matrix.toMatrix(A).getCopy().acos();
     };
 
     /** Apply the arcsine function to values of Matrix.
@@ -245,6 +288,10 @@
         return this;
     };
 
+    Matrix.asin = function (A) {
+        return Matrix.toMatrix(A).getCopy().asin();
+    };
+
     /** Apply the arctan function to values of Matrix.
      *
      * @chainable
@@ -257,6 +304,10 @@
             data[i] = Math.acos(data[i]);
         }
         return this;
+    };
+
+    Matrix.atan = function (A) {
+        return Matrix.toMatrix(A).getCopy().atan();
     };
 
     /** Apply the arctan2 function to values of Matrix.
@@ -276,6 +327,10 @@
             dataA[i] = Math.atan2(dataA[i], dataB[i]);
         }
         return A;
+    };
+
+    Matrix.atan2 = function (A) {
+        return Matrix.toMatrix(A).getCopy().atan2();
     };
 
 
