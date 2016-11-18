@@ -81,7 +81,7 @@
 
         // Special cases
         if (!isFinite(first) || !isFinite(step) || !isFinite(last)) {
-            throw new Error("Parameters are invalid number (Infitity or NaN).");
+            throw new Error("Matrix.colon: Parameters are invalid number (Infitity or NaN).");
         }
 
         // Minimum difference between 2 double precision values
