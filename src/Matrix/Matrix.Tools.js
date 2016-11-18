@@ -370,18 +370,27 @@
      * @param {Number|Number[]|Matrix} data
      *  Data to convert
      *
+     * @param {Integer[]} shape
+     *  Shape of the returned matrix
+     *
      * @return {Matrix}
      */
-    Matrix.toMatrix = function (data, type) {
+    Matrix.toMatrix = function (data, shape) {
         if (data instanceof Matrix) {
-            return data;
+            return shape ? data.reshape(shape) : data;
         }
         if (data.constructor === Number) {
             data = [data];
         }
-        var d = Array.prototype.concat.apply([], data);
+
+        var d;
+        if (data instanceof Array) {
+            d = Array.prototype.concat.apply([], data);
+        } else {
+            d = data;
+        }
         var isBoolean = false, size;
-        
+
         if (Tools.isArrayOfBooleans(d)) {
             isBoolean = true;
         } else if (!Tools.isArrayOfNumbers(d)) {
@@ -400,7 +409,8 @@
             }
             size = size.reverse();
         }
-        return new Matrix(size, d, false, isBoolean);
+        var matOut = new Matrix(size, d, false, isBoolean);
+        return shape ? matOut.reshape(shape) : matOut;
     };
 
 
