@@ -190,8 +190,9 @@
      * @matlike
      */
     Matrix_prototype.issquare = function () {
-        if (this.getSize(0) !== this.getSize(1)) {
-            throw false;
+        var size = this.getSize();
+        if (size.length > 2 || size[0] !== size[1]) {
+            return false;
         }
         return true;
     };
