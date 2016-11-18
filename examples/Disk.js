@@ -50,5 +50,5 @@ var Disk = {
     "clear": function () {
         'use strict';
         localStorage.clear();
-    };
+    }
 };
