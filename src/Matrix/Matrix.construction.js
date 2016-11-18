@@ -175,6 +175,47 @@
         return om;
     };
 
+    /** Creates a column vector filled with log spaced values.
+     *
+     * __Also see:__
+     *  {@link Matrix#colon}, {@link Matrix#linspace}.
+     *
+     * @param {Number} min
+     * Minimum value
+     *
+     * @param {Number} max
+     * Maximum value
+     *
+     * @param {Integer} n
+     * Number of elements
+     *
+     * @return {Matrix}
+     *
+     * @matlike
+     */
+    Matrix.logspace = function (min, max, bins) {
+        if (!Tools.isNumber(min)) {
+            throw new Error();
+        }
+        if (!Tools.isNumber(max)) {
+            throw new Error();
+        }
+        if (bins === undefined) {
+            bins = 100;
+        } else if (!Tools.isInteger(bins, 1)) {
+            throw new Error("Matrix.linspace: Bins should be an integer > 1.");
+        }
+        var om = Matrix.zeros(bins, 1), od = om.getData(), n = od.length - 1;
+        var pow = Math.pow, step = (max - min) / (bins - 1);
+        for (var i = 0, ie = Math.floor(n / 2) + 1, v1 = min, v2 = max; i < ie; i++, v1 += step, v2 -= step) {
+            od[i] = pow(10, v1);
+            od[n - i] = pow(10, v2);
+        }
+        if (n % 2 === 0) {
+            od[n / 2] = (pow(10, v1) + pow(10, v2)) / 2;
+        }
+        return om;
+    };
     /** Creates a Matrix filled with zeros.
      *
      * __Also see:__
