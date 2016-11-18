@@ -301,7 +301,7 @@
     Matrix_prototype.atan = function () {
         var data = this.getData(), i, ie;
         for (i = 0, ie = data.length; i < ie; i++) {
-            data[i] = Math.acos(data[i]);
+            data[i] = Math.atan(data[i]);
         }
         return this;
     };
