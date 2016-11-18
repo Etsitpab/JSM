@@ -1911,6 +1911,9 @@
         }
         return out;
     };
+    Matrix.sign = function (A) {
+        return Matrix.toMatrix(A).sign();
+    };
 
 })(Matrix, Matrix.prototype);
 
