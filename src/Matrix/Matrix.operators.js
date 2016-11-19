@@ -341,16 +341,22 @@
 
     var booleanOperators = function (op, A, B) {
 
-        if (!A.isreal() || (B instanceof Matrix && !B.isreal())) {
+        A = Matrix.toMatrix(A);
+        B = Matrix.toMatrix(B);
+        if (!A.isreal() || !B.isreal()) {
             throw new Error("Matrix.booleanOperators: This function doesn't " +
                             "work with complex numbers.");
+        }
+        if (A.isscalar()) {
+            [A, B] = [B, A];
         }
 
         var id = A.getData(), ld = id.length;
 
         var out, od, x;
 
-        if (typeof B === 'number') {
+        if (B.isscalar()) {
+            B = B.getDataScalar();
             out = new Matrix(A.size(), 'boolean');
             od = out.getData();
             if (op === '===' || op === '==') {
@@ -446,6 +452,9 @@
         return booleanOperators('===', this, b);
     };
     Matrix_prototype['==='] = Matrix_prototype.eq;
+    Matrix.eq = function (a, b) {
+        return booleanOperators('===', a, b);
+    };
 
     /** Test inequality between two arrays.
      *
@@ -457,6 +466,9 @@
         return booleanOperators('!==', this, b);
     };
     Matrix_prototype['!=='] = Matrix_prototype.ne;
+    Matrix.ne = function (a, b) {
+        return booleanOperators('!==', a, b);
+    };
 
     /** Greater than operator.
      *
@@ -468,6 +480,9 @@
         return booleanOperators('>', this, b);
     };
     Matrix_prototype['>'] = Matrix_prototype.gt;
+    Matrix.gt = function (a, b) {
+        return booleanOperators('>', a, b);
+    };
 
     /** Greater or equal operator.
      *
@@ -479,6 +494,9 @@
         return booleanOperators('>=', this, b);
     };
     Matrix_prototype['>='] = Matrix_prototype.ge;
+    Matrix.ge = function (a, b) {
+        return booleanOperators('>=', a, b);
+    };
 
     /** Lower than operator.
      *
@@ -490,6 +508,9 @@
         return booleanOperators('<', this, b);
     };
     Matrix_prototype['<'] = Matrix_prototype.lt;
+    Matrix.lt = function (a, b) {
+        return booleanOperators('<', a, b);
+    };
 
     /** Lower or equal operator.
      *
@@ -501,6 +522,9 @@
         return booleanOperators('<=', this, b);
     };
     Matrix_prototype['<='] = Matrix_prototype.le;
+    Matrix.le = function (a, b) {
+        return booleanOperators('<=', a, b);
+    };
 
     /** And operator.
      *
@@ -512,6 +536,9 @@
         return booleanOperators('&&', this, b);
     };
     Matrix_prototype['&&'] = Matrix_prototype.and;
+    Matrix.and = function (a, b) {
+        return booleanOperators('&&', a, b);
+    };
 
     /** Or operator.
      *
@@ -523,6 +550,9 @@
         return booleanOperators('||', this, b);
     };
     Matrix_prototype['||'] = Matrix_prototype.or;
+    Matrix.or = function (a, b) {
+        return booleanOperators('||', a, b);
+    };
 
     /** Return false if different of zero.
      *
@@ -538,6 +568,9 @@
             data[i] = !data[i] ? 1 : 0;
         }
         return out;
+    };
+    Matrix.neg = function (a) {
+        return Matrix.toMatrix(a).getCopy().neg();
     };
 
 
