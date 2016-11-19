@@ -57,6 +57,9 @@
             }
             return this;
         };
+        Matrix.sqrt = function (A) {
+            return Matrix.toMatrix(A).getCopy().sqrt();
+        };
     })(Matrix_prototype);
 
     /** Apply the cosine function to values of Matrix.
