@@ -242,7 +242,12 @@
     };
 
     var log = function (msg, psnr, time) {
-        if (psnr < 100) {
+        if (psnr === true) {
+            console.log(msg, "Status:  OK", "Time:", time);
+        } else if (psnr === false) {
+            console.error(msg, "Status: NOK", "Time:", time);
+            return -1;
+        } else if (psnr < 100) {
             console.error(msg, "PSNR:", parseFloat(psnr.toFixed(2)), "dB", "Time:", time);
             return -1;
         } else if (psnr !== undefined && time !== undefined){
@@ -263,7 +268,7 @@
             'haar',
             'sym2', 'sym4', 'sym8',
             'db2', 'db4', 'db8',
-            'coif1', 'coif2', 'coif4', 'coif4', 
+            'coif1', 'coif2', 'coif4', 'coif4',
             'bi13', 'bi31', 'bi68',
             'rbio31', 'rbio33', 'rbio35', 'rbio39',
             'cdf97'
@@ -378,11 +383,11 @@
                     var s = Matrix.rand(sz, sz + 1, 2);
                     var N = Matrix.dwtmaxlev([sz, sz + 1], name);
                     N = N < 1 ? 1 : N;
-                    
+
                     log(s.size() + " " + name + " " + wModes[m]);
                     // 1D tests
                     res = test_wavedecrec(s, N, name);
-                    log("DWT 1D on " + N + " levels", res.psnr, res.time); 
+                    log("DWT 1D on " + N + " levels", res.psnr, res.time);
                     if (testMode !== "fast") {
                         res = test_upwlev(s, N, name);
                         log("1D upwlev on " + N + " levels", res.psnr, res.time);
@@ -443,9 +448,35 @@
         var covA = A.cov();// .display("cov(A)");
 
         var covAhat = Matrix.toMatrix([0.5, 2, 5, 2, 8, 20, 5, 20, 50], [3, 3]).transpose();// .display("cov(A, B)");
-        log("Cov test 1", Tools.checkArrayEquals(covA.getData(), covAhat.getData()) ? Infinity : 0, 0);
+        log("Cov test 1", Tools.checkArrayEquals(covA.getData(), covAhat.getData()), 0);
         var covABhat = Matrix.toMatrix([-4.5, 1, 1.5, -18, 4, 6, -45, 10, 15], [3, 3]).transpose();// .display("cov(A, B)");
-        log("Cov test 1", Tools.checkArrayEquals(covAB.getData(), covABhat.getData()) ? Infinity : 0, 0);
+        log("Cov test 1", Tools.checkArrayEquals(covAB.getData(), covABhat.getData()), 0);
+    };
+
+    Matrix._benchmarkMisc = function () {
+        var a = Matrix.rand(7, 9, 11);
+
+        var t = [0, 1, 2];
+        for (var i in t) {
+            var b = a.max(parseInt(i)), c = a.amax(parseInt(i));
+            log("Max-amax test 1", a.get(c).eq(b).sum().getDataScalar() === b.numel(), 0);
+            var b = a.min(parseInt(i)), c = a.amin(parseInt(i));
+            log("Min-amin test 1", a.get(c).eq(b).sum().getDataScalar() === b.numel(), 0);
+        }
+
+        // Check is equal functions.
+        var a = Matrix.rand(3, 3), b = a.getCopy();
+        log("Isequal test 1", a.isequal(b), 0);
+        log("Isequaln test 1", a.isequaln(b), 0);
+        b.getData()[0] = NaN;
+        log("Isequal test 2", !a.isequal(b), 0);
+        log("Isequaln test 2", !a.isequaln(b), 0);
+        a.getData()[0] = NaN;
+        log("Isequal test 3", !a.isequal(b), 0);
+        log("Isequaln test 3", a.isequaln(b), 0);
+        b.reshape();
+        log("Isequal test 4", !a.isequal(b), 0);
+        log("Isequaln test 4", !a.isequaln(b), 0);
     };
 
     Matrix._benchmark = function () {

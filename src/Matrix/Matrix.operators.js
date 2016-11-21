@@ -576,6 +576,41 @@
         return Matrix.toMatrix(a).getCopy().neg();
     };
 
+    Matrix_prototype.isequal = function (b) {
+        b = Matrix.toMatrix(b);
+        if (!Tools.areSizeEquals(this.getSize(), b.getSize(), Matrix.ignoreTrailingDims)) {
+            return false;
+        }
+
+        var ad = this.getData(), bd = b.getData();
+        for (var i = 0, ie = ad.length; i < ie; i++) {
+            if (ad[i] !== bd[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
+    Matrix.isequal = function (a, b) {
+        return Matrix.toMatrix(a).isequal(b);
+    };
+
+    Matrix_prototype.isequaln = function (b) {
+        b = Matrix.toMatrix(b);
+        if (!Tools.areSizeEquals(this.getSize(), b.getSize(), Matrix.ignoreTrailingDims)) {
+            return false;
+        }
+
+        var ad = this.getData(), bd = b.getData();
+        for (var i = 0, ie = ad.length; i < ie; i++) {
+            if (ad[i] !== bd[i] && (!isNaN(ad[i]) || !isNaN(bd[i]))) {
+                return false;
+            }
+        }
+        return true;
+    };
+    Matrix.isequaln = function (a, b) {
+        return Matrix.toMatrix(a).isequaln(b);
+    };
 
     //////////////////////////////////////////////////////////////////
     //                     Arithmetic Operators                     //
@@ -1558,7 +1593,7 @@
     //                        Other operators                       //
     //////////////////////////////////////////////////////////////////
 
- 
+
     /** Apply a function to values of Matrix.
      *
      * @param {Function} f
@@ -1834,9 +1869,9 @@
             throw new Error("Matrix.bsxfun: This function doesn't " +
                             "work with complex numbers.");
         }
-        
+
         var aView = a.getView(), bView = b.getView();
-        
+
         var i, ei = Math.max(aView.ndims(), bView.ndims());
         for (i = 0; i < ei; i++) {
             var asize = a.getSize(i), bsize = b.getSize(i);
@@ -1952,8 +1987,3 @@
     };
 
 })(Matrix, Matrix.prototype);
-
-
-
-
-
