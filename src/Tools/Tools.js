@@ -226,7 +226,7 @@ if (typeof window === 'undefined') {
          case Int32Array:
              if (min === undefined && max === undefined) {
                  return true;
-             } 
+             }
              for (i = 0, ie = obj.length; i < ie; i++) {
                  if (obj[i] < min || obj[i] > max) {
                      return false;
@@ -402,7 +402,7 @@ if (typeof window === 'undefined') {
          return size;
      }.bind(Tools);
 
-     /** Check two equal sizes.
+     /** Return true if sizes are similar.
       *
       * If the sizes are the same except for trailing 1's, the behavior depends on
       * `Matrix.ignoreTrailingDims`:
@@ -430,10 +430,9 @@ if (typeof window === 'undefined') {
       *
       * @todo broadcasting? behavior for last dimensions of 1?
       */
-     Tools.checkSizeEquals = function (sizeA, sizeB, ignoreTrailingDims) {
+     Tools.areSizeEquals = function (sizeA, sizeB, ignoreTrailingDims = true) {
          sizeA = this.checkSize(sizeA);
          sizeB = this.checkSize(sizeB);
-         ignoreTrailingDims = ignoreTrailingDims || true;
 
          var sizeF = (sizeA.length < sizeB.length) ? sizeA : sizeB;
 
@@ -442,24 +441,53 @@ if (typeof window === 'undefined') {
 
          for (i = 0; i < ni; i++) {
              if (sizeA[i] !== sizeB[i]) {
-                 throw new Error('checkSizeEquals: dimensions must be equals.');
+                 return false;
              }
          }
          if (ignoreTrailingDims) {
              for (i = ni; i < nimax; i++) {
                  if (sizeA[i] !== undefined && sizeA[i] !== 1) {
-                     throw new Error('checkSizeEquals: dimensions must be equals.');
+                     return false;
                  }
                  if (sizeB[i] !== undefined && sizeB[i] !== 1) {
-                     throw new Error('checkSizeEquals: dimensions must be equals.');
+                     return false;
                  }
              }
          } else if (!ignoreTrailingDims) {
-             throw new Error('checkSizeEquals: ' +
-                             'dimensions differ by trailing 1\'s, ',
-                             'and ignoreTrailingDims is False.');
+             return false;
          }
          return sizeF;
+     }.bind(Tools);
+
+     /** Check if size are equal. Throw an exeption if not.
+      *
+      * See also:
+      *  {@link Tools#areSizeEquals},
+      *  {@link Tools#checkSize}.
+      *
+      * @param{Array | Number} sizeA
+      *  Size of a matrix A.
+      *
+      * @param{Array | Number} sizeB
+      *  Size of a matrix B.
+      *
+      * @return{Array}
+      *  Array containing the (equal) size.
+      *
+      * @todo broadcasting? behavior for last dimensions of 1?
+      */
+     Tools.checkSizeEquals = function (sizeA, sizeB, ignoreTrailingDims) {
+         var eq = Tools.areSizeEquals(sizeA, sizeB, ignoreTrailingDims);
+         if (!eq) {
+             throw new Error('checkSizeEquals: dimensions must be equals.');
+             // Might be used to give more feedback.
+             if (!ignoreTrailingDims) {
+                 throw new Error('checkSizeEquals: ' +
+                                 'dimensions differ by trailing 1\'s, ',
+                                 'and ignoreTrailingDims is False.');
+             }
+         }
+         return eq;
      }.bind(Tools);
 
      /** Check a range argument, i.e. made of indices [min, max].
@@ -860,9 +888,9 @@ if (typeof window === 'undefined') {
           /** Save the current time (in ms) as reference.
            * @param {string} [label=undefined]
            *  Label used as a marker to store the current time. If undefined,
-           *  then the current time is stored on the stack. 
+           *  then the current time is stored on the stack.
            * @return {undefined}
-           * @todo 
+           * @todo
            *  store only last time instead of stack? Return time?
            * @matlike
            */
@@ -877,7 +905,7 @@ if (typeof window === 'undefined') {
           /** Compute the elapsed time (in ms) since the last `tic`.
            * @param {string} [label=undefined]
            *  If label is defined then used the corresponding time to compute
-           *  the difference. Otherwise the function will use the last time 
+           *  the difference. Otherwise the function will use the last time
            *  on the stack.
            * @todo allow optional argument `start`?
            * @return {Number}
@@ -895,4 +923,3 @@ if (typeof window === 'undefined') {
 
 
  })(Tools);
-
