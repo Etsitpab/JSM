@@ -265,24 +265,21 @@
      *
      * @matlike
      */
-    Matrix.ones = function () {
-        var type;
-        // Get type;
-        if (typeof arguments[arguments.length - 1] === 'string') {
-            type = Array.prototype.pop.apply(arguments);
-        }
+     Matrix.ones = function () {
+         var type;
+         // Get type;
+         if (typeof arguments[arguments.length - 1] === 'string') {
+             type = Array.prototype.pop.apply(arguments);
+         }
 
-        // Check size
-        var size = Tools.checkSize(arguments, 'square');
+         // Check size
+         var size = Tools.checkSize(arguments, 'square');
 
-        var mat = new Matrix(size, type), data = mat.getData();
-        var i, ie;
-        for (i = 0, ie = data.length; i < ie; ++i) {
-            data[i] = 1;
-        }
+         var mat = new Matrix(size, type);
+         mat.getData().fill(1);
+         return mat;
+     };
 
-        return mat;
-    };
      /** Creates a logical Matrix filled with true.
       *
       * __Also see:__
