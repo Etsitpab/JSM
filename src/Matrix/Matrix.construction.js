@@ -219,6 +219,8 @@
     /** Creates a Matrix filled with zeros.
      *
      * __Also see:__
+     *  {@link Matrix#true},
+     *  {@link Matrix#false},
      *  {@link Matrix#ones}.
      *
      * @param {Integer[]} size
@@ -249,6 +251,8 @@
      * Actually it acts like Matlab ones constructor.
      *
      * __Also see:__
+     *  {@link Matrix#true},
+     *  {@link Matrix#false},
      *  {@link Matrix#zeros}.
      *
      * @param {Integer[]} size A sequence of integers indicating
@@ -279,6 +283,43 @@
 
         return mat;
     };
+     /** Creates a logical Matrix filled with true.
+      *
+      * __Also see:__
+      *  {@link Matrix#false},
+      *  {@link Matrix#ones},
+      *  {@link Matrix#zeros}.
+      *
+      * @param {Integer[]} size A sequence of integers indicating
+      * the size of the output matrix.
+      *
+      * @return {Matrix}
+      *
+      * @matlike
+      */
+     Matrix.true = function (...args) {
+         args.push("logical");
+         return Matrix.ones.apply(null, args);
+     };
+
+     /** Creates a logical Matrix filled with false.
+      *
+      * __Also see:__
+      *  {@link Matrix#true},
+      *  {@link Matrix#ones},
+      *  {@link Matrix#zeros}.
+      *
+      * @param {Integer[]} size A sequence of integers indicating
+      * the size of the output matrix.
+      *
+      * @return {Matrix}
+      *
+      * @matlike
+      */
+     Matrix.false = function (...args) {
+         args.push("logical");
+         return Matrix.zeros.apply(null, args);
+     };
 
     /** Creates a Matrix filled with random walues uniformely
      * distributed in range [0, 1].
