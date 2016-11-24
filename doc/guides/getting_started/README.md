@@ -56,7 +56,7 @@ The method `get` allows to extract values from the Matrix. Remember that values 
     // Extract the value of coordinates [2, 2]
     var v = A.get(2, 2).display("My value");
     // Extract the second line
-    var l = A.get(2, []).display("My line"); // Equivalent to: a.get(2)
+    var l = A.get(2, []).display("My line"); // Equivalent to: A.get(2)
     // Extract the second column
     var c = A.get([], 2).display("My column");
     
