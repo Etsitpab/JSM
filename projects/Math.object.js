@@ -570,6 +570,11 @@
          }
      };
 
+     // Compute the binomial coefficient  n! / ((n – k)! x k!).
+     obj.nchoosek = function (n, k) {
+         return Math.round(Math.exp(obj.gammaln(n + 1) - obj.gammaln(n - k + 1) - obj.gammaln(k + 1)));
+     };
+
      obj.trunc = trunc;
      obj.gamma = gamma;
      obj.gammaln = gammaln;
