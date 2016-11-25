@@ -25,6 +25,41 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
 (function (global) {
 
+    // return H such that X2_hat = H x X1
+    var estimateHomography = function (m) {
+        var X1 = [], X2 = [];
+        m.forEach(function(v) {
+            X1.push(v.k1.x, v.k1.y, 1);
+            X2.push(v.k2.x, v.k2.y, 1);
+        });
+        X1 = Matrix.toMatrix(X1).reshape(3, m.length).transpose();
+        X2 = Matrix.toMatrix(X2).reshape(3, m.length).transpose();
+        if (X1.size(0) !== X2.size(0)) {
+            throw new Error();
+        }
+        var x1 = X1.get([], 0), y1 = X1.get([], 1),
+            x2 = X2.get([], 0), y2 = X2.get([], 1);
+
+        var z1 = X1.size(1) < 3 ? Matrix.ones(x1.numel(), 1) : X1.get([], 2),
+            z2 = X2.size(1) < 3 ? Matrix.ones(x2.numel(), 1) : X2.get([], 2);
+
+        var x2p = x2["./"](z2), y2p = y2["./"](z2);
+        var om = Matrix.ones(x1.numel(), 1).uminus(),
+            z  = Matrix.zeros(x1.numel(), 3),
+            m1 = Matrix.cat(1, x1.uminus(), y1.uminus(), om);
+        var A = Matrix.cat(1,
+            m1, z, x2p[".*"](x1), x2p[".*"](x1), x2p,
+            z, m1, y2p[".*"](x1), y2p[".*"](y1), y2p
+        ).transpose().reshape(9, 2 * x1.numel()).transpose();//.display();
+        var [U, S, V] = A.svd();
+        var s9 = S.get(8, 8).getDataScalar();
+        var H = V.get([], 8).reshape(3, 3).transpose();
+        H["/="](H.get(2, 2));
+        var X2h = H.mtimes(X1.transpose()).transpose();
+        var err = X2["-"](X2h).abs().mean();
+        return [H, s9, err.getDataScalar()];
+    };
+
     var phaseNormImage = function (phase, norm, mask, o) {
         norm = norm.rdivide(norm.max());
         var pData = phase.getData(), nData = norm.getData();
@@ -505,6 +540,10 @@ var root = typeof window === 'undefined' ? module.exports : window;
             align: 'v',
             thresholdMatches: function (s, c) {
                 this.thresholdMatches(0, 1, s, c);
+                var [H, s9, err] = estimateHomography(S.matchesList[0][1]);
+                console.log(s9, err);
+                H.display("H");
+                this.matchesValidation(H, 0, 1, c)
                 p.showMatches(this.scaleSpaces[0].image,
                              this.scaleSpaces[1].image,
                              this.matchesList[0][1], view.align);
