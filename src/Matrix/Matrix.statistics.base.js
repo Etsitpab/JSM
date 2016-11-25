@@ -526,6 +526,7 @@
          * @param {Number} lambda
          * @param {Number} [size]
          * @return {Matrix}
+         * @matlike
          */
         Matrix.poissrnd = function () {
             var lambda = Array.prototype.shift.apply(arguments);
@@ -547,6 +548,7 @@
          * @param {Number} mu
          * @param {Number} size
          * @return {Matrix}
+         * @matlike
          */
         Matrix.exprnd = function () {
             var mu = Array.prototype.shift.apply(arguments);
@@ -557,6 +559,30 @@
             return mat;
         };
 
+        /** Generate random permutations of integers from 0 to n - 1.
+         * @param {n} n
+         *  Output size
+         * @param {k} k
+         *  return only k unique integer between 0 and n - 1;
+         * @return {Matrix}
+         */
+        Matrix.randperm = function (n, k) {
+            var out = Matrix.zeros(n, 1, "uint32"), od = out.getData();
+            for (var i = 0; i < n; i++) {
+                od[i] = i;
+            }
+            var random = Math.random, round = Math.round;
+            for (var i = 0; i < n - 1; i++) {
+                var j = round(random() * (n - i));
+                var tmp = od[i + j];
+                od[i + j] = od[i];
+                od[i] = tmp;
+            }
+            if (k !== undefined) {
+                return out.get([0, k - 1]);
+            }
+            return out;
+        };
     })();
 
     (function () {
