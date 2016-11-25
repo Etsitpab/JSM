@@ -119,6 +119,9 @@ var root = typeof window === 'undefined' ? module.exports : window;
         if (this.orientation) {
             newKeypoint.orientation = this.orientation;
         }
+        if (this.number) {
+            newKeypoint.number = this.number;
+        }
         return newKeypoint;
     };
 
