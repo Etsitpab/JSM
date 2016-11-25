@@ -94,7 +94,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         /** How many rings, and how many sectors per rings  */
         sectors: [1, 4, 4],
         /** Radius of each ring  */
-        rings: [0.25, 0.75, 1],
+        rings: undefined,
         /** Should modes been extracted from histograms ? */
         extractModes: false,
         /** Distance used to compare histograms "L1", "L2" or "CEMD" */

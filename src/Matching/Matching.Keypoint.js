@@ -65,7 +65,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
     Keypoint.prototype.algorithm = "max";
     /** The factor size used to determine the associated region 
      in the image. */
-    Keypoint.prototype.factorSize = 18;
+    Keypoint.prototype.factorSize = 24;
     /** The descriptor(s) used to describe the region of the keypoint. */
     Keypoint.prototype.descriptors = [
         global.descriptorDB["SIFT"],
