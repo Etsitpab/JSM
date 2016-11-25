@@ -181,7 +181,7 @@ window.onload = function () {
 
         var callback = function (evt) {
             var onread = function () {
-                IMAGES.push(this.im2double());
+                IMAGES.push(limitImageSize(this, 600));
                 if (IMAGES.length === files.length) {
                     run();
                 }
