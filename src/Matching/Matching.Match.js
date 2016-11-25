@@ -25,22 +25,22 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
 (function (global) {
 
-    /** This class provides object to store matchs.
+    /** This class provides object to store matches.
      *
      * @class Matching.Match
-     * @param {Integer} num_1 
+     * @param {Integer} num_1
      *  Number of the first `Keypoint`.
-     *  
+     *
      * @param {Object} key_1
      *  The first `Keypoint`.
-     * 
-     * @param {Integer} num_2 
+     *
+     * @param {Integer} num_2
      *  Number of the second `Keypoint`.
      *
-     * @param {Integer} key_2 
+     * @param {Integer} key_2
      *  The second `Keypoint`.
      *
-     * @param {Number} distance 
+     * @param {Number} distance
      *  The distance between the two keypoints.
      *
      * @constructor
@@ -70,7 +70,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
     /** Convert a match to a String. Function used for export purpose.
      */
     Match.prototype.toString = function () {
-        var str = this.k1.toString(true, 
+        var str = this.k1.toString(true,
                                    true, false, false) + " ";
         str += this.k2.toString(true, true, false, false) + " ";
         str += this.distance;

@@ -22,17 +22,17 @@ function exportAll() {
 
     var value, name;
     value = "SIFT";
-    name = imName1 + "_" + imName2 + "_matchs_" + value + ".txt";
-    Tools.stringToDownload(S.matchsToString(0, 1, value), name);
+    name = imName1 + "_" + imName2 + "_matches_" + value + ".txt";
+    Tools.stringToDownload(S.matchesToString(0, 1, value), name);
     value = "SIFT+HUE-Norm";
-    name = imName1 + "_" + imName2 + "_matchs_" + value + ".txt";
-    Tools.stringToDownload(S.matchsToString(0, 1, value), name);
+    name = imName1 + "_" + imName2 + "_matches_" + value + ".txt";
+    Tools.stringToDownload(S.matchesToString(0, 1, value), name);
     value = "Ohta-SIFT";
-    name = imName1 + "_" + imName2 + "_matchs_" + value + ".txt";
-    Tools.stringToDownload(S.matchsToString(0, 1, value), name);
+    name = imName1 + "_" + imName2 + "_matches_" + value + ".txt";
+    Tools.stringToDownload(S.matchesToString(0, 1, value), name);
     value = "Ohta-SIFT+HUE-Norm";
-    name = imName1 + "_" + imName2 + "_matchs_" + value + ".txt";
-    Tools.stringToDownload(S.matchsToString(0, 1, value), name);
+    name = imName1 + "_" + imName2 + "_matches_" + value + ".txt";
+    Tools.stringToDownload(S.matchesToString(0, 1, value), name);
 
 }
 
@@ -54,13 +54,13 @@ function exportData() {
     Tools.stringToDownload(str, name);
 }
 
-function exportMatchs() {
+function exportMatches() {
     "use strict";
     var value = $V(this.id),
         name1 = NAMES[0].match(/(.*)\.[^.]+$/)[1],
         name2 = NAMES[1].match(/(.*)\.[^.]+$/)[1],
-        str = S.matchsToString(0, 1, value),
-        name = name1 + "_" + name2 + "_matchs_" + value + ".txt";
+        str = S.matchesToString(0, 1, value),
+        name = name1 + "_" + name2 + "_matches_" + value + ".txt";
     Tools.stringToDownload(str, name);
 }
 
@@ -139,19 +139,19 @@ var run = function() {
         // console.profileEnd();
 
         VIEW = S.createView($("image"));
-        VIEW.thresholdMatchs(parseFloat($("threshold").value), $V("combination"));
+        VIEW.thresholdMatches(parseFloat($("threshold").value), $V("combination"));
 
     }
     computeSift();
     var changeThreshold = function () {
-        VIEW.thresholdMatchs(parseFloat($V("threshold")), $V("combination"));
+        VIEW.thresholdMatches(parseFloat($V("threshold")), $V("combination"));
     };
 
     var changeDistance = function () {
         Matching.Descriptor.prototype.distance = $("distance").value;
         S.computeDescriptors(ds);
-        VIEW.computeMatchs(this.value.split(','), parseFloat($("threshold").value));
-        VIEW.thresholdMatchs(parseFloat(this.value));
+        VIEW.computeMatches(this.value.split(','), parseFloat($("threshold").value));
+        VIEW.thresholdMatches(parseFloat(this.value));
     };
 
     $("threshold").addEventListener("change", changeThreshold);
@@ -159,7 +159,7 @@ var run = function() {
     $("distance").addEventListener("change", changeDistance);
     $("export1").addEventListener("change", exportData);
     $("export2").addEventListener("change", exportData);
-    $("export3").addEventListener("change", exportMatchs);
+    $("export3").addEventListener("change", exportMatches);
 };
 
 window.onload = function () {

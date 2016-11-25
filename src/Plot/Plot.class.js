@@ -3679,7 +3679,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
         return this;
     };
 
-    Plot.prototype.showMatchs = function (im1, im2, matchs, align) {
+    Plot.prototype.showMatches = function (im1, im2, matches, align) {
         'use strict';
         align = align || 'v';
         var p = this, offset;
@@ -3691,7 +3691,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
                 p.addImage(this, 0, 0);
                 im2.toImage(function () {
                     p.addImage(this, 0, -offset);
-                    var m = matchs;
+                    var m = matches;
                     for (var i = 0; i < m.length; i++) {
                         var k1 = m[i].k1, k2 = m[i].k2;
                         if (m[i].isValid) {
@@ -3700,7 +3700,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
                             p.addPath([k1.x, k2.x], [-k1.y, -offset - k2.y], {id: i, stroke: "red"});
                         }
                     }
-                    // p.setTitle(m.length + " Matchs");
+                    // p.setTitle(m.length + " Matches");
                 });
             });
         } else {
@@ -3709,7 +3709,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
                 p.addImage(this, 0, 0);
                 im2.toImage(function () {
                     p.addImage(this, offset, 0);
-                    var m = matchs;
+                    var m = matches;
                     for (var i = 0; i < m.length; i++) {
                         var k1 = m[i].k1, k2 = m[i].k2;
                         if (m[i].isValid) {
@@ -3718,7 +3718,7 @@ var global = typeof window === 'undefined' ? module.exports : window;
                             p.addPath([k1.x, k2.x + offset], [-k1.y, -k2.y], {id: i, stroke: "red"});
                         }
                     }
-                    // p.setTitle(m.length + " Matchs");
+                    // p.setTitle(m.length + " Matches");
                 });
             });
         }

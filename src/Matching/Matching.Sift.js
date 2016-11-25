@@ -34,8 +34,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
      */
     function Sift(images) {
         this.scaleSpaces = [];
-        this.matchs = [];
-        this.matchsList = [];
+        this.matches = [];
+        this.matchesList = [];
         var i;
         for (i = 0; i < images.length; i++) {
             this.scaleSpaces[i] = new global.ScaleSpace(images[i]);
@@ -139,7 +139,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
          *  The names of the descritors to be used for comparing keypoints.
          *  @chainable
          */
-        computeMatchs: function (S1, S2, crit, names) {
+        computeMatches: function (S1, S2, crit, names) {
             Tools.tic();
 
             var keypoints1 = this.scaleSpaces[S1].keypoints;
@@ -154,11 +154,11 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 }
                 tmps.push(tmp);
             }
-            var matchs = Array.prototype.concat.apply([], tmps);
+            var matches = Array.prototype.concat.apply([], tmps);
 
-            this.matchs = this.matchs || [];
-            this.matchs[S1] = this.matchs[S1] || [];
-            this.matchs[S1][S2] = matchs.sort(global.Match.compar);
+            this.matches = this.matches || [];
+            this.matches[S1] = this.matches[S1] || [];
+            this.matches[S1][S2] = matches.sort(global.Match.compar);
             console.log("Matching time : ", Tools.toc(), "ms");
             return this;
         },
@@ -173,11 +173,11 @@ var root = typeof window === 'undefined' ? module.exports : window;
          *  The criterion used for comparing keypoints.
          *  @chainable
          */
-        thresholdMatchs: function (S1, S2, threshold, c) {
+        thresholdMatches: function (S1, S2, threshold, c) {
             threshold = threshold || this.threshold;
 
             Tools.tic();
-            var matchsList = [],
+            var matchesList = [],
                 keypoints1 = this.scaleSpaces[S1].keypoints,
                 keypoints2 = this.scaleSpaces[S2].keypoints,
                 criterion = global.Keypoint.prototype.criterion;
@@ -186,21 +186,21 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 threshold /= keypoints1.length * keypoints2.length;
             }
 
-            var k, ek, matchs = this.matchs[S1][S2];
+            var k, ek, matches = this.matches[S1][S2];
             if (c) {
-                matchs = matchs[c];
+                matches = matches[c];
             }
-            for (k = 0, ek = matchs.length; k < ek; k++) {
-                if (matchs[k].distance < threshold) {
-                    matchsList.push(matchs[k]);
+            for (k = 0, ek = matches.length; k < ek; k++) {
+                if (matches[k].distance < threshold) {
+                    matchesList.push(matches[k]);
                 }
             }
 
-            this.matchsList[S1] = this.matchsList[S1] || [];
-            this.matchsList[S1][S2] = matchsList;
-            console.log("\t", "matchsList[" + S1 + "][" + S2 + "]:",
-                        matchsList.length, "matchs.");
-            console.log("Threshold matchs time : ", Tools.toc(), "ms");
+            this.matchesList[S1] = this.matchesList[S1] || [];
+            this.matchesList[S1][S2] = matchesList;
+            console.log("\t", "matchesList[" + S1 + "][" + S2 + "]:",
+                        matchesList.length, "matches.");
+            console.log("Threshold matches time : ", Tools.toc(), "ms");
 
             return this;
         },
@@ -210,8 +210,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * + {@link Matching.Sift#applyScaleSpaceThreshold},
          * + {@link Matching.Sift#computeMainOrientations},
          * + {@link Matching.Sift#computeDescriptors},
-         * + {@link Matching.Sift#computeMatchs},
-         * + {@link Matching.Sift#thresholdMatchs}.
+         * + {@link Matching.Sift#computeMatches},
+         * + {@link Matching.Sift#thresholdMatches}.
          *
          * @param {Number} S1
          *  The first image.
@@ -225,8 +225,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 .applyScaleSpaceThreshold()
                 .computeMainOrientations()
                 .computeDescriptors()
-                .computeMatchs(S1, S2)
-                .thresholdMatchs(S1, S2);
+                .computeMatches(S1, S2)
+                .thresholdMatches(S1, S2);
             console.log("Global match time : ", Tools.toc(), "ms");
             return this;
         },
@@ -236,13 +236,13 @@ var root = typeof window === 'undefined' ? module.exports : window;
          * @param {Number} [criterion]
          * @return {String}
          */
-        matchsToString: function (S1, S2, c) {
-            var matchs = this.matchs[S1][S2];
-            matchs = (c !== undefined) ? matchs[c] : matchs;
+        matchesToString: function (S1, S2, c) {
+            var matches = this.matches[S1][S2];
+            matches = (c !== undefined) ? matches[c] : matches;
 
             var k, ek, str = "";
-            for (k = 0, ek = matchs.length; k < ek; k++) {
-                str += matchs[k].toString() + "\n";
+            for (k = 0, ek = matches.length; k < ek; k++) {
+                str += matches[k].toString() + "\n";
             }
             return str;
         }

@@ -174,45 +174,45 @@ var root = typeof window === 'undefined' ? module.exports : window;
         return keypointsOut;
     };
 
-    global.Sift.prototype.computeMatchsBenchmark = function (S1, S2, criterions, combinations) {
+    global.Sift.prototype.computeMatchesBenchmark = function (S1, S2, criterions, combinations) {
         Tools.tic();
         var keypoints1 = this.scaleSpaces[S1].keypoints;
         var keypoints2 = this.scaleSpaces[S2].keypoints;
 
-        var k, ek, l, el, c, matchs = {};
+        var k, ek, l, el, c, matches = {};
         for (c in criterions) {
-            matchs[c] = [];
+            matches[c] = [];
         }
         for (c in combinations) {
-            matchs[c] = [];
+            matches[c] = [];
         }
         for (k = 0, ek = keypoints1.length; k < ek; k++) {
             var m = keypoints1[k].matchBenchmark(keypoints2, criterions, combinations);
-            for (c in matchs) {
+            for (c in matches) {
                 var tmp = m[c];
                 for (l = 0, el = tmp.length; l < el; l++) {
                     tmp[l].k1.number = k;
                 }
-                matchs[c].push(tmp);
+                matches[c].push(tmp);
             }
         }
 
-        for (c in matchs) {
-            matchs[c] = Array.prototype.concat.apply([], matchs[c]);
-            matchs[c].sort(Match.compar);
+        for (c in matches) {
+            matches[c] = Array.prototype.concat.apply([], matches[c]);
+            matches[c].sort(Match.compar);
         }
 
-        this.matchs = this.matchs || [];
-        this.matchs[S1] = this.matchs[S1] || [];
-        this.matchs[S1][S2] = matchs;
+        this.matches = this.matches || [];
+        this.matches[S1] = this.matches[S1] || [];
+        this.matches[S1][S2] = matches;
         console.log("Matching time : ", Tools.toc(), "ms");
         return this;
     };
 
-    global.Sift.prototype.matchsValidation = function (mat, n1, n2, c) {
-        var matchs = this.matchs[n1 || 0][n2 || 1];
+    global.Sift.prototype.matchesValidation = function (mat, n1, n2, c) {
+        var matches = this.matches[n1 || 0][n2 || 1];
         if (c) {
-            matchs = matchs[c];
+            matches = matches[c];
         }
 
         var isValid = function (kr, kc, mat) {
@@ -225,18 +225,18 @@ var root = typeof window === 'undefined' ? module.exports : window;
             return (dist(kp, kc) < dmin) ? true : false;
         };
         var i, ei;
-        for (i = 0, ei = matchs.length; i < ei; i++) {
-            var m = matchs[i];
+        for (i = 0, ei = matches.length; i < ei; i++) {
+            var m = matches[i];
             m.isValid = isValid(m.k1, m.k2, mat);
         }
     };
 
-    global.createCurves = function (matchs) {
-        var n = matchs.length;
+    global.createCurves = function (matches) {
+        var n = matches.length;
         var i, ei;
         var t = new Array(n), f = new Array(n), th = new Array(n);
-        for (i = 0, ei = matchs.length; i < ei; i++) {
-            var m = matchs[i];
+        for (i = 0, ei = matches.length; i < ei; i++) {
+            var m = matches[i];
             th[i] = m.distance;
             if (m.isValid) {
                 t[i] = 1;
@@ -325,13 +325,13 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 .computeMainOrientations();
         }
         S.computeDescriptors()
-            .computeMatchsBenchmark(0, 1, criterions, combinations);
+            .computeMatchesBenchmark(0, 1, criterions, combinations);
         S.curves = {};
         if (mat) {
             var c;
-            for (c in S.matchs[0][1]) {
-                S.matchsValidation(mat, 0, 1, c);
-                S.curves[c] = global.createCurves(S.matchs[0][1][c]);
+            for (c in S.matches[0][1]) {
+                S.matchesValidation(mat, 0, 1, c);
+                S.curves[c] = global.createCurves(S.matches[0][1][c]);
             }
         }
         console.log("Benchmark time:", Tools.toc(), "ms");
@@ -503,25 +503,25 @@ var root = typeof window === 'undefined' ? module.exports : window;
         var view = {
             descriptor: descriptors[0].name,
             align: 'v',
-            thresholdMatchs: function (s, c) {
-                this.thresholdMatchs(0, 1, s, c);
-                p.showMatchs(this.scaleSpaces[0].image,
+            thresholdMatches: function (s, c) {
+                this.thresholdMatches(0, 1, s, c);
+                p.showMatches(this.scaleSpaces[0].image,
                              this.scaleSpaces[1].image,
-                             this.matchsList[0][1], view.align);
+                             this.matchesList[0][1], view.align);
             }.bind(this),
             plots: [p, p1, p2, p3, p4],
             currentPatches: [patch1, patch2],
             getPatch: getPatch,
             sift: this,
             selected: selected,
-            computeMatchs: function (names, s) {
+            computeMatches: function (names, s) {
                 var i, n = {};
                 for (i = 0; i < names.length; i++) {
                     n[names[i]] = {};
                 }
-                this.computeMatchs(0, 1, undefined, n);
+                this.computeMatches(0, 1, undefined, n);
                 if (s) {
-                    view.thresholdMatchs(s);
+                    view.thresholdMatches(s);
                 }
             }.bind(this),
             visual: function (v) {
@@ -546,7 +546,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             p1.clear();
             p2.clear();
             var n = parseInt(c.data.id, 10);
-            var m = S.matchsList[0][1][n];
+            var m = S.matchesList[0][1][n];
             selected.push(m);
             var tmp1, tmp2;
             patch1 = getPatch(0, m.k1.number, "RGB");
