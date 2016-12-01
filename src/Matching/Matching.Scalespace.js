@@ -25,7 +25,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
 (function (global) {
 
-    /** 
+    /**
      * @class Matching.Scalespace
      * @constructor
      */
@@ -53,7 +53,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
         scaleRatio: 1.26,
         lapThresh: 4e-3,
         harrisThresh: 1e4,
-        /** Function to use for exporting the keypoint list 
+        /** Function to use for exporting the keypoint list
          * @return {String}
          */
         keypointsToString: function () {
@@ -76,7 +76,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             return out;
         },
         /** Function to use to get an image of the scalespace at a given
-         * scale and with gradient computed. It is useful for display 
+         * scale and with gradient computed. It is useful for display
          * purpose.
          * @return {String}
          */
@@ -89,7 +89,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             if (img === "blur" || img === "gray") {
                 img = scale[img];
             } else if (img === "phase-norm") {
-                
+
             } else {
                 img = scale.gradient[img];
             }
@@ -178,7 +178,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             }
             return this;
         },
-        /** Function used to precompute the Harris pyramid. 
+        /** Function used to precompute the Harris pyramid.
          * @chainable
          */
         precomputeHarris: function () {
@@ -277,7 +277,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     sMin = i;
                 }
             }
-            var scale = this.scale[sMin], 
+            var scale = this.scale[sMin],
                 image = scale["gray"],
                 grad = scale.gradient,
                 channel = [];
@@ -345,7 +345,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                 view: view,
             };
         },
-        /** Extract the main direction(s) of all keypoint detected in 
+        /** Extract the main direction(s) of all keypoint detected in
          * the scalespace.
          * @param {String} algorithm
          *  Algorithm to use.
@@ -418,7 +418,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                         );
                 }
             }
-            
+
             return this;
         }
     };

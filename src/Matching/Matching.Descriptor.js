@@ -189,7 +189,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
             var size = view.getSize(0),
                 wSize = Math.floor(size / 2),
                 wSize2 = wSize * wSize;
-            
+
             var exp = Math.exp, c = -2 / wSize2;
             var oR = this.relativeOrientation === true ? o : 0;
 
@@ -198,16 +198,16 @@ var root = typeof window === 'undefined' ? module.exports : window;
             for (var r = 0; r < rings.length; r++) {
                 rings2[r] = wSize * wSize * rings[r] * rings[r];
             }
-            
+
             var cst = 1 / (2 * Math.PI);
-            
+
             var i, j, _j, ij;
             var x, y, x2, r2, j2;
-            
+
             for (j = 0, _j = xs; j < size; j++, _j += dx) {
                 for (i = 0, ij = _j + ys, j2 = (j - wSize) * (j - wSize); i < size; i++, ij++) {
                     r2 = j2 + (i - wSize) * (i - wSize);
-                    
+
                     if (r2 > wSize2) {
                         continue;
                     }
@@ -227,7 +227,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     }
                     var k =  Math.floor(phase * nBin + 0.5);
                     var sec = (k >= nBin) ? (k - nBin) : k;
-                    
+
                     // Histogram corresponding to sector and ring
                     var s, his = sec;
                     for (s = 0; s < ring; s++) {
@@ -239,7 +239,7 @@ var root = typeof window === 'undefined' ? module.exports : window;
                     pps[his]++;
                     sum[his] += norm;
                     h[his][bin] += norm;
-                    
+
                 }
             }
             return data;
@@ -280,8 +280,8 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
             return {patch: patch, mean: patchRGB.mean, mask: patchRGB.mask};
         },
-        /** Compute from an RGB image patch an patch adapted to the 
-         * descriptor computation. This transformation is constituted by 
+        /** Compute from an RGB image patch an patch adapted to the
+         * descriptor computation. This transformation is constituted by
          * a colorspace conversion an a gradient phase/norm computation.
          */
         getPatch: function (patch) {

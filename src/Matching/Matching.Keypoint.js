@@ -60,10 +60,10 @@ var root = typeof window === 'undefined' ? module.exports : window;
 
     /** Number of bins used to compute the histogram of oriented gradient */
     Keypoint.prototype.nBin = 36;
-    /** The algorithm used to compute the main(s) orientation(s) 
+    /** The algorithm used to compute the main(s) orientation(s)
      of the keypoint. */
     Keypoint.prototype.algorithm = "max";
-    /** The factor size used to determine the associated region 
+    /** The factor size used to determine the associated region
      in the image. */
     Keypoint.prototype.factorSize = 24;
     /** The descriptor(s) used to describe the region of the keypoint. */
