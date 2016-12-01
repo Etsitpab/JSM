@@ -573,7 +573,7 @@
             }
             var random = Math.random, round = Math.round;
             for (var i = 0; i < n - 1; i++) {
-                var j = round(random() * (n - i));
+                var j = round(random() * (n - i - 1));
                 var tmp = od[i + j];
                 od[i + j] = od[i];
                 od[i] = tmp;
