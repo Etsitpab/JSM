@@ -710,6 +710,36 @@
         };
     })();
 
+    /** Return unique values in a matrix.
+     * @return {Matrix}
+     */
+    Matrix_prototype.unique = function () {
+        var sorted = this.getCopy().reshape().sort(0, "ascend"), sd = sorted.getData();
+        var od = new Matrix.dataType(sd.length);
+        od[0] = sd[0];
+        for (var i = 1, ie = sd.length, j = 1; i < ie; i++) {
+            if (sd[i - 1] < sd[i]) {
+                od[j++] = sd[i];
+            }
+        }
+        return new Matrix.toMatrix(od.subarray(0, j));
+    };
+    Matrix.unique = function(A) {
+        return A.unique();
+    }
+
+    /** Return unique values in the union of two matrices.
+     * @param {Matrix} A
+     * @param {Matrix} B
+     * @return {Matrix}
+     */
+    Matrix.union = function (A, B) {
+        return Matrix.cat(0, A.unique(), B.unique()).unique();
+    };
+    Matrix_prototype.union = function (B) {
+        return Matrix.union(this, B);
+    };
+
     /** Accumate values in an array
      * @param {Array} subs
      *  Array of integers indicating subscript positions
